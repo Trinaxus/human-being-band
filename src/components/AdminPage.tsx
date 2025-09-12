@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { usersList, usersSetRole, type UserPublic } from '../lib/api';
 import AdminContentPanel from './AdminContentPanel';
 import AdminTicketsPanel from './AdminTicketsPanel';
+import AdminScanPanel from './AdminScanPanel';
 import TwoFASetupCard from './TwoFASetupCard';
 import { useAuth } from '../hooks/useAuth';
 
@@ -11,7 +12,7 @@ const AdminPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<UserPublic[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [tab, setTab] = useState<'users' | 'content' | 'tickets'>('users');
+  const [tab, setTab] = useState<'users' | 'content' | 'tickets' | 'scan'>('users');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -83,6 +84,12 @@ const AdminPage: React.FC = () => {
                 >
                   Tickets
                 </button>
+                <button
+                  onClick={() => setTab('scan')}
+                  className={`text-sm sm:text-base font-black uppercase tracking-wide transition-colors touch-manipulation ${tab === 'scan' ? 'text-neutral-100' : 'text-neutral-500 hover:text-neutral-300'}`}
+                >
+                  Scan Ticket
+                </button>
               </nav>
             </div>
             <div className="ml-6 flex items-center space-x-3 flex-shrink-0">
@@ -103,6 +110,8 @@ const AdminPage: React.FC = () => {
             <AdminContentPanel />
           ) : tab === 'tickets' ? (
             <AdminTicketsPanel />
+          ) : tab === 'scan' ? (
+            <AdminScanPanel />
           ) : (
             <>
               {/* 2FA Setup */}

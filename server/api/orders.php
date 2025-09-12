@@ -35,6 +35,25 @@ if ($method === 'GET') {
     }));
     json_ok(['ok' => true, 'orders' => $mine]);
   }
+  if ($action === 'find') {
+    // admin only
+    if (!isset($_SESSION['auth']) || $_SESSION['auth'] !== true || (($_SESSION['role'] ?? 'user') !== 'admin')) {
+      json_error('Forbidden', 403);
+    }
+    $code = trim((string)($_GET['code'] ?? ''));
+    $token = trim((string)($_GET['token'] ?? ''));
+    if ($code === '' && $token === '') json_error('code or token required', 400);
+    $all = orders_read_all($dataFile);
+    foreach ($all['orders'] as $o) {
+      if ($code !== '' && isset($o['ticket_code']) && (string)$o['ticket_code'] === $code) {
+        json_ok(['ok' => true, 'order' => $o]);
+      }
+      if ($token !== '' && isset($o['qr_token']) && (string)$o['qr_token'] === $token) {
+        json_ok(['ok' => true, 'order' => $o]);
+      }
+    }
+    json_error('Not found', 404);
+  }
 
   if ($action === 'repair') {
     // admin only
@@ -96,6 +115,11 @@ if ($method === 'POST') {
     $all = orders_read_all($dataFile);
 
     $id = bin2hex(random_bytes(8));
+    // Generate a human-friendly ticket code and a secret QR token
+    $codeRaw = strtoupper(bin2hex(random_bytes(4))); // 8 hex chars
+    $prefix = ($payment === 'onsite') ? 'BAR' : 'OL';
+    $ticket_code = $prefix . '-' . substr($codeRaw, 0, 4) . '-' . substr($codeRaw, 4, 4);
+    $qr_token = bin2hex(random_bytes(16));
     $order = [
       'id' => $id,
       'ticket_id' => $ticket_id,
@@ -106,6 +130,8 @@ if ($method === 'POST') {
       'name' => $buyer_name,
       'email' => $buyer_email,
       'status' => ($payment === 'onsite' ? 'reserved' : 'redirected'), // reserved = vor Ort zahlen, redirected = zu extern geleitet
+      'ticket_code' => $ticket_code,
+      'qr_token' => $qr_token,
       'created_at' => date('c'),
       'updated_at' => date('c'),
     ];

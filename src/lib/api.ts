@@ -364,6 +364,10 @@ export type OrderItem = {
   name?: string;
   email?: string;
   status: 'reserved' | 'redirected' | 'confirmed' | 'paid' | 'cancelled';
+  // Ticket metadata
+  ticket_code?: string;
+  qr_token?: string;
+  redeemed_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -382,6 +386,13 @@ export async function ordersCreate(payload: { ticket_id: string; title: string; 
 
 export async function ordersUpdate(id: string, status: OrderItem['status']) {
   return apiPost<{ ok: boolean }>(`/orders.php?action=update`, { id, status });
+}
+
+export async function ordersFind(params: { code?: string; token?: string }) {
+  const qs = new URLSearchParams();
+  if (params.code) qs.set('code', params.code);
+  if (params.token) qs.set('token', params.token);
+  return apiGet<{ ok: boolean; order: OrderItem }>(`/orders.php?action=find&${qs.toString()}`);
 }
 
 export async function ordersRepair() {

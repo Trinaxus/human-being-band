@@ -7,6 +7,7 @@ const OverviewPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderItem[]>([]);
+  const [qrPreview, setQrPreview] = useState<{ code: string; token: string; title?: string; date?: string } | null>(null);
 
   useEffect(() => {
     let cancel = false;
@@ -194,16 +195,64 @@ const OverviewPage: React.FC = () => {
                     {o.status && (
                       <span className={"px-2 py-0.5 rounded-md text-[11px] border capitalize "+statusClass(o.status)}>{o.status}</span>
                     )}
+                    {o.ticket_code && (
+                      <span className="ml-1 px-2 py-0.5 rounded-md text-[11px] border bg-neutral-900 text-neutral-100 border-neutral-700/40">Ticket‑Nr.: {o.ticket_code}</span>
+                    )}
                   </div>
                 </div>
-                {o.href && (
-                  <a href={o.href} target="_blank" rel="noreferrer" className="text-xs px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800">Zum Anbieter</a>
-                )}
+                <div className="flex items-center gap-3">
+                  {o.href && (
+                    <a href={o.href} target="_blank" rel="noreferrer" className="text-xs px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800">Zum Anbieter</a>
+                  )}
+                  {o.qr_token && (
+                    <button
+                      type="button"
+                      onClick={() => setQrPreview({ code: o.ticket_code || '', token: o.qr_token!, title: o.title, date: o.date })}
+                      className="rounded-lg bg-neutral-900 border border-neutral-700/40 p-1 hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-600"
+                      aria-label="QR-Code anzeigen"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=96x96&data=${encodeURIComponent(`${o.ticket_code || ''}|${o.qr_token}`)}`}
+                        alt="Ticket QR"
+                        className="w-14 h-14 object-contain"
+                      />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
       </section>
+      {/* QR Preview Modal */}
+      {qrPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setQrPreview(null)} aria-hidden="true" />
+          <div className="relative z-10 w-[92vw] max-w-[420px] mx-auto rounded-2xl bg-neutral-900 border-[0.5px] border-neutral-700/40 p-4">
+            <div className="flex items-start justify-between mb-2">
+              <div className="min-w-0">
+                <div className="text-neutral-100 font-semibold truncate">{qrPreview.title || 'Ticket'}</div>
+                {qrPreview.date && <div className="text-neutral-400 text-sm">{qrPreview.date}</div>}
+              </div>
+              <button onClick={() => setQrPreview(null)} className="ml-3 px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Schließen</button>
+            </div>
+            <div className="flex items-center justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=280x280&data=${encodeURIComponent(`${qrPreview.code}|${qrPreview.token}`)}`}
+                alt="Ticket QR groß"
+                className="w-[260px] h-[260px] sm:w-[280px] sm:h-[280px] object-contain"
+              />
+            </div>
+            <div className="mt-3 text-center">
+              {qrPreview.code && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border-[0.5px] border-neutral-700/40 bg-neutral-800/60 text-neutral-100 text-sm">Ticket‑Nr.: {qrPreview.code}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

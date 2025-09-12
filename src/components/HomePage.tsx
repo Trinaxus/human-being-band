@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle } from 'lucide-react';
-import { contentGet, commentsPublicApproved, commentSubmit, ordersCreate, type SiteContent, type CommentItem } from '../lib/api';
+import { contentGet, commentsPublicApproved, commentSubmit, ordersCreate, type SiteContent, type CommentItem, type OrderItem } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 
 const HomePage: React.FC = () => {
@@ -10,6 +10,7 @@ const HomePage: React.FC = () => {
   const [content, setContent] = useState<SiteContent>({});
   const [commentsApproved, setCommentsApproved] = useState<CommentItem[]>([]);
   const [sortBy, setSortBy] = useState<'highest' | 'newest'>('highest');
+  const [lastOrder, setLastOrder] = useState<OrderItem | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [formName, setFormName] = useState('');
   const [formRating, setFormRating] = useState<number>(5);
@@ -72,7 +73,8 @@ const HomePage: React.FC = () => {
       const href = (ticketSel.url.startsWith('http') ? ticketSel.url : url.href);
       const final = href + (href.includes('?') ? `&date=${ticketDate}` : `?date=${ticketDate}`);
       try {
-        await ordersCreate({ ticket_id: ticketSel.id, title: ticketSel.title, date: ticketDate, payment: 'external', href: final, name: buyerName || authName || undefined, email: buyerEmail || authEmail || undefined });
+        const res = await ordersCreate({ ticket_id: ticketSel.id, title: ticketSel.title, date: ticketDate, payment: 'external', href: final, name: buyerName || authName || undefined, email: buyerEmail || authEmail || undefined });
+        setLastOrder(res.order as any);
       } catch {}
       // Open external checkout in new tab, then confirm on Home
       window.open(final, '_blank', 'noopener');
@@ -84,7 +86,8 @@ const HomePage: React.FC = () => {
     }
     // On-site payment: create order and show confirmation (step 3)
     try {
-      await ordersCreate({ ticket_id: ticketSel.id, title: ticketSel.title, date: ticketDate, payment: 'onsite', name: buyerName || authName || undefined, email: buyerEmail || authEmail || undefined });
+      const res = await ordersCreate({ ticket_id: ticketSel.id, title: ticketSel.title, date: ticketDate, payment: 'onsite', name: buyerName || authName || undefined, email: buyerEmail || authEmail || undefined });
+      setLastOrder(res.order as any);
       setTicketStep(3);
     } catch (e) {
       // fallback: still show a minimal confirmation
@@ -526,7 +529,11 @@ const HomePage: React.FC = () => {
                 <div className="uppercase text-sm text-neutral-300">Service auswählen</div>
                 <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 flex items-center gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={ticketSel.image || 'https://via.placeholder.com/100'} alt={ticketSel.title} className="w-12 h-12 rounded-full object-cover border border-neutral-700" />
+                  <img
+                    src={ticketSel.image || 'https://via.placeholder.com/100'}
+                    alt={ticketSel.title}
+                    className="w-12 h-12 rounded-full object-cover border border-neutral-700"
+                  />
                   <div className="text-neutral-100 font-medium">{ticketSel.title}</div>
                 </div>
                 <div>
@@ -578,21 +585,46 @@ const HomePage: React.FC = () => {
             {ticketStep === 3 && (
               <div className="space-y-3">
                 <div className="uppercase text-sm text-neutral-300">Bestätigung</div>
-                <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
-                  <div className="text-neutral-100 font-medium">{ticketSel?.title}</div>
-                  <div className="text-neutral-300 text-sm mt-1">Datum: {ticketDate}</div>
-                  <div className="text-neutral-400 text-sm mt-2">Die Buchung wurde reserviert. Bitte vor Ort bezahlen. Du erhältst die Bestätigung auch in unserer internen Übersicht.</div>
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    onClick={() => {
-                      setTicketOpen(false);
-                      setOrderOk(ticketSel && ticketDate ? `Buchung erfasst: "${ticketSel.title}" am ${ticketDate}. Bitte vor Ort bezahlen.` : 'Buchung erfasst.');
-                      setTicketSel(null);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-900 bg-neutral-200 hover:bg-white"
-                  >Zur Startseite</button>
+                <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 space-y-3">
+                  {lastOrder && (
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-lg bg-neutral-900 border border-neutral-700/40 p-2">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`${lastOrder.ticket_code || ''}|${lastOrder.qr_token || ''}`)}`}
+                          alt="Ticket QR"
+                          className="w-28 h-28 object-contain"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-neutral-100 font-medium">{lastOrder.title}</div>
+                        <div className="text-neutral-300 text-sm">Datum: {lastOrder.date}</div>
+                        {lastOrder.ticket_code && (
+                          <div className="mt-1 text-sm">
+                            <span className="text-neutral-400">Ticket‑Nr.:</span>
+                            <span className="ml-2 px-2 py-0.5 rounded-md border bg-neutral-900 text-neutral-100 border-neutral-700/40">{lastOrder.ticket_code}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  {/* existing confirmation content could follow here */}
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => {
+                        if (lastOrder) {
+                          const msg = `Buchung erfasst: "${lastOrder.title}" am ${lastOrder.date}. ${paymentChoice==='onsite' ? 'Bitte vor Ort bezahlen.' : ''}`;
+                          setOrderOk(msg.trim());
+                        } else {
+                          setOrderOk('Buchung erfasst.');
+                        }
+                        setTicketSel(null);
+                        setTicketOpen(false);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-900 bg-neutral-200 hover:bg-white"
+                    >Zur Startseite</button>
+                  </div>
                 </div>
               </div>
             )}
