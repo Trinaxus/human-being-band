@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ordersFind, ordersUpdate, type OrderItem } from '../lib/api';
+import jsQR from 'jsqr';
 
 // Simple QR scan panel using the native BarcodeDetector API when available.
 // Fallback: show camera preview and allow manual input of the code.
@@ -17,8 +18,11 @@ const AdminScanPanel: React.FC = () => {
   const [scanning, setScanning] = useState<boolean>(false);
   const [found, setFound] = useState<OrderItem | null>(null);
   const [busy, setBusy] = useState<boolean>(false);
+  const [facing, setFacing] = useState<'environment' | 'user'>('environment');
+  const [forceJsqr, setForceJsqr] = useState<boolean>(false);
   const detectorRef = useRef<any>(null);
   const rafRef = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
     // Check for BarcodeDetector support
@@ -26,34 +30,77 @@ const AdminScanPanel: React.FC = () => {
     setHasDetector(supported);
   }, []);
 
+  const handleDecoded = (raw: string) => {
+    try {
+      const parts = raw.split('|');
+      const code = (parts[0] || '').trim();
+      const token = (parts[1] || '').trim();
+      setDetected({ code, token, raw });
+      setLastFoundAt(Date.now());
+      setFlash(true);
+      setTimeout(() => setFlash(false), 300);
+      if (code || token) {
+        ordersFind({ code: code || undefined, token: token || undefined })
+          .then((res) => setFound(res.order))
+          .catch(() => setFound(null));
+      }
+    } catch {
+      setDetected({ raw });
+    }
+  };
+
+  const tryJsQR = () => {
+    const v = videoRef.current;
+    if (!v || v.readyState !== 4) return false;
+    const w = v.videoWidth;
+    const h = v.videoHeight;
+    if (!w || !h) return false;
+    if (!canvasRef.current) {
+      canvasRef.current = document.createElement('canvas');
+    }
+    const c = canvasRef.current;
+    c.width = w; c.height = h;
+    const ctx = c.getContext('2d');
+    if (!ctx) return false;
+    ctx.drawImage(v, 0, 0, w, h);
+    let img: ImageData;
+    try {
+      img = ctx.getImageData(0, 0, w, h);
+    } catch {
+      return false;
+    }
+    const result = jsQR(img.data as unknown as Uint8ClampedArray, w, h);
+    if (result && result.data) {
+      handleDecoded(String(result.data));
+      return true;
+    }
+    return false;
+  };
+
   const tick = () => {
     rafRef.current = requestAnimationFrame(tick);
     const v = videoRef.current;
-    if (!v || v.readyState !== 4 || !detectorRef.current) return;
-    detectorRef.current.detect(v).then((codes: Array<{ rawValue: string }>) => {
-      setAttempts(prev => prev + 1);
-      setLastScanAt(Date.now());
-      if (!codes || codes.length === 0) return;
-      const raw = (codes[0]?.rawValue || '').trim();
-      if (!raw) return;
-      try {
-        const parts = raw.split('|');
-        const code = (parts[0] || '').trim();
-        const token = (parts[1] || '').trim();
-        setDetected({ code, token, raw });
-        setLastFoundAt(Date.now());
-        setFlash(true);
-        setTimeout(() => setFlash(false), 300);
-        // Lookup order details when we have a valid code/token
-        if (code || token) {
-          ordersFind({ code: code || undefined, token: token || undefined })
-            .then((res) => setFound(res.order))
-            .catch(() => setFound(null));
+    if (!v || v.readyState !== 4) return;
+    setAttempts(prev => prev + 1);
+    setLastScanAt(Date.now());
+    const tryDetector = !!detectorRef.current && !forceJsqr;
+    if (tryDetector) {
+      detectorRef.current.detect(v).then((codes: Array<{ rawValue: string }>) => {
+        if (codes && codes.length > 0) {
+          const raw = (codes[0]?.rawValue || '').trim();
+          if (raw) handleDecoded(raw);
+          return;
         }
-      } catch {
-        setDetected({ raw });
-      }
-    }).catch(() => {});
+        // fallback to jsQR if no codes
+        tryJsQR();
+      }).catch(() => {
+        // detector failed -> try jsQR
+        tryJsQR();
+      });
+    } else {
+      // no detector -> jsQR only
+      tryJsQR();
+    }
   };
 
   const stopCamera = () => {
@@ -67,10 +114,39 @@ const AdminScanPanel: React.FC = () => {
     }
   };
 
-  const startCamera = async () => {
+  const refreshDevices = async () => {
+    try {
+      const list = await navigator.mediaDevices.enumerateDevices();
+      const vids = list.filter((d) => d.kind === 'videoinput');
+      return vids as MediaDeviceInfo[];
+    } catch {
+      return null as any;
+    }
+  };
+
+  const pickDeviceId = (devs: MediaDeviceInfo[] | null | undefined, want: 'environment' | 'user'): string | undefined => {
+    if (!devs || devs.length === 0) return undefined;
+    const lwant = want === 'environment' ? ['back','rear','environment'] : ['front','user'];
+    const cand = devs.find(d => (d.label || '').toLowerCase().includes(lwant[0]) || (d.label || '').toLowerCase().includes(lwant[1]) || (d.label || '').toLowerCase().includes(lwant[2]||''));
+    return cand?.deviceId || devs[0]?.deviceId || undefined;
+  };
+
+  const startCamera = async (prefer?: 'environment' | 'user') => {
     setStreamError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      const want = prefer || facing;
+      // Try to pick by deviceId after we have permissions (labels only after grant)
+      let constraints: MediaStreamConstraints['video'] = {
+        facingMode: want,
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      } as any;
+      try {
+        const devs = await refreshDevices();
+        const did = pickDeviceId(devs, want);
+        if (did) constraints = { deviceId: { exact: did }, width: { ideal: 1280 }, height: { ideal: 720 } } as any;
+      } catch {}
+      const stream = await navigator.mediaDevices.getUserMedia({ video: constraints as MediaTrackConstraints, audio: false });
       if (videoRef.current) {
         videoRef.current.srcObject = stream as MediaStream;
         await videoRef.current.play().catch(() => {});
@@ -81,6 +157,7 @@ const AdminScanPanel: React.FC = () => {
         setScanning(true);
         tick();
       }
+      setFacing(want);
     } catch (e) {
       setStreamError('Kamera konnte nicht geöffnet werden. Bitte Berechtigungen prüfen.');
     }
@@ -114,12 +191,25 @@ const AdminScanPanel: React.FC = () => {
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-neutral-100 text-base sm:text-lg font-semibold">Scan Ticket</h3>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-neutral-400 hidden sm:inline">{hasDetector ? 'BarcodeDetector aktiv' : 'Kein BarcodeDetector – manueller Modus'}</span>
+            <span className="text-xs text-neutral-400 hidden sm:inline">{(!hasDetector || forceJsqr) ? 'Fallback-Scanner (jsQR) aktiv' : 'BarcodeDetector aktiv'}</span>
             {scanning ? (
               <button onClick={stopCamera} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Kamera stoppen</button>
             ) : (
-              <button onClick={startCamera} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Kamera starten</button>
+              <button onClick={() => startCamera()} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Kamera starten</button>
             )}
+            <button
+              onClick={async () => {
+                const next = facing === 'environment' ? 'user' : 'environment';
+                stopCamera();
+                await startCamera(next);
+              }}
+              className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800"
+            >Kamera wechseln ({facing === 'environment' ? 'Rück' : 'Front'})</button>
+            <button
+              onClick={() => setForceJsqr(v => !v)}
+              className={`px-2 py-1 rounded border-[0.5px] ${forceJsqr ? 'border-emerald-400 text-emerald-300' : 'border-neutral-700/40 text-neutral-300'} hover:bg-neutral-800`}
+              title="Fallback-Decoder (jsQR) erzwingen"
+            >{forceJsqr ? 'jsQR erzwungen' : 'Fallback erzwingen'}</button>
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -129,7 +219,7 @@ const AdminScanPanel: React.FC = () => {
             {scanning && (
               <div className="absolute top-2 left-2 flex items-center gap-1 px-2 py-1 rounded-md bg-black/50 border border-neutral-700 text-white text-[11px]">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Scan aktiv</span>
+                <span>Scan aktiv{(!hasDetector || forceJsqr) ? ' · jsQR' : ''}</span>
               </div>
             )}
             {/* Flash on detection */}
@@ -157,6 +247,9 @@ const AdminScanPanel: React.FC = () => {
                   {scanning ? 'Scanne…' : 'Kamera aus.'}
                   <div className="mt-1 text-[11px] text-neutral-500">
                     Versuche: {attempts} {lastScanAt ? `• letzter Scan: ${new Date(lastScanAt).toLocaleTimeString()}` : ''} {lastFoundAt ? `• letzter Treffer: ${new Date(lastFoundAt).toLocaleTimeString()}` : ''}
+                  </div>
+                  <div className="mt-2">
+                    <button onClick={() => tryJsQR()} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Jetzt scannen</button>
                   </div>
                 </div>
               )}
