@@ -48,7 +48,7 @@ export async function apiPost<T>(path: string, body: any, headers: Record<string
 }
 
 export async function login(username: string, password: string) {
-  return apiPost<{ ok: boolean }>(`/login.php`, { username, password });
+  return apiPost<{ ok?: boolean; require_totp?: boolean; role?: string }>(`/login.php`, { username, password });
 }
 
 export async function logout(): Promise<{ ok: boolean }> {
@@ -64,6 +64,10 @@ export async function logout(): Promise<{ ok: boolean }> {
     if (res && typeof res.ok === 'boolean') return res;
   } catch (_) {}
   return { ok: false };
+}
+
+export async function register(name: string, email: string, password: string) {
+  return apiPost<{ ok: boolean; user?: { id: string; name: string; email: string; role: string } }>(`/register.php`, { name, email, password });
 }
 
 export async function me() {
@@ -253,4 +257,142 @@ export async function remoteGet() {
 
 export async function remoteSend(action: 'play' | 'pause', soundId?: string) {
   return apiPost<{ ok: boolean; command: RemoteCommand }>(`/remote.php?action=send`, { action, soundId });
+}
+
+// --- Users (admin only) ---
+export type UserPublic = { id: string; name: string; email: string; role: 'user' | 'admin'; created_at?: string | null };
+
+export async function usersList() {
+  return apiGet<{ users: UserPublic[] }>(`/users.php?action=list`);
+}
+
+export async function usersSetRole(id: string, role: 'user' | 'admin') {
+  return apiPost<{ ok: true }>(`/users.php?action=setRole`, { id, role });
+}
+
+// --- Content management (admin only) ---
+export type SiteContent = {
+  heroUrl?: string;
+  heroTitle?: string;
+  heroText?: string;
+  // Hero sizing and positioning
+  heroHeight?: number; // in px
+  heroFocusX?: number; // 0..100 (%), horizontal focus
+  heroFocusY?: number; // 0..100 (%), vertical focus
+  heroZoom?: number;   // 100..150 (%)
+  contact?: { email?: string; phone?: string; address?: string };
+  gallery?: string[];
+  // New: direct build URL to display on Home
+  buildUrl?: string;
+  // New: address string for maps; prefer this over lat/lng
+  mapAddress?: string;
+  // Keep embedUrl for direct iframe usage (preferred if present)
+  map?: { embedUrl?: string; lat?: number; lng?: number };
+  reviews?: Array<{ id: string; author?: string; text: string; rating?: number; created_at?: string }>;
+  about?: { title?: string; text?: string };
+  // Social links for display across the site
+  socials?: Array<{ type: 'instagram' | 'facebook' | 'youtube' | 'tiktok' | 'twitter' | 'linkedin' | 'spotify' | 'soundcloud' | 'bandcamp' | 'website' | 'whatsapp'; url: string }>;
+  // Tickets: list of external ticket links (no payment processing here)
+  tickets?: Array<{ id: string; title: string; url: string; image?: string; description?: string; active?: boolean; paymentType?: 'online' | 'onsite' }>;
+  updated_at?: string;
+};
+
+export async function contentGet() {
+  return apiGet<{ ok: boolean; content: SiteContent }>(`/content.php`);
+}
+
+export async function contentSave(content: SiteContent) {
+  return apiPost<{ ok: boolean; content: SiteContent }>(`/content.php`, content);
+}
+
+// --- Comments moderation (admin only) ---
+export type CommentItem = { id: string; author?: string; text: string; rating?: number; created_at?: string; approved_at?: string };
+
+export async function commentsList() {
+  return apiGet<{ ok: boolean; pending: CommentItem[]; approved: CommentItem[] }>(`/comments.php?action=list`);
+}
+
+export async function commentSubmit(author: string | undefined, text: string, rating?: number) {
+  return apiPost<{ ok: boolean }>(`/comments.php?action=submit`, { author, text, rating });
+}
+
+// Public (no auth) – get approved comments only for Home
+export async function commentsPublicApproved() {
+  return apiGet<{ ok: boolean; approved: CommentItem[] }>(`/comments.php?action=public`);
+}
+
+export async function commentsApprove(id: string) {
+  return apiPost<{ ok: boolean }>(`/comments.php?action=approve`, { id });
+}
+
+export async function commentsDelete(id: string) {
+  return apiPost<{ ok: boolean }>(`/comments.php?action=delete`, { id });
+}
+
+// --- Generic file upload ---
+export async function uploadFile(file: File) {
+  const form = new FormData();
+  form.append('file', file);
+  return apiPost<{ ok: boolean; name: string; url: string; file_path: string; size: number; type: string }>(`/upload.php`, form);
+}
+
+// --- Two-Factor (TOTP) ---
+export async function twofaSetup() {
+  return apiGet<{ ok: boolean; secret: string; otpauth: string }>(`/twofa.php?action=setup`);
+}
+
+export async function twofaEnable(secret: string, code: string) {
+  return apiPost<{ ok: boolean }>(`/twofa.php?action=enable`, { secret, code });
+}
+
+export async function twofaVerify(code: string) {
+  return apiPost<{ ok: boolean; role?: string }>(`/twofa.php?action=verify`, { code });
+}
+
+export async function twofaDisable(email?: string) {
+  return apiPost<{ ok: boolean }>(`/twofa.php?action=disable`, email ? { email } : {});
+}
+
+// --- Orders (ticket purchases) ---
+export type OrderItem = {
+  id: string;
+  ticket_id: string;
+  title: string;
+  date: string; // YYYY-MM-DD
+  payment: 'onsite' | 'external';
+  href?: string;
+  name?: string;
+  email?: string;
+  status: 'reserved' | 'redirected' | 'confirmed' | 'paid' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+};
+
+export async function ordersList() {
+  return apiGet<{ ok: boolean; orders: OrderItem[] }>(`/orders.php`);
+}
+
+export async function ordersMine() {
+  return apiGet<{ ok: boolean; orders: OrderItem[] }>(`/orders.php?action=mine`);
+}
+
+export async function ordersCreate(payload: { ticket_id: string; title: string; date: string; payment: 'onsite' | 'external'; href?: string; name?: string; email?: string }) {
+  return apiPost<{ ok: boolean; order: OrderItem }>(`/orders.php?action=create`, payload);
+}
+
+export async function ordersUpdate(id: string, status: OrderItem['status']) {
+  return apiPost<{ ok: boolean }>(`/orders.php?action=update`, { id, status });
+}
+
+export async function ordersRepair() {
+  return apiGet<{ ok: boolean; repaired: number }>(`/orders.php?action=repair`);
+}
+
+// Password reset helpers
+export async function requestPasswordReset(email: string) {
+  return apiPost<{ ok: boolean }>(`/users.php?action=request_reset`, { email });
+}
+
+export async function confirmPasswordReset(email: string, token: string, new_password: string) {
+  return apiPost<{ ok: boolean }>(`/users.php?action=confirm_reset`, { email, token, new_password });
 }

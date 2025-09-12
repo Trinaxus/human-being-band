@@ -1,32 +1,17 @@
 import React from 'react';
-import { Clock, LogOut, Menu, X, Music } from 'lucide-react';
-import { useSounds } from '../context/SoundContext';
-import { useAuth } from '../hooks/useAuth';
-import { logout } from '../lib/api';
+import { Menu, X, Home as HomeIcon, LogIn, LogOut, TicketCheck } from 'lucide-react';
 
-const Header: React.FC = () => {
-  const { isHost, setHostMode } = useSounds();
-  const { authenticated } = useAuth();
+type HeaderProps = {
+  authRole?: 'unauthenticated' | 'user' | 'admin';
+  onHomeClick?: () => void;
+  onLoginClick?: () => void;
+  onLogoutClick?: () => void;
+  onAdminClick?: () => void;
+  onOverviewClick?: () => void;
+};
+
+const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeClick, onLoginClick, onLogoutClick, onAdminClick, onOverviewClick }) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
-  const [time, setTime] = React.useState(new Date().toLocaleTimeString([], { 
-    hour: '2-digit', 
-    minute: '2-digit', 
-    second: '2-digit',
-    hour12: false
-  }));
-
-  React.useEffect(() => {
-    const timer = setInterval(() => {
-      setTime(new Date().toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit',
-        hour12: false
-      }));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, []);
 
   // Clean up URL from cache-busting param after reloads
   React.useEffect(() => {
@@ -39,20 +24,27 @@ const Header: React.FC = () => {
     } catch {}
   }, []);
 
-  const handleLogout = async () => {
+  // No authentication or host/remote state in the minimal skeleton.
+
+  // Default button behaviors if no handlers are provided
+  const handleHome = () => {
+    if (onHomeClick) return onHomeClick();
+    try { window.location.assign('/'); } catch {}
+  };
+  const handleLogin = () => {
+    if (onLoginClick) return onLoginClick();
     try {
-      await logout();
-    } catch (err) {
-      console.error('Logout failed:', err);
-    } finally {
-      try {
-        // Clear local client state regardless
-        window.localStorage?.clear?.();
-        window.sessionStorage?.clear?.();
-      } catch {}
-      // Hard redirect to root (no cache-busting param)
-      window.location.replace(`${window.location.origin}/`);
-    }
+      const el = document.getElementById('login-form');
+      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch {}
+  };
+  const handleLogout = () => {
+    if (onLogoutClick) return onLogoutClick();
+    try {
+      window.localStorage?.clear?.();
+      window.sessionStorage?.clear?.();
+    } catch {}
+    try { window.location.replace('/'); } catch {}
   };
 
   return (
@@ -63,8 +55,8 @@ const Header: React.FC = () => {
           <span className="w-9 h-9" />
           <h1 className="text-xl font-bold bg-gradient-to-r from-[#4ECBD9] to-[#F471B5] text-transparent bg-clip-text tracking-tight">
             <span className="inline-flex items-center gap-2">
-              <Music className="w-5 h-5 text-[#4ECBD9]" />
-              <span>SoundScheduler</span>
+              <TicketCheck className="w-5 h-5 text-[#4ECBD9]" />
+              <span>Booking.tonband</span>
             </span>
           </h1>
           <button
@@ -77,66 +69,70 @@ const Header: React.FC = () => {
           </button>
         </div>
 
-        {/* Mobile: time bar under header */}
-        <div className="sm:hidden mt-2">
-          <div className="flex items-center justify-center bg-neutral-700/40 border border-neutral-600/40 rounded-lg px-3 py-2">
-            <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-[#4ECBD9]" />
-              <span className="font-mono text-sm text-[#C1C2C5]">{time}</span>
-            </div>
-          </div>
-        </div>
+        {/* Mobile: time bar removed */}
 
         {/* Desktop: full header */}
         <div className="hidden sm:flex items-center justify-between">
-          {/* Logo/Title (now left) */}
+          {/* Logo + label */}
           <h1 className="text-4xl font-bold bg-gradient-to-r from-[#4ECBD9] to-[#F471B5] text-transparent bg-clip-text tracking-tight">
             <span className="inline-flex items-center gap-3">
-              <Music className="w-7 h-7 text-[#4ECBD9]" />
-              <span>SoundScheduler</span>
+              <TicketCheck className="w-7 h-7 text-[#4ECBD9]" />
+              <span>Booking.tonband</span>
             </span>
           </h1>
 
-          {/* Clock (now center) */}
-          <div className="flex items-center space-x-2 bg-neutral-700/50 px-4 py-2 rounded-xl border-[0.5px] border-[#4ECBD9]/10 shadow-glow-cyan">
-            <Clock className="h-4 w-4 text-[#4ECBD9]" />
-            <div className="text-base font-medium font-mono tracking-wider">
-              <span className="text-[#4ECBD9]">{time.split(':')[0]}</span>
-              <span className="text-neutral-500 mx-0.5">:</span>
-              <span className="text-[#4ECBD9]">{time.split(':')[1]}</span>
-              <span className="text-neutral-500 mx-0.5">:</span>
-              <span className="text-[#4ECBD9]">{time.split(':')[2]}</span>
-            </div>
-          </div>
+          {/* Center area removed (clock) */}
 
-          {/* Host/Remote segmented toggle + Logout (right) */}
-          <div className="flex items-center gap-2">
-            <div className="flex bg-neutral-700/40 border border-neutral-600/50 rounded-lg overflow-hidden">
+          {/* Right side buttons */}
+          <div className="flex items-center gap-3">
+            {/* Home button (replaces Host/Remote segmented) */}
+            <button
+              onClick={handleHome}
+              className="px-4 py-2 text-sm rounded-lg border-[0.5px] border-neutral-600/50 bg-neutral-700/50 text-neutral-300 hover:bg-neutral-600/40 hover:text-white transition-colors"
+              title="Home"
+            >
+              <span className="inline-flex items-center gap-2">
+                <HomeIcon className="w-4 h-4 text-[#4ECBD9]" />
+                <span>Home</span>
+              </span>
+            </button>
+
+            {/* Übersicht button (for authenticated users) */}
+            {(authRole === 'user' || authRole === 'admin') && (
               <button
-                onClick={() => setHostMode(true)}
-                aria-pressed={isHost}
-                className={`px-4 py-2 text-sm transition-colors ${
-                  isHost ? 'bg-[#0d1718] text-[#4ECBD9] ring-1 ring-[#4ECBD9]/40' : 'text-neutral-300 hover:bg-neutral-600/40'
-                }`}
-                title="Dieses Gerät als Player (Host) festlegen"
+                onClick={() => onOverviewClick?.()}
+                className="px-4 py-2 text-sm rounded-lg border-[0.5px] border-neutral-600/50 bg-neutral-700/50 text-neutral-300 hover:bg-neutral-600/40 hover:text-white transition-colors"
+                title="Übersicht"
               >
-                Host
+                Übersicht
               </button>
+            )}
+
+            {/* Admin button (only for admins) */}
+            {authRole === 'admin' && (
               <button
-                onClick={() => setHostMode(false)}
-                aria-pressed={!isHost}
-                className={`px-4 py-2 text-sm transition-colors ${
-                  !isHost ? 'bg-[#0d1718] text-[#4ECBD9] ring-1 ring-[#4ECBD9]/40' : 'text-neutral-300 hover:bg-neutral-600/40'
-                }`}
-                title="Remote-Modus: Dieses Gerät sendet nur Play/Pause an den Host"
+                onClick={() => onAdminClick?.()}
+                className="px-4 py-2 text-sm rounded-lg border-[0.5px] border-neutral-600/50 bg-neutral-700/50 text-neutral-300 hover:bg-neutral-600/40 hover:text-white transition-colors"
+                title="Admin"
               >
-                Remote
+                Admin
               </button>
-            </div>
-            {authenticated && (
+            )}
+
+            {/* Auth button */}
+            {authRole === 'unauthenticated' ? (
+              <button
+                onClick={handleLogin}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg border-[0.5px] border-neutral-600/50 bg-neutral-700/50 text-neutral-400 hover:bg-neutral-600 hover:text-white active:bg-neutral-500 transition-all"
+                title="Anmelden"
+              >
+                <LogIn className="h-4 w-4" />
+                <span className="text-sm font-medium">Anmelden</span>
+              </button>
+            ) : (
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg border-[0.5px] border-neutral-600/50 bg-neutral-700/50 text-neutral-400 hover:bg-neutral-600 hover:text-white active:bg-neutral-500 transition-all touch-manipulation"
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg border-[0.5px] border-neutral-600/50 bg-neutral-700/50 text-neutral-400 hover:bg-neutral-600 hover:text-white active:bg-neutral-500 transition-all"
                 title="Abmelden"
               >
                 <LogOut className="h-4 w-4" />
@@ -165,41 +161,46 @@ const Header: React.FC = () => {
               </button>
             </div>
 
-            {/* Clock removed from menu (moved under header on mobile) */}
-
-            {/* Host/Remote toggle (compact) */}
-            <div className="flex bg-neutral-700/40 border border-neutral-600/50 rounded-lg overflow-hidden mb-3">
+            {/* Mobile buttons */}
+            <div className="mt-2 grid gap-2">
               <button
-                onClick={() => setHostMode(true)}
-                aria-pressed={isHost}
-                className={`flex-1 px-2 py-1 text-xs transition-colors ${
-                  isHost ? 'bg-[#0d1718] text-[#4ECBD9] ring-1 ring-[#4ECBD9]/40' : 'text-neutral-300 hover:bg-neutral-600/40'
-                }`}
+                onClick={handleHome}
+                className="w-full px-3 py-2 rounded-lg bg-neutral-700/40 border border-neutral-600/50 text-neutral-200 text-left"
               >
-                Host
+                <span className="inline-flex items-center gap-2"><HomeIcon className="w-4 h-4 text-[#4ECBD9]" /> Home</span>
               </button>
-              <button
-                onClick={() => setHostMode(false)}
-                aria-pressed={!isHost}
-                className={`flex-1 px-2 py-1 text-xs transition-colors ${
-                  !isHost ? 'bg-[#0d1718] text-[#4ECBD9] ring-1 ring-[#4ECBD9]/40' : 'text-neutral-300 hover:bg-neutral-600/40'
-                }`}
-              >
-                Remote
-              </button>
+              {(authRole === 'user' || authRole === 'admin') && (
+                <button
+                  onClick={() => onOverviewClick?.()}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700/40 border border-neutral-600/50 text-neutral-200 text-left"
+                >
+                  Übersicht
+                </button>
+              )}
+              {authRole === 'admin' && (
+                <button
+                  onClick={() => onAdminClick?.()}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700/40 border border-neutral-600/50 text-neutral-200 text-left"
+                >
+                  Admin
+                </button>
+              )}
+              {authRole === 'unauthenticated' ? (
+                <button
+                  onClick={handleLogin}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700/40 border border-neutral-600/50 text-neutral-200 text-left"
+                >
+                  <span className="inline-flex items-center gap-2"><LogIn className="w-4 h-4" /> Anmelden</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleLogout}
+                  className="w-full px-3 py-2 rounded-lg bg-neutral-700/40 border border-neutral-600/50 text-neutral-200 text-left"
+                >
+                  <span className="inline-flex items-center gap-2"><LogOut className="w-4 h-4" /> Abmelden</span>
+                </button>
+              )}
             </div>
-
-            {/* (On Air toggle removed per request) */}
-
-            {/* Logout inside mobile menu */}
-            {authenticated && (
-              <button
-                onClick={handleLogout}
-                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-[0.5px] border-neutral-600/50 bg-neutral-700/50 text-neutral-400 hover:bg-neutral-600 hover:text-white active:bg-neutral-500 transition-all"
-              >
-                <LogOut className="h-4 w-4" /> Abmelden
-              </button>
-            )}
           </div>
         </div>
       )}

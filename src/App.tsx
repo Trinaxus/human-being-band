@@ -1,73 +1,84 @@
-import React, { Suspense, useEffect } from 'react';
-import LoginPage from './components/LoginPage';
-import { useAuth } from './hooks/useAuth';
-import { SoundProvider } from './context/SoundContext';
-import SoundboardView from './components/SoundboardView';
+import { useEffect, useState } from 'react';
 import Header from './components/Header';
-const AuthedApp = React.lazy(() => import('./AuthedApp'));
+import Footer from './components/Footer';
+import LoginPage from './components/LoginPage';
+import HomePage from './components/HomePage';
+import AdminPage from './components/AdminPage';
+import OverviewPage from './components/OverviewPage';
+import ResetPasswordPage from './components/ResetPasswordPage';
+import { me, logout } from './lib/api';
 
 function App() {
-  const { authenticated, role, loading } = useAuth();
+  const [view, setView] = useState<'home' | 'login' | 'overview' | 'admin' | 'reset'>('home');
+  const [authRole, setAuthRole] = useState<'unauthenticated' | 'user' | 'admin'>('unauthenticated');
 
-  // Keep local Host/Remote toggle in sync with server-side role
   useEffect(() => {
-    try {
-      if (authenticated && role === 'admin') {
-        window.localStorage.setItem('player_is_host', '1');
-      } else if (authenticated && role === 'remote') {
-        window.localStorage.setItem('player_is_host', '0');
+    const check = async () => {
+      try {
+        const res = await me() as any;
+        if (res?.authenticated) {
+          setAuthRole((res.role as 'admin' | 'user') || 'admin');
+        } else {
+          setAuthRole('unauthenticated');
+        }
+      } catch {
+        setAuthRole('unauthenticated');
       }
-    } catch {}
-  }, [authenticated, role]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100">
-        <div className="w-6 h-6 border-2 border-neutral-700 border-t-[#4ECBD9] rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!authenticated) {
-    // If device is set to Remote mode locally, show a minimal remote Soundboard (favorites only)
-    let isRemote = false;
-    try { isRemote = window.localStorage.getItem('player_is_host') === '0'; } catch {}
-    if (isRemote) {
-      return (
-        <SoundProvider>
-          <div className="min-h-screen flex flex-col bg-neutral-900 text-neutral-100">
-            <main className="flex-1 max-w-[1200px] mx-auto px-4 py-6 w-full">
-              <SoundboardView mode="remoteFavorites" />
-            </main>
-          </div>
-        </SoundProvider>
-      );
-    }
-    return <LoginPage />;
-  }
-
-  // If authenticated as 'remote', show Soundboard-only view (favorites)
-  if (authenticated && role === 'remote') {
-    return (
-      <SoundProvider>
-        <div className="min-h-screen flex flex-col bg-neutral-900 text-neutral-100">
-          <Header />
-          <main className="flex-1 max-w-[1200px] mx-auto px-4 py-6 w-full">
-            <SoundboardView mode="remoteFavorites" />
-          </main>
-        </div>
-      </SoundProvider>
-    );
-  }
+    };
+    check();
+    const onVisible = () => { if (!document.hidden) check(); };
+    document.addEventListener('visibilitychange', onVisible);
+    // route by query param ?view=reset
+    const applyViewFromUrl = () => {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const v = params.get('view');
+        if (v === 'reset') { setView('reset'); return; }
+        // hash-based routing: #reset?email=...&token=...
+        const h = window.location.hash || '';
+        if (h.startsWith('#reset')) setView('reset');
+      } catch {}
+    };
+    applyViewFromUrl();
+    window.addEventListener('popstate', applyViewFromUrl);
+    window.addEventListener('hashchange', applyViewFromUrl);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('hashchange', applyViewFromUrl);
+    };
+  }, []);
 
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-neutral-900 text-neutral-100">
-        <div className="w-6 h-6 border-2 border-neutral-700 border-t-[#4ECBD9] rounded-full animate-spin" />
-      </div>
-    }>
-      <AuthedApp />
-    </Suspense>
+    <div className="min-h-screen flex flex-col">
+      <Header
+        authRole={authRole}
+        onHomeClick={() => setView('home')}
+        onLoginClick={() => setView('login')}
+        onLogoutClick={async () => {
+          try { await logout(); } catch {}
+          setAuthRole('unauthenticated');
+          setView('home');
+        }}
+        onAdminClick={() => setView('admin')}
+        onOverviewClick={() => setView('overview')}
+      />
+      <main className="flex-1 flex items-start md:items-center justify-center px-0 sm:px-4 py-6 w-full">
+        {view === 'home' && <HomePage />}
+        {view === 'login' && (
+          <LoginPage onLoggedIn={async () => {
+            try {
+              const res = await me() as any;
+              if (res?.authenticated) setAuthRole((res.role as 'admin' | 'user') || 'admin');
+            } catch {}
+            setView('home');
+          }} />
+        )}
+        {view === 'reset' && <ResetPasswordPage onDone={() => setView('login')} />}
+        {view === 'overview' && <OverviewPage />}
+        {view === 'admin' && <AdminPage />}
+      </main>
+      <Footer />
+    </div>
   );
 }
 

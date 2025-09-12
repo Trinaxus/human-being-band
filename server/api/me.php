@@ -1,13 +1,32 @@
 <?php
-require __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/bootstrap.php';
 
-// Returns simple auth status for the current session
-if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
-  json_out(['error' => 'Method not allowed'], 405);
+$authenticated = isset($_SESSION['auth']) && $_SESSION['auth'] === true;
+$role = $authenticated ? ($_SESSION['role'] ?? 'admin') : null;
+$name = $authenticated ? ($_SESSION['name'] ?? '') : null;
+$email = $authenticated ? ($_SESSION['email'] ?? '') : null;
+
+$twofaEnabled = false;
+if ($authenticated && $email) {
+  $usersFile = $DATA_DIR . '/users.json';
+  $users = json_read_file($usersFile);
+  if (is_array($users)) {
+    foreach ($users as $u) {
+      if (isset($u['email']) && strtolower($u['email']) === strtolower($email)) {
+        $two = $u['twofa'] ?? null;
+        if (is_array($two) && !empty($two['enabled']) && !empty($two['secret'])) {
+          $twofaEnabled = true;
+        }
+        break;
+      }
+    }
+  }
 }
 
-$authenticated = (!empty($_SESSION['admin']) && $_SESSION['admin'] === true) || (!empty($_SESSION['remote']) && $_SESSION['remote'] === true);
-$role = null;
-if (!empty($_SESSION['admin']) && $_SESSION['admin'] === true) $role = 'admin';
-if (!empty($_SESSION['remote']) && $_SESSION['remote'] === true) $role = 'remote';
-json_out(['authenticated' => $authenticated, 'role' => $role]);
+json_ok([
+  'authenticated' => $authenticated,
+  'role' => $role,
+  'name' => $name,
+  'email' => $email,
+  'twofaEnabled' => $twofaEnabled,
+]);

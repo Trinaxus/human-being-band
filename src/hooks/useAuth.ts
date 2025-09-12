@@ -5,6 +5,8 @@ export function useAuth() {
   const [authenticated, setAuthenticated] = useState<boolean>(false);
   const [role, setRole] = useState<'admin' | 'remote' | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [name, setName] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -15,6 +17,8 @@ export function useAuth() {
         if (!cancelled) {
           setAuthenticated(!!res.authenticated);
           setRole((res.role as 'admin' | 'remote' | null) ?? null);
+          setName((res.name as string) ?? null);
+          setEmail((res.email as string) ?? null);
         }
       } catch {
         if (!cancelled) setAuthenticated(false);
@@ -35,5 +39,5 @@ export function useAuth() {
     };
   }, []);
 
-  return { authenticated, role, loading };
+  return { authenticated, role, loading, name, email };
 }
