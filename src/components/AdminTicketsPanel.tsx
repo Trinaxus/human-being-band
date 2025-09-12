@@ -144,6 +144,29 @@ const AdminTicketsPanel: React.FC = () => {
 
   const [open, setOpen] = useState({ tickets: true, orders: false });
 
+  // Aggregate orders per month and payment type (fixed Jan–Dec for current year)
+  const monthlyData = useMemo(() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const keys: string[] = Array.from({ length: 12 }, (_, i) => `${year}-${String(i + 1).padStart(2, '0')}`);
+    const init: Record<string, { onsite: number; online: number; label: string }> = {};
+    keys.forEach((k, idx) => {
+      const label = new Date(year, idx, 1).toLocaleDateString('de-DE', { month: 'short' });
+      init[k] = { onsite: 0, online: 0, label };
+    });
+    for (const o of orders) {
+      if ((o.status || '').toLowerCase() !== 'paid') continue; // only count paid
+      const d = (o.date || '').trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+      const key = d.slice(0, 7); // YYYY-MM
+      if (!init[key]) continue; // only current year
+      if (o.payment === 'onsite') init[key].onsite += 1; else if (o.payment === 'external') init[key].online += 1;
+    }
+    const rows = keys.map(k => ({ key: k, ...init[k] }));
+    const max = rows.reduce((m, r) => Math.max(m, r.onsite + r.online, r.onsite, r.online), 0) || 1;
+    return { rows, max };
+  }, [orders]);
+
   if (loading) return <div className="text-neutral-400">Lade…</div>;
 
   return (
@@ -387,6 +410,19 @@ const AdminTicketsPanel: React.FC = () => {
                 });
               })()}
             </div>
+            {/* Monthly bar chart */}
+            <div className="mt-4 p-4 rounded-xl bg-neutral-900 border-[0.5px] border-neutral-700/30">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-neutral-200 font-medium">Monatsübersicht (Vor Ort vs. Online) — nur Paid</h4>
+                <div className="flex items-center gap-3 text-[11px]">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-neutral-700/40 bg-neutral-800/60 text-neutral-200"><span className="w-3 h-3 bg-pink-400/60 border border-pink-400/70 inline-block" /> Vor Ort</span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-neutral-700/40 bg-neutral-800/60 text-neutral-200"><span className="w-3 h-3 bg-sky-400/60 border border-sky-400/70 inline-block" /> Online</span>
+                </div>
+              </div>
+              <div>
+                <ChartBars data={monthlyData.rows} max={monthlyData.max} />
+              </div>
+            </div>
           </div>
         )}
       </section>
@@ -395,3 +431,50 @@ const AdminTicketsPanel: React.FC = () => {
 };
 
 export default AdminTicketsPanel;
+
+// Simple inline chart component (no external libs)
+const ChartBars: React.FC<{ data: Array<{ key: string; label: string; onsite: number; online: number }>; max: number }>
+  = ({ data, max }) => {
+  const width = 960; // logical width; scales to 100%
+  const height = 220;
+  const padding = { top: 10, right: 16, bottom: 28, left: 28 };
+  const innerW = width - padding.left - padding.right;
+  const innerH = height - padding.top - padding.bottom;
+  const groups = Math.max(1, data.length);
+  const barGroupWidth = innerW / groups; // fill entire width evenly
+  const groupGap = 10;
+  const barWidth = Math.max(8, (barGroupWidth - groupGap) / 2);
+  const scaleY = (v: number) => padding.top + innerH - (v / max) * innerH;
+  const trans = 'y 400ms ease, height 400ms ease';
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} preserveAspectRatio="none" className="block">
+      <rect x={0} y={0} width={width} height={height} fill="none" />
+      {/* Y axis grid */}
+      {[0, 0.25, 0.5, 0.75, 1].map((t, idx) => {
+        const y = padding.top + innerH - t * innerH;
+        const val = Math.round(t * max);
+        return (
+          <g key={idx}>
+            <line x1={padding.left} x2={padding.left + innerW} y1={y} y2={y} stroke="rgba(120,120,120,0.25)" strokeWidth={1} />
+            <text x={6} y={y + 4} fontSize={10} fill="#9CA3AF">{val}</text>
+          </g>
+        );
+      })}
+      {/* Bars */}
+      {data.map((d, i) => {
+        const x0 = padding.left + i * barGroupWidth + (barGroupWidth - (barWidth * 2 + groupGap)) / 2;
+        const yOn = scaleY(d.onsite);
+        const yOl = scaleY(d.online);
+        const hOn = padding.top + innerH - yOn;
+        const hOl = padding.top + innerH - yOl;
+        return (
+          <g key={d.key}>
+            <rect x={x0} y={yOn} width={barWidth} height={hOn} fill="rgba(236,72,153,0.6)" stroke="rgba(236,72,153,0.7)" style={{ transition: trans }} />
+            <rect x={x0 + barWidth + groupGap} y={yOl} width={barWidth} height={hOl} fill="rgba(56,189,248,0.6)" stroke="rgba(56,189,248,0.7)" style={{ transition: trans }} />
+            <text x={padding.left + i * barGroupWidth + barGroupWidth / 2} y={height - 8} textAnchor="middle" fontSize={10} fill="#D1D5DB">{d.label}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};

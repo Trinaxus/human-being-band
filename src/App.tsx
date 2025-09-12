@@ -6,7 +6,7 @@ import HomePage from './components/HomePage';
 import AdminPage from './components/AdminPage';
 import OverviewPage from './components/OverviewPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
-import { me, logout } from './lib/api';
+import { me, logout, contentGet } from './lib/api';
 
 function App() {
   const [view, setView] = useState<'home' | 'login' | 'overview' | 'admin' | 'reset'>('home');
@@ -26,6 +26,21 @@ function App() {
       }
     };
     check();
+    // Load SiteContent for global CSS variables (orb)
+    const applyContent = async () => {
+      try {
+        const c = await contentGet();
+        const url = (c?.content?.orbUrl || '').trim();
+        if (url) {
+          document.documentElement.style.setProperty('--orb-url', `url('${url}')`);
+        } else {
+          document.documentElement.style.removeProperty('--orb-url');
+        }
+      } catch {}
+    };
+    applyContent();
+    const onContentUpdated = () => applyContent();
+    window.addEventListener('content:updated', onContentUpdated as any);
     const onVisible = () => { if (!document.hidden) check(); };
     document.addEventListener('visibilitychange', onVisible);
     // route by query param ?view=reset
@@ -45,6 +60,7 @@ function App() {
     return () => {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('hashchange', applyViewFromUrl);
+      window.removeEventListener('content:updated', onContentUpdated as any);
     };
   }, []);
 

@@ -33,6 +33,7 @@ $allowed = [
   'heroUrl', 'heroTitle', 'heroText',
   'heroHeight', 'heroFocusX', 'heroFocusY',
   'heroZoom',
+  'orbUrl',      // background orb image URL
   'contact',     // { email, phone, address }
   'gallery',     // [urls]
   'buildUrl',    // string

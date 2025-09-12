@@ -84,6 +84,8 @@ const AdminContentPanel: React.FC = () => {
       const res = await contentSave(content);
       setContent(res.content);
       setOk('Gespeichert');
+      // Notify app to re-apply global CSS (orb)
+      try { window.dispatchEvent(new Event('content:updated')); } catch {}
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Speichern fehlgeschlagen');
     } finally {
@@ -246,6 +248,32 @@ const AdminContentPanel: React.FC = () => {
           </div>
         </div>
         </>
+        )}
+      </section>
+
+      {/* Hintergrund Orb */}
+      <section>
+        <ToggleButton label="Hintergrund Orb" open={(open as any).orb === true} onClick={() => setOpen(prev => ({ ...prev, orb: !(prev as any).orb }))} />
+        {(open as any).orb && (
+          <div className="mt-3 space-y-3">
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+              <label className="block text-xs text-neutral-400 mb-1">Orb‑Bild‑URL</label>
+              <Input placeholder="https://…/bild.png" value={content.orbUrl || ''} onChange={e => setContent({ ...content, orbUrl: e.target.value })} />
+              <div className="mt-2 text-[12px] text-neutral-400">Dieses Bild rotiert langsam als Deko im Hintergrund. Transparentes PNG empfohlen.</div>
+            </div>
+            <div className="rounded-lg bg-neutral-900/60 border-[0.5px] border-neutral-700/30 p-3">
+              <div className="text-neutral-300 text-sm mb-2">Vorschau</div>
+              <div className="relative h-56 rounded-lg overflow-hidden bg-neutral-900 border border-neutral-700/50">
+                <div
+                  className="absolute inset-0 opacity-80"
+                  style={{ backgroundImage: content.orbUrl ? `url('${content.orbUrl}')` : undefined, backgroundSize: 'contain', backgroundRepeat: 'no-repeat', backgroundPosition: 'center' }}
+                />
+                {!content.orbUrl && (
+                  <div className="absolute inset-0 flex items-center justify-center text-[#909296] text-sm">Kein Bild</div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
       </section>
 

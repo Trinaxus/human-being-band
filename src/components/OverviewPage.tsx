@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ordersMine, type OrderItem } from '../lib/api';
+import { ordersMine, contentGet, type OrderItem, type SiteContent } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 
 const OverviewPage: React.FC = () => {
@@ -8,6 +8,7 @@ const OverviewPage: React.FC = () => {
   const [err, setErr] = useState<string | null>(null);
   const [orders, setOrders] = useState<OrderItem[]>([]);
   const [qrPreview, setQrPreview] = useState<{ code: string; token: string; title?: string; date?: string } | null>(null);
+  const [content, setContent] = useState<SiteContent>({});
 
   useEffect(() => {
     let cancel = false;
@@ -21,6 +22,11 @@ const OverviewPage: React.FC = () => {
           const res = await ordersMine();
           if (!cancel) setOrders(res.orders || []);
         }
+        // Load content for hero image/text
+        try {
+          const c = await contentGet();
+          if (!cancel) setContent(c.content || {});
+        } catch {}
       } catch (e) {
         if (!cancel) setErr(e instanceof Error ? e.message : 'Fehler beim Laden');
       } finally {
@@ -117,23 +123,59 @@ const OverviewPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-[1200px] mx-auto px-6 self-start mt-2 md:mt-3 space-y-4">
-      {/* Greeting */}
-      <section className="rounded-xl bg-neutral-900 border-[0.5px] border-neutral-700/20 p-4 sm:p-6">
-        <h2 className="text-xl font-semibold text-neutral-100 mb-2">Übersicht</h2>
-        {authenticated ? (
-          <p className="text-neutral-300 text-sm">Hallo{name ? `, ${name}` : ''}! Hier findest du deine gebuchten Tickets.</p>
-        ) : (
-          <p className="text-neutral-300 text-sm">Bitte melde dich an, um deine Ticketkäufe zu sehen.</p>
+      {/* Unified container (same style as Home) */}
+      <section className="relative bg-neutral-900/80 rounded-xl border-[0.5px] border-neutral-700/20 p-4 sm:p-6 space-y-4">
+        {(content.heroTitle || content.heroText || content.heroUrl) && (
+          <div className="relative rounded-xl overflow-hidden bg-neutral-800/60 border border-neutral-700">
+            <div className="w-full" style={{ height: `${content.heroHeight ?? 300}px` }}>
+              {content.heroUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={content.heroUrl}
+                  alt="Hero"
+                  className="w-full h-full object-cover"
+                  style={{
+                    objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
+                    transform: `scale(${(content.heroZoom ?? 100) / 100})`,
+                    transformOrigin: 'center',
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-[#909296] text-sm">Kein Bild</div>
+              )}
+            </div>
+            {(content.heroTitle || content.heroText) && (
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent p-4 sm:p-6 flex items-center justify-center text-center">
+                <div className="max-w-3xl mx-auto">
+                  {content.heroTitle && (
+                    <h2 className="uppercase text-white drop-shadow tracking-wide text-2xl sm:text-3xl font-semibold">
+                      {content.heroTitle}
+                    </h2>
+                  )}
+                  {content.heroText && (
+                    <p className="mt-2 uppercase text-neutral-200 drop-shadow tracking-wider whitespace-pre-line text-xs sm:text-sm font-extralight">
+                      {content.heroText}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         )}
-      </section>
+        <div>
+          <h2 className="text-xl font-semibold text-neutral-100 mb-1">Übersicht</h2>
+          {authenticated ? (
+            <p className="text-neutral-300 text-sm">Hallo{name ? `, ${name}` : ''}! Hier findest du deine gebuchten Tickets.</p>
+          ) : (
+            <p className="text-neutral-300 text-sm">Bitte melde dich an, um deine Ticketkäufe zu sehen.</p>
+          )}
+        </div>
 
-      {/* Orders list */}
-      <section className="rounded-xl bg-neutral-900 border-[0.5px] border-neutral-700/20 p-4 sm:p-6">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between">
           <h3 className="text-neutral-100 text-lg font-semibold">Meine Bestellungen</h3>
           {loading && <span className="text-neutral-400 text-sm">Lade…</span>}
         </div>
-        {err && <div className="p-3 rounded-lg bg-neutral-800/60 border border-neutral-700 text-[#F471B5] text-sm mb-2">{err}</div>}
+        {err && <div className="p-3 rounded-lg bg-neutral-800/60 border border-neutral-700 text-[#F471B5] text-sm">{err}</div>}
         {!authenticated ? (
           <div className="text-neutral-500 text-sm">Nicht angemeldet.</div>
         ) : sorted.length === 0 ? (

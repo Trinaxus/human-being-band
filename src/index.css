@@ -45,7 +45,7 @@ body::after {
   margin-top: -750px;
   z-index: -1; /* above gradient but behind all content */
   pointer-events: none;
-  background-image: url('https://www.tonbandleipzig.de/tonband/uploads/2025/LOGOS/twisted-fold-v5_1024x1024-2.png');
+  background-image: var(--orb-url, url('https://www.tonbandleipzig.de/tonband/uploads/2025/LOGOS/twisted-fold-v5_1024x1024-2.png'));
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;

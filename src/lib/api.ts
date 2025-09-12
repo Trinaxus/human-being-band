@@ -280,6 +280,8 @@ export type SiteContent = {
   heroFocusX?: number; // 0..100 (%), horizontal focus
   heroFocusY?: number; // 0..100 (%), vertical focus
   heroZoom?: number;   // 100..150 (%)
+  // Global background orb image URL
+  orbUrl?: string;
   contact?: { email?: string; phone?: string; address?: string };
   gallery?: string[];
   // New: direct build URL to display on Home
