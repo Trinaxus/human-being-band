@@ -93,7 +93,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
         <div className="flex items-center justify-between sm:hidden">
           <span className="w-9 h-9" />
           <button onClick={handleHome} className="inline-flex items-center" title="Home">
-            <img src="/logo-hbb.png" alt="Human Being Band" className="h-7 w-auto block" />
+            <img src="/human-being-logo-weiß.png" alt="Human Being Band" className="header-logo h-7 w-auto block" />
             <span className="sr-only">HUMAN BEING BAND</span>
           </button>
           <button
@@ -112,7 +112,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
         <div className="hidden sm:flex items-center justify-between">
           {/* Logo */}
           <button onClick={handleHome} className="inline-flex items-center" title="Home">
-            <img src="/logo-hbb.png" alt="Human Being Band" className="h-9 w-auto block" />
+            <img src="/human-being-logo-weiß.png" alt="Human Being Band" className="header-logo h-9 w-auto block" />
             <span className="sr-only">HUMAN BEING BAND</span>
           </button>
 

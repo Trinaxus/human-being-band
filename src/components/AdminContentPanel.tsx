@@ -162,12 +162,28 @@ const AdminContentPanel: React.FC = () => {
     try {
       const res = await scanUploads();
       const scanned = Array.isArray(res.galleries) ? res.galleries : [];
-      // Merge: keep existing status if scan doesn't provide one
-      const merged = scanned.map((sg: any) => {
-        const prev = (galleries||[]).find(pg => pg.year === sg.year && pg.name === sg.name) as any;
+      // Merge: union with existing by (year,name), preserve prev items and status, add new files from scan
+      const keyOf = (y: number, n: string) => `${y}:::${n}`.toLowerCase();
+      const prevMap = new Map<string, any>();
+      (galleries||[]).forEach(pg => prevMap.set(keyOf(pg.year, pg.name), { ...pg, items: (pg.items||[]).slice() }));
+      const outMap = new Map<string, any>(prevMap);
+      scanned.forEach((sg: any) => {
+        const k = keyOf(sg.year, sg.name);
+        const prev = prevMap.get(k);
         const status = sg.status ?? prev?.status ?? undefined;
-        return status ? { ...sg, status } : sg;
+        const prevItems = Array.isArray(prev?.items) ? prev.items : [];
+        const scanItems = Array.isArray(sg.items) ? sg.items : [];
+        const seen = new Set<string>();
+        const mergedItems: any[] = [];
+        const sig = (it: any) => `${it.type||''}@@${it.url||''}`;
+        // Keep previous items first (so custom videos/youtube/instagram remain)
+        prevItems.forEach((it: any) => { const s = sig(it); if (!seen.has(s)) { seen.add(s); mergedItems.push(it); } });
+        // Add any new scanned files (images/videos) that aren't already present
+        scanItems.forEach((it: any) => { const s = sig(it); if (!seen.has(s)) { seen.add(s); mergedItems.push(it); } });
+        outMap.set(k, { year: sg.year, name: sg.name, status, items: mergedItems });
       });
+      // Preserve galleries that existed but weren't in scan (e.g., external-only galleries)
+      const merged = Array.from(outMap.values());
       const next: SiteContent = { ...content, galleries: merged };
       const saved = await contentSave(next);
       setContent(saved.content);
@@ -231,6 +247,13 @@ const AdminContentPanel: React.FC = () => {
       setOk('Gespeichert');
       // Notify app to re-apply global CSS (orb)
       try { window.dispatchEvent(new Event('content:updated')); } catch {}
+      // Sync gallery items to metadata.json so externe Links (YouTube/Instagram) erhalten bleiben
+      try {
+        const gals = Array.isArray(res.content?.galleries) ? res.content.galleries : [];
+        for (const g of gals) {
+          try { await writeMetadata(g.year as any, g.name as any, (g.items||[]) as any, (g as any).status); } catch (_) {}
+        }
+      } catch (_) {}
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Speichern fehlgeschlagen');
     } finally {

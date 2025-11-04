@@ -23,8 +23,8 @@ const HomePage: React.FC = () => {
     try { const t = window.localStorage.getItem('theme'); return (t === 'light' ? 'light' : 'dark'); } catch { return 'dark'; }
   }, []);
   const cardBase = 'rounded-xl border';
-  const cardTone = theme === 'light' ? 'bg-white border-neutral-200' : 'bg-neutral-900 border-neutral-700/20';
-  const cardToneAlt = theme === 'light' ? 'bg-white border-neutral-200' : 'bg-neutral-900 border-neutral-700/20';
+  const cardTone = theme === 'light' ? 'bg-white/85 border-neutral-200' : 'bg-neutral-900/70 border-neutral-700/20';
+  const cardToneAlt = theme === 'light' ? 'bg-white/85 border-neutral-200' : 'bg-neutral-900/70 border-neutral-700/20';
   const [ticketSel, setTicketSel] = useState<{ id: string; title: string; url: string; image?: string } | null>(null);
   const [ticketStep, setTicketStep] = useState<1 | 2 | 3>(1);
   const [ticketDate, setTicketDate] = useState<string | null>(null);
@@ -445,9 +445,9 @@ const HomePage: React.FC = () => {
               <div className={`${cardBase} ${theme==='light' ? 'bg-white border-neutral-200' : 'bg-neutral-900 border-neutral-700/20'}`}>
                 <button onClick={() => setOpenGals(prev => ({ ...prev, [key]: !prev[key] }))} className="w-full text-left">
                   <div className="w-full h-44 sm:h-52 overflow-hidden">
-                    {preview.kind==='image' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
-                    {preview.kind==='youtube' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
-                    {preview.kind==='instagram' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
+                    {preview.kind==='image' && preview.url && (<img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />)}
+                    {preview.kind==='youtube' && preview.url && (<img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />)}
+                    {preview.kind==='instagram' && preview.url && (<img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />)}
                     {(!preview.url) && (<div className="w-full h-full flex items-center justify-center text-neutral-400 text-sm">Keine Vorschau</div>)}
                   </div>
                   <div className="p-2 flex items-center justify-between">

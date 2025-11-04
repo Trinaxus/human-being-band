@@ -52,6 +52,23 @@ html[data-theme="light"] .border-neutral-700\/30 { border-color: rgba(241, 212, 
 html[data-theme="light"] .border-neutral-700\/20 { border-color: rgba(241, 212, 184, 0.2) !important; }
 html[data-theme="light"] .border-neutral-600\/50 { border-color: rgba(229, 200, 168, 0.5) !important; }
 
+/* Light mode: header logo schwarz (invertiert) */
+html[data-theme="light"] .header-logo {
+  filter: invert(1) contrast(1) saturate(0);
+}
+
+/* Light mode: Preview-Bilder etwas heller und weicher darstellen */
+html[data-theme="light"] .preview-img {
+  filter: brightness(1.12) contrast(0.96) saturate(1.05);
+}
+
+/* Light mode: Hintergrundbild auf Body etwas aufhellen */
+html[data-theme="light"] body {
+  /* Wenn ein Hintergrundbild gesetzt ist, hellt diese Mischung es leicht auf */
+  background-color: rgba(255,255,255,0.12);
+  background-blend-mode: lighten;
+}
+
 /* Header background override */
 html[data-theme="light"] header.bg-neutral-900\/85 { background-color: rgba(255, 248, 238, 0.85) !important; }
 

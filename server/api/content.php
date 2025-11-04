@@ -42,7 +42,7 @@ $allowed = [
   'buildUrl',      // string
   'mapAddress',    // string
   'map',           // { embedUrl?: string, lat?: number, lng?: number }
-  'about',         // { title?: string, text?: string }
+  'about',         // { title?: string, text?: string, members?: [] }
   'mediaEmbeds',   // [ { id, type: 'spotify', url, title?, enabled?, order? } ]
   'socials',       // [ { type, url } ]
   'tickets',       // [ { id, title, url } ]
@@ -58,7 +58,16 @@ $existing = json_read_file($contentFile);
 if (!is_array($existing)) $existing = [];
 $save = $existing;
 foreach ($allowed as $k) {
-  if (array_key_exists($k, $body)) {
+  if (!array_key_exists($k, $body)) continue;
+  if ($k === 'about') {
+    $prev = isset($existing['about']) && is_array($existing['about']) ? $existing['about'] : [];
+    $next = is_array($body['about']) ? $body['about'] : [];
+    // Deep-merge: if 'members' missing in payload, keep previous members
+    if (!array_key_exists('members', $next) && array_key_exists('members', $prev)) {
+      $next['members'] = $prev['members'];
+    }
+    $save['about'] = array_replace($prev, $next);
+  } else {
     $save[$k] = $body[$k];
   }
 }
