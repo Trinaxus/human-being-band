@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, X, Home as HomeIcon, LogIn, LogOut, Settings as SettingsIcon, Sun, Moon } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, Settings as SettingsIcon, Sun, Moon } from 'lucide-react';
 
 type HeaderProps = {
   authRole?: 'unauthenticated' | 'user' | 'admin';
@@ -120,33 +120,22 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
           <nav className="flex items-center gap-4">
             {[
               { id: 'news', label: 'News' },
-              { id: 'booking', label: 'Booking' },
-              { id: 'media', label: 'Media' },
               { id: 'about', label: 'About' },
+              { id: 'media', label: 'Media' },
+              { id: 'booking', label: 'Booking' },
             ].map(link => (
               <button
                 key={link.id}
                 onClick={() => {
                   try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
                 }}
-                className="px-3 py-1.5 text-sm rounded-md text-neutral-300 hover:text-white hover:bg-neutral-700/40"
+                className="px-3 py-1.5 text-base md:text-lg rounded-md text-white hover:text-white hover:bg-neutral-700/40 uppercase font-display tracking-wider"
               >{link.label}</button>
             ))}
           </nav>
 
           {/* Right side buttons */}
           <div className="flex items-center gap-3">
-            {/* Home button */}
-            <button
-              onClick={handleHome}
-              className="px-4 py-2 text-sm rounded-lg border-[0.5px] border-neutral-600/50 bg-neutral-700/50 text-neutral-300 hover:bg-neutral-600/40 hover:text-white transition-colors"
-              title="Home"
-            >
-              <span className="inline-flex items-center gap-2">
-                <HomeIcon className="w-4 h-4 text-[#F97316]" />
-                <span>Home</span>
-              </span>
-            </button>
             {/* Settings gear dropdown */}
             <div id="header-settings" className="relative">
               <button onClick={() => setSettingsOpen(v=>!v)} className="px-3 py-2 text-sm rounded-lg border-[0.5px] border-neutral-600/50 bg-neutral-700/50 text-neutral-300 hover:bg-neutral-600/40 hover:text-white transition-colors" title="Einstellungen" aria-haspopup>
@@ -199,17 +188,14 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
 
             {/* Mobile buttons */}
             <div className="mt-2 grid gap-2">
-              <button onClick={handleHome} className="w-full px-3 py-2 rounded-lg bg-neutral-700/40 border border-neutral-600/50 text-neutral-200 text-left">
-                <span className="inline-flex items-center gap-2"><HomeIcon className="w-4 h-4 text-[#4ECBD9]" /> Home</span>
-              </button>
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { id: 'news', label: 'News' },
-                  { id: 'booking', label: 'Booking' },
-                  { id: 'media', label: 'Media' },
                   { id: 'about', label: 'About' },
+                  { id: 'media', label: 'Media' },
+                  { id: 'booking', label: 'Booking' },
                 ].map(link => (
-                  <button key={link.id} onClick={() => { try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {} setMobileOpen(false); }} className="w-full px-3 py-2 rounded-lg bg-neutral-700/30 border border-neutral-600/40 text-neutral-200 text-left">{link.label}</button>
+                  <button key={link.id} onClick={() => { try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {} setMobileOpen(false); }} className="w-full px-3 py-2 rounded-lg bg-neutral-700/30 border border-neutral-600/40 text-white text-left uppercase font-display tracking-wider text-base">{link.label}</button>
                 ))}
               </div>
               <div className="rounded-lg bg-neutral-800/60 border border-neutral-700 p-2">
@@ -238,7 +224,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
         </div>
       )}
       {/* Gradient hairline */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[0.5px] bg-gradient-to-r from-[#F97316] via-[#F59E0B] to-[#B45309] opacity-60" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[0.5px] bg-gradient-to-r from-[#77111c33] via-[#77111c] to-[#77111c33] opacity-60" />
     </header>
   );
 };

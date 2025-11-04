@@ -26,7 +26,7 @@ const Footer: React.FC = () => {
         </div>
       </div>
       {/* Gradient hairline */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[0.5px] bg-gradient-to-r from-[#F97316] via-[#F59E0B] to-[#B45309] opacity-60" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[0.5px] bg-gradient-to-r from-[#77111c33] via-[#77111c] to-[#77111c33] opacity-60" />
     </footer>
   );
 };

@@ -30,6 +30,18 @@ const AdminSchedulerPanel: React.FC = () => {
     return map;
   }, [content.events]);
 
+  const monthKeyPrefix = useMemo(() => {
+    const y = cursor.getFullYear(); const m = String(cursor.getMonth()+1).padStart(2,'0');
+    return `${y}-${m}-`;
+  }, [cursor]);
+
+  const monthEvents = useMemo(() => {
+    const all = (content.events||[]).filter(e => (e.date||'').startsWith(monthKeyPrefix));
+    return all.slice().sort((a,b)=> (
+      (a.date||'').localeCompare(b.date||'') || (a.time||'').localeCompare(b.time||'')
+    ));
+  }, [content.events, monthKeyPrefix]);
+
   const calendar = useMemo(() => {
     const y = cursor.getFullYear(); const m = cursor.getMonth();
     const first = new Date(y, m, 1);
@@ -88,17 +100,38 @@ const AdminSchedulerPanel: React.FC = () => {
           </div>
         </div>
         <div className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40">
-          <div className="text-neutral-300 text-sm mb-2">{selected || 'Kein Tag ausgewählt'}</div>
-          <div className="space-y-2">
-            {selectedEvents.length===0 && <div className="text-[#909296] text-sm">Keine Termine</div>}
-            {selectedEvents.map((e, idx) => (
-              <div key={e.id||idx} className="p-2 rounded border border-neutral-700/40 bg-neutral-800/60">
-                <div className="text-neutral-100 text-sm font-medium">{e.title}</div>
-                <div className="text-neutral-400 text-xs">{[e.time, e.location].filter(Boolean).join(' · ')}</div>
-                {e.description && <div className="text-neutral-300 text-xs mt-1 whitespace-pre-line">{e.description}</div>}
-                {e.link && <a href={e.link} target="_blank" rel="noopener" className="inline-block mt-1 text-xs text-emerald-300 underline">Link</a>}
+          {/* Selected day (optional) */}
+          {selected && (
+            <div className="mb-3">
+              <div className="text-neutral-300 text-sm mb-2">{selected}</div>
+              <div className="space-y-2">
+                {selectedEvents.length===0 && <div className="text-[#909296] text-sm">Keine Termine</div>}
+                {selectedEvents.map((e, idx) => (
+                  <div key={e.id||idx} className="p-2 rounded border border-neutral-700/40 bg-neutral-800/60">
+                    <div className="text-neutral-100 text-sm font-medium">{e.title}</div>
+                    <div className="text-neutral-400 text-xs">{[e.time, e.location].filter(Boolean).join(' · ')}</div>
+                    {e.description && <div className="text-neutral-300 text-xs mt-1 whitespace-pre-line">{e.description}</div>}
+                    {e.link && <a href={e.link} target="_blank" rel="noopener" className="inline-block mt-1 text-xs text-emerald-300 underline">Link</a>}
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Month list */}
+          <div>
+            <div className="text-neutral-300 text-sm mb-2">Alle Termine · {monthLabel}</div>
+            <div className="space-y-2">
+              {monthEvents.length===0 && <div className="text-[#909296] text-sm">Keine Termine in diesem Monat</div>}
+              {monthEvents.map((e, idx) => (
+                <div key={e.id||idx} className="p-2 rounded border border-neutral-700/40 bg-neutral-800/60">
+                  <div className="text-neutral-100 text-sm font-medium">{e.title}</div>
+                  <div className="text-neutral-400 text-xs">{[e.date, e.time, e.location].filter(Boolean).join(' · ')}</div>
+                  {e.description && <div className="text-neutral-300 text-xs mt-1 whitespace-pre-line">{e.description}</div>}
+                  {e.link && <a href={e.link} target="_blank" rel="noopener" className="inline-block mt-1 text-xs text-emerald-300 underline">Link</a>}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

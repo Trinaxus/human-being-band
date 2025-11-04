@@ -86,6 +86,12 @@ body {
   touch-action: manipulation;
 }
 
+/* Display font utility for big headings */
+.font-display {
+  font-family: 'Bebas Neue', 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  letter-spacing: 0.08em;
+}
+
 /* Removed gradient overlay to allow static body background to be fully visible */
 
 /* Removed rotating orb layer */

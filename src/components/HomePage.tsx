@@ -82,7 +82,7 @@ const HomePage: React.FC = () => {
     };
 
     return (
-      <form onSubmit={onSubmit} className={`${cardBase} ${cardTone} p-4 space-y-3 max-w-3xl mx-auto`}>
+      <form onSubmit={onSubmit} className={`${cardBase} ${cardTone} p-4 space-y-3 max-w-[1200px] mx-auto`}>
         {okMsg && <div className="p-2 rounded bg-emerald-600/15 border border-emerald-500/30 text-emerald-200 text-sm">{okMsg}</div>}
         {errMsg && <div className="p-2 rounded bg-rose-600/15 border border-rose-500/30 text-rose-200 text-sm">{errMsg}</div>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -298,12 +298,12 @@ const HomePage: React.FC = () => {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent p-4 sm:p-6 flex items-center justify-center text-center hero-overlay">
                       <div className="max-w-3xl mx-auto">
                         {content.heroTitle && (
-                          <h2 className="uppercase text-white drop-shadow tracking-wide text-2xl sm:text-3xl font-semibold">
+                          <h2 className="font-display uppercase text-white drop-shadow tracking-wider text-2xl sm:text-3xl md:text-4xl font-extrabold">
                             {content.heroTitle}
                           </h2>
                         )}
                         {content.heroText && (
-                          <p className="mt-2 uppercase text-neutral-200 drop-shadow tracking-wider whitespace-pre-line text-xs sm:text-sm font-extralight">
+                          <p className="font-display mt-2 uppercase text-neutral-200 drop-shadow tracking-wider whitespace-pre-line text-xs sm:text-sm">
                             {content.heroText}
                           </p>
                         )}
@@ -316,7 +316,7 @@ const HomePage: React.FC = () => {
             {content.newsEnabled && Array.isArray(content.news) && content.news.some(p => p.published !== false && (p.title || p.html)) && (
               <div className="mt-4">
                 <div className="mb-3 flex items-center justify-center">
-                  <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide text-center">{lang==='en' ? 'News' : 'News'}</h3>
+                  <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{lang==='en' ? 'News' : 'News'}</h3>
                 </div>
                 <div className="space-y-4">
                   {content.news.filter(p => p.published !== false).sort((a,b)=> (b.date||'').localeCompare(a.date||'')).map(p => (
@@ -338,7 +338,7 @@ const HomePage: React.FC = () => {
           <div id="booking" className="relative" key="booking">
             <div className="p-2 sm:p-3">
               <div className="mb-3 flex items-center justify-center">
-                <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide text-center">{cfg.headline || (lang==='en'?'Booking':'Booking')}</h3>
+                <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{cfg.headline || (lang==='en'?'Booking':'Booking')}</h3>
               </div>
               <BookingForm note={cfg.note} phone={cfg.phone} />
             </div>
@@ -351,7 +351,7 @@ const HomePage: React.FC = () => {
             <div className="p-2 sm:p-3">
               <div className={`${cardBase} ${cardTone} p-3`}>
                 <div className="mb-2 flex items-center justify-center">
-                  <h3 className="text-neutral-100 font-semibold text-lg text-center">{content.about?.title || (lang==='en' ? 'About' : 'Über uns')}</h3>
+                  <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{content.about?.title || (lang==='en' ? 'About' : 'Über uns')}</h3>
                 </div>
                 {content.about?.text && <p className="text-neutral-300 text-sm whitespace-pre-line text-center">{content.about.text}</p>}
               </div>
@@ -400,7 +400,7 @@ const HomePage: React.FC = () => {
           <div className="relative" key="social">
             <div className="p-2 sm:p-3">
               <div className="mb-3 flex items-center justify-center">
-                <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide text-center">{lang==='en' ? 'Social' : 'Social'}</h3>
+                <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{lang==='en' ? 'Social' : 'Social'}</h3>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-3">
                 {content.socials.map((s, idx) => (
@@ -442,7 +442,7 @@ const HomePage: React.FC = () => {
               if (it.type==='video') { preview = { kind:'video', url: null }; }
             }
             return (
-              <div className={`${cardBase} ${theme==='light' ? 'bg-white border-neutral-200' : 'bg-neutral-900 border-neutral-700/20'}`}>
+              <div className={`${cardBase} ${cardTone}`}>
                 <button onClick={() => setOpenGals(prev => ({ ...prev, [key]: !prev[key] }))} className="w-full text-left">
                   <div className="w-full h-44 sm:h-52 overflow-hidden">
                     {preview.kind==='image' && preview.url && (<img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />)}
@@ -480,7 +480,7 @@ const HomePage: React.FC = () => {
             const largeTypes = ['track','album','playlist'];
             const height = largeTypes.includes(p.type) ? 352 : 152;
             return (
-              <div className={`${open ? 'col-span-2 sm:col-span-3 md:col-span-4' : ''} ${cardBase} ${theme==='light' ? 'bg-white border-neutral-200' : 'bg-neutral-900 border border-neutral-700/20'} overflow-hidden`}>
+              <div className={`${open ? 'col-span-2 sm:col-span-3 md:col-span-4' : ''} ${cardBase} ${cardTone} overflow-hidden`}>
                 <button onClick={onToggle} className="w-full text-left">
                   <div className="p-3">
                     {item.title && <div className="text-neutral-200 text-sm font-medium mb-2">{item.title}</div>}
@@ -559,7 +559,7 @@ const HomePage: React.FC = () => {
               <div className="p-2 sm:p-3 space-y-6">
                 {(singles.length>0 || albums.length>0 || others.length>0) && (
                   <div className="mb-6">
-                    <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide text-center">{lang==='en' ? 'Media' : 'Medien'}</h3>
+                    <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{lang==='en' ? 'Music' : 'Musik'}</h3>
                     {albums.length>0 && (
                       <div className="mt-4 space-y-2">
                         <div className="text-neutral-300 text-sm font-medium">{lang==='en'?'Albums':'Alben'}</div>
@@ -607,11 +607,15 @@ const HomePage: React.FC = () => {
                     )}
                   </div>
                 )}
+                {/* Galerie Heading */}
+                {years.length>0 && (
+                  <div className="mb-2">
+                    <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{lang==='en' ? 'Gallery' : 'Galerie'}</h3>
+                  </div>
+                )}
                 {years.map(y => (
                   <div key={y} className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide">{y}</h3>
-                    </div>
+                    {/* Jahrentitel entfernt */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                       {(byYear.get(y) || []).sort((a,b)=> a.name.localeCompare(b.name)).map(g => {
                         const key = `${y}:${g.name}`;
