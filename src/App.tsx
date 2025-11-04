@@ -26,20 +26,116 @@ function App() {
       }
     };
     check();
-    // Load SiteContent for global CSS variables (orb)
+    // Load SiteContent to apply global background image (in its own fixed layer)
     const applyContent = async () => {
       try {
         const c = await contentGet();
-        const url = (c?.content?.orbUrl || '').trim();
-        if (url) {
-          document.documentElement.style.setProperty('--orb-url', `url('${url}')`);
+        const ensureMainOverlay = () => {
+          const mainId = 'bg-main-overlay';
+          let main = document.getElementById(mainId) as HTMLDivElement | null;
+          if (!main) {
+            main = document.createElement('div');
+            main.id = mainId;
+            main.style.position = 'fixed';
+            main.style.inset = '0';
+            main.style.pointerEvents = 'none';
+            main.style.zIndex = '-2'; // below bg image (-1)
+            document.body.prepend(main);
+          }
+          // Theme-aware color (match Admin card)
+          const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+          main.style.backgroundColor = isLight ? 'rgba(250,247,242,0.95)' : 'rgba(10,10,10,0.95)';
+        };
+
+        const bg = (c?.content?.backgroundUrl || '').trim();
+        const f = (c?.content as any)?.backgroundFilter || {};
+        if (bg) {
+          const filterStr = [
+            `brightness(${(f.brightness ?? 100)}%)`,
+            `contrast(${(f.contrast ?? 100)}%)`,
+            `saturate(${(f.saturate ?? 100)}%)`,
+            `grayscale(${(f.grayscale ?? 0)}%)`,
+            `sepia(${(f.sepia ?? 0)}%)`,
+            `blur(${(f.blur ?? 0)}px)`,
+            `hue-rotate(${(f.hue ?? 0)}deg)`
+          ].join(' ');
+          // Manage background image layer
+          const bgId = 'bg-image-layer';
+          let bgLayer = document.getElementById(bgId) as HTMLDivElement | null;
+          if (!bgLayer) {
+            bgLayer = document.createElement('div');
+            bgLayer.id = bgId;
+            bgLayer.style.position = 'fixed';
+            bgLayer.style.inset = '0';
+            bgLayer.style.zIndex = '-1';
+            bgLayer.style.pointerEvents = 'none';
+            document.body.prepend(bgLayer);
+          }
+          // Remove any legacy overlay appended to body in older versions
+          const legacyOverlay = document.getElementById('bg-tint-overlay');
+          if (legacyOverlay && legacyOverlay.parentElement !== bgLayer) legacyOverlay.remove();
+          bgLayer.style.backgroundImage = `url('${bg}')`;
+          bgLayer.style.backgroundSize = 'cover';
+          bgLayer.style.backgroundRepeat = 'no-repeat';
+          try {
+            const cposX = (c?.content as any)?.backgroundPosX;
+            const cposY = (c?.content as any)?.backgroundPosY;
+            bgLayer.style.backgroundPosition = `${(typeof cposX==='number'?cposX:50)}% ${(typeof cposY==='number'?cposY:50)}%`;
+          } catch { bgLayer.style.backgroundPosition = 'center'; }
+          (bgLayer.style as any).filter = filterStr;
+          // Manage overlay tint element (as child of bg layer)
+          const id = 'bg-tint-overlay';
+          let overlay = (bgLayer && bgLayer.querySelector(`#${id}`)) as HTMLDivElement | null;
+          const needsOverlay = !!f.tintColor && (f.tintOpacity ?? 0) > 0;
+          if (needsOverlay) {
+            if (!overlay) {
+              overlay = document.createElement('div');
+              overlay.id = id;
+              overlay.style.position = 'fixed';
+              overlay.style.inset = '0';
+              overlay.style.pointerEvents = 'none';
+              overlay.style.zIndex = '-1';
+              bgLayer?.appendChild(overlay);
+            }
+            overlay.style.backgroundColor = String(f.tintColor);
+            overlay.style.opacity = String(f.tintOpacity ?? 0);
+          } else if (overlay) {
+            overlay.remove();
+          }
+          ensureMainOverlay();
         } else {
-          document.documentElement.style.removeProperty('--orb-url');
+          const bgLayer = document.getElementById('bg-image-layer');
+          if (bgLayer) bgLayer.remove();
+          // Still ensure main overlay exists (for solid background even without image)
+          const mainId = 'bg-main-overlay';
+          let main = document.getElementById(mainId) as HTMLDivElement | null;
+          if (!main) {
+            main = document.createElement('div');
+            main.id = mainId;
+            main.style.position = 'fixed';
+            main.style.inset = '0';
+            main.style.pointerEvents = 'none';
+            main.style.zIndex = '-2';
+            document.body.prepend(main);
+          }
+          const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+          main.style.backgroundColor = isLight ? 'rgba(245,245,245,0.95)' : 'rgba(10,10,10,0.95)';
         }
       } catch {}
     };
     applyContent();
     const onContentUpdated = () => applyContent();
+    // Keep main overlay in sync with theme changes (light/dark)
+    const setMainOverlayColor = () => {
+      const el = document.getElementById('bg-main-overlay') as HTMLDivElement | null;
+      if (!el) return;
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      el.style.backgroundColor = isLight ? 'rgba(250,247,242,0.95)' : 'rgba(10,10,10,0.95)';
+    };
+    const themeObserver = new MutationObserver(() => setMainOverlayColor());
+    try { themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); } catch {}
+    const onStorage = (e: StorageEvent) => { if (e.key === 'theme') setMainOverlayColor(); };
+    window.addEventListener('storage', onStorage);
     window.addEventListener('content:updated', onContentUpdated as any);
     const onVisible = () => { if (!document.hidden) check(); };
     document.addEventListener('visibilitychange', onVisible);
@@ -61,6 +157,8 @@ function App() {
       document.removeEventListener('visibilitychange', onVisible);
       window.removeEventListener('hashchange', applyViewFromUrl);
       window.removeEventListener('content:updated', onContentUpdated as any);
+      try { themeObserver.disconnect(); } catch {}
+      window.removeEventListener('storage', onStorage);
     };
   }, []);
 

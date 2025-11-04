@@ -111,8 +111,8 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoggedIn }) => {
     <div className="w-full px-6">
       <div className="w-full max-w-md mx-auto">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#4ECBD9]/10 mb-4 shadow-glow-cyan">
-            <TicketCheck className="h-8 w-8 text-[#4ECBD9]" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#F97316]/10 mb-4 shadow-glow-cyan">
+            <TicketCheck className="h-8 w-8 text-[#F97316]" />
           </div>
           <p className="text-[#909296]">Bitte anmelden oder registrieren</p>
         </div>
@@ -124,7 +124,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoggedIn }) => {
             type="button"
             onClick={() => setMode('login')}
             aria-pressed={mode === 'login'}
-            className={`px-4 py-2 text-sm transition-colors ${mode === 'login' ? 'bg-[#0d1718] text-[#4ECBD9] ring-1 ring-[#4ECBD9]/40' : 'text-neutral-300 hover:bg-neutral-600/40'}`}
+            className={`px-4 py-2 text-sm transition-colors ${mode === 'login' ? 'bg-[#0d1718] text-[#F97316] ring-1 ring-[#F97316]/40' : 'text-neutral-300 hover:bg-neutral-600/40'}`}
           >
             Anmelden
           </button>
@@ -132,14 +132,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoggedIn }) => {
             type="button"
             onClick={() => setMode('register')}
             aria-pressed={mode === 'register'}
-            className={`px-4 py-2 text-sm transition-colors ${mode === 'register' ? 'bg-[#0d1718] text-[#4ECBD9] ring-1 ring-[#4ECBD9]/40' : 'text-neutral-300 hover:bg-neutral-600/40'}`}
+            className={`px-4 py-2 text-sm transition-colors ${mode === 'register' ? 'bg-[#0d1718] text-[#F97316] ring-1 ring-[#F97316]/40' : 'text-neutral-300 hover:bg-neutral-600/40'}`}
           >
             Registrieren
           </button>
           </div>
         </div>
 
-        <form id="login-form" onSubmit={handleLogin} className="bg-neutral-800/50 backdrop-blur-sm border-[0.1px] border-[#4ECBD9] rounded-xl p-6 space-y-4">
+        <form id="login-form" onSubmit={handleLogin} className="bg-neutral-800/50 backdrop-blur-sm border-[0.1px] border-[#B45309] rounded-xl p-6 space-y-4">
           {/* Social login */}
           <div>
             <a
@@ -152,10 +152,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoggedIn }) => {
           <div className="h-px bg-neutral-700/50" />
           {/* Hinweis-Block */}
           {error && (
-            <div className="p-4 rounded-lg bg-[#F471B5]/10 border border-[#F471B5]/20 flex items-start space-x-3">
-            <AlertCircle className="h-5 w-5 text-[#F471B5] flex-shrink-0 mt-0.5" />
-            <p className="text-sm text-[#F471B5]">{error}</p>
-          </div>
+            <div className="p-4 rounded-lg bg-[#DC2626]/10 border border-[#DC2626]/30 flex items-start space-x-3">
+              <AlertCircle className="h-5 w-5 text-[#DC2626] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-[#DC2626]">{error}</p>
+            </div>
           )}
 
           {mode === 'register' && (
@@ -166,7 +166,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoggedIn }) => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-2 bg-neutral-700/50 border border-[#4ECBD9]/10 rounded-lg text-[#C1C2C5] placeholder-[#909296] focus:outline-none focus:ring-2 focus:ring-[#4ECBD9]/20 focus:border-transparent transition-colors"
+                className="w-full px-4 py-2 bg-neutral-700/50 border border-[#F97316]/10 rounded-lg text-[#C1C2C5] placeholder-[#909296] focus:outline-none focus:ring-2 focus:ring-[#F97316]/20 focus:border-transparent transition-colors"
                 placeholder="Ihr Name"
                 required
                 disabled={loading}
@@ -261,10 +261,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLoggedIn }) => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex items-center justify-center px-6 py-3 text-sm font-medium rounded-xl text-[#C1C2C5] bg-[#4ECBD9]/10 border border-[#4ECBD9]/30 hover:bg-[#4ECBD9]/20 hover:border-[#4ECBD9]/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#4ECBD9]/10 disabled:hover:border-[#4ECBD9]/30"
+            className="w-full flex items-center justify-center px-6 py-3 text-sm font-medium rounded-xl text-[#C1C2C5] bg-[#F97316]/10 border border-[#F97316]/30 hover:bg-[#F97316]/20 hover:border-[#F97316]/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#F97316]/10 disabled:hover:border-[#F97316]/30"
           >
             {loading ? (
-              <div className="w-5 h-5 border-2 border-[#4ECBD9]/30 border-t-[#4ECBD9] rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-[#F97316]/30 border-t-[#F97316] rounded-full animate-spin" />
             ) : (
               mode === 'login' ? (needsTotp ? 'Bestätigen' : 'Anmelden') : 'Registrieren'
             )}

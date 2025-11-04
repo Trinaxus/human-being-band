@@ -9,15 +9,15 @@ const Footer: React.FC = () => {
           <div className="text-neutral-400 text-sm flex items-center">
             <span>Made with</span>
             <Heart size={16} className="text-neutral-400 mx-1" />
-            <span>for ton.band sessions</span>
+            <span>for Human Being Band by trinax</span>
           </div>
           <div className="flex items-center gap-4">
             <a 
-              href="https://session.tonbandleipzig.de" 
+              href="https://human-being-band.de" 
               className="text-neutral-400 hover:text-neutral-200 transition-colors"
               target="_blank"
               rel="noopener noreferrer"
-              title="session.tonbandleipzig.de"
+              title="human-being-band.de"
             >
               <Github size={20} />
             </a>
@@ -26,7 +26,7 @@ const Footer: React.FC = () => {
         </div>
       </div>
       {/* Gradient hairline */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[0.5px] bg-gradient-to-r from-[#4ECBD9] via-[#F471B5] to-[#4ECBD9] opacity-60" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[0.5px] bg-gradient-to-r from-[#F97316] via-[#F59E0B] to-[#B45309] opacity-60" />
     </footer>
   );
 };

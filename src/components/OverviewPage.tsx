@@ -145,7 +145,7 @@ const OverviewPage: React.FC = () => {
               )}
             </div>
             {(content.heroTitle || content.heroText) && (
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent p-4 sm:p-6 flex items-center justify-center text-center">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent p-4 sm:p-6 flex items-center justify-center text-center hero-overlay">
                 <div className="max-w-3xl mx-auto">
                   {content.heroTitle && (
                     <h2 className="uppercase text-white drop-shadow tracking-wide text-2xl sm:text-3xl font-semibold">

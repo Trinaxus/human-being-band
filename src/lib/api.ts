@@ -275,13 +275,27 @@ export type SiteContent = {
   heroUrl?: string;
   heroTitle?: string;
   heroText?: string;
-  // Hero sizing and positioning
   heroHeight?: number; // in px
   heroFocusX?: number; // 0..100 (%), horizontal focus
   heroFocusY?: number; // 0..100 (%), vertical focus
   heroZoom?: number;   // 100..150 (%)
   // Global background orb image URL
-  orbUrl?: string;
+  backgroundUrl?: string;
+  // Background image position (percentages)
+  backgroundPosX?: number; // 0..100 (%), default 50
+  backgroundPosY?: number; // 0..100 (%), default 50
+  // Background filter and tint configuration
+  backgroundFilter?: {
+    brightness?: number; // 0 - 200 (%), default 100
+    contrast?: number;   // 0 - 200 (%), default 100
+    saturate?: number;   // 0 - 200 (%), default 100
+    grayscale?: number;  // 0 - 100 (%)
+    sepia?: number;      // 0 - 100 (%)
+    blur?: number;       // 0 - 20 (px)
+    hue?: number;        // 0 - 360 (deg)
+    tintColor?: string;  // hex or rgb(a)
+    tintOpacity?: number;// 0 - 1
+  };
   contact?: { email?: string; phone?: string; address?: string };
   gallery?: string[];
   // New: direct build URL to display on Home
@@ -290,7 +304,22 @@ export type SiteContent = {
   mapAddress?: string;
   // Keep embedUrl for direct iframe usage (preferred if present)
   map?: { embedUrl?: string; lat?: number; lng?: number };
-  reviews?: Array<{ id: string; author?: string; text: string; rating?: number; created_at?: string }>;
+  // Structured galleries (admin-managed): grouped by year and gallery name
+  galleries?: Array<{
+    year: number;
+    name: string;
+    status?: 'public' | 'internal' | 'locked';
+    items: Array<{ type: 'image' | 'video' | 'youtube' | 'instagram'; url: string; title?: string }>;
+  }>;
+  sectionsOrder?: string[];
+  newsEnabled?: boolean;
+  news?: Array<{
+    id: string;
+    title: string;
+    html: string;
+    date?: string;
+    published?: boolean;
+  }>;
   about?: { title?: string; text?: string };
   // Social links for display across the site
   socials?: Array<{ type: 'instagram' | 'facebook' | 'youtube' | 'tiktok' | 'twitter' | 'linkedin' | 'spotify' | 'soundcloud' | 'bandcamp' | 'website' | 'whatsapp'; url: string }>;
@@ -307,35 +336,30 @@ export async function contentSave(content: SiteContent) {
   return apiPost<{ ok: boolean; content: SiteContent }>(`/content.php`, content);
 }
 
-// --- Comments moderation (admin only) ---
-export type CommentItem = { id: string; author?: string; text: string; rating?: number; created_at?: string; approved_at?: string };
-
-export async function commentsList() {
-  return apiGet<{ ok: boolean; pending: CommentItem[]; approved: CommentItem[] }>(`/comments.php?action=list`);
-}
-
-export async function commentSubmit(author: string | undefined, text: string, rating?: number) {
-  return apiPost<{ ok: boolean }>(`/comments.php?action=submit`, { author, text, rating });
-}
-
-// Public (no auth) – get approved comments only for Home
-export async function commentsPublicApproved() {
-  return apiGet<{ ok: boolean; approved: CommentItem[] }>(`/comments.php?action=public`);
-}
-
-export async function commentsApprove(id: string) {
-  return apiPost<{ ok: boolean }>(`/comments.php?action=approve`, { id });
-}
-
-export async function commentsDelete(id: string) {
-  return apiPost<{ ok: boolean }>(`/comments.php?action=delete`, { id });
+// --- Uploads scanner ---
+export async function scanUploads() {
+  return apiGet<{ ok: boolean; galleries: Array<{ year: number; name: string; items: Array<{ type: 'image' | 'video'; url: string }> }> }>(`/scan_uploads.php`);
 }
 
 // --- Generic file upload ---
-export async function uploadFile(file: File) {
+export async function uploadFile(file: File, opts?: { year?: number; gallery?: string }) {
   const form = new FormData();
   form.append('file', file);
+  if (opts?.year) form.append('year', String(opts.year));
+  if (opts?.gallery) form.append('gallery', opts.gallery);
   return apiPost<{ ok: boolean; name: string; url: string; file_path: string; size: number; type: string }>(`/upload.php`, form);
+}
+
+// Persist gallery items to metadata.json in the uploads folder for given year/gallery
+export async function writeMetadata(
+  year: number,
+  gallery: string,
+  items: Array<{ type: 'image'|'video'|'youtube'|'instagram'; url: string; title?: string }>,
+  status?: 'public'|'internal'|'locked'
+) {
+  const payload: any = { year, gallery, items };
+  if (status) payload.status = status;
+  return apiPost<{ ok: boolean; written: number }>(`/write_metadata.php`, payload);
 }
 
 // --- Two-Factor (TOTP) ---

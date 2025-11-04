@@ -33,16 +33,22 @@ $allowed = [
   'heroUrl', 'heroTitle', 'heroText',
   'heroHeight', 'heroFocusX', 'heroFocusY',
   'heroZoom',
-  'orbUrl',      // background orb image URL
-  'contact',     // { email, phone, address }
-  'gallery',     // [urls]
-  'buildUrl',    // string
-  'mapAddress',  // string
-  'map',         // { embedUrl?: string, lat?: number, lng?: number }
-  'reviews',     // optional preset reviews content
-  'about',       // { title?: string, text?: string }
-  'socials',     // [ { type, url } ]
-  'tickets'      // [ { id, title, url } ]
+  'backgroundUrl', // static page background image URL
+  'backgroundPosX', // bg position X percent
+  'backgroundPosY', // bg position Y percent
+  'backgroundFilter', // filters and tint for background image
+  'contact',       // { email, phone, address }
+  'gallery',       // [urls]
+  'buildUrl',      // string
+  'mapAddress',    // string
+  'map',           // { embedUrl?: string, lat?: number, lng?: number }
+  'about',         // { title?: string, text?: string }
+  'socials',       // [ { type, url } ]
+  'tickets',       // [ { id, title, url } ]
+  'galleries',     // structured galleries
+  'sectionsOrder', // custom order of sections on Home
+  'newsEnabled',   // toggle for news/blog visibility
+  'news'           // array of posts { id, title, html, date, published }
 ];
 // Start from existing content and overlay only provided keys
 $existing = json_read_file($contentFile);

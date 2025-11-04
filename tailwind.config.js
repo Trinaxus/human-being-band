@@ -5,13 +5,13 @@ export default {
     extend: {
       colors: {
         primary: {
-          300: '#4ECBD9',
-          400: '#3BBAC8',
-          500: '#2AA9B7'
+          300: '#FDBA74', // orange-300
+          400: '#FB923C', // orange-400
+          500: '#F97316'  // orange-500
         },
         secondary: {
-          400: '#F471B5',
-          500: '#EC4899'
+          400: '#F59E0B', // amber-500
+          500: '#B45309'  // orange-700 / warm brown accent
         },
         neutral: {
           100: '#FFFFFF',
@@ -26,7 +26,7 @@ export default {
         }
       },
       boxShadow: {
-        'glow-cyan': '0 0 20px rgba(78, 203, 217, 0.1)'
+        'glow-cyan': '0 0 20px rgba(249, 115, 22, 0.15)' // warm glow
       }
     },
   },

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { API_BASE } from '../lib/api';
 import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle } from 'lucide-react';
-import { contentGet, commentsPublicApproved, commentSubmit, ordersCreate, type SiteContent, type CommentItem, type OrderItem } from '../lib/api';
+import { contentGet, ordersCreate, type SiteContent, type OrderItem } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 
 const HomePage: React.FC = () => {
@@ -8,27 +9,57 @@ const HomePage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [content, setContent] = useState<SiteContent>({});
-  const [commentsApproved, setCommentsApproved] = useState<CommentItem[]>([]);
-  const [sortBy, setSortBy] = useState<'highest' | 'newest'>('highest');
   const [lastOrder, setLastOrder] = useState<OrderItem | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [formName, setFormName] = useState('');
-  const [formRating, setFormRating] = useState<number>(5);
-  const [formText, setFormText] = useState('');
-  const [formOk, setFormOk] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-  const [formBusy, setFormBusy] = useState(false);
   // Global confirmation after ticket booking
   const [orderOk, setOrderOk] = useState<string | null>(null);
 
   // Tickets modal state
   const [ticketOpen, setTicketOpen] = useState(false);
+  const lang = useMemo<'de'|'en'>(() => {
+    try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
+  }, []);
+  const theme = useMemo<'dark'|'light'>(() => {
+    try { const t = window.localStorage.getItem('theme'); return (t === 'light' ? 'light' : 'dark'); } catch { return 'dark'; }
+  }, []);
+  const cardBase = 'rounded-xl border';
+  const cardTone = theme === 'light' ? 'bg-white border-[#E7DED0]' : 'bg-neutral-900 border-neutral-700/20';
+  const cardToneAlt = theme === 'light' ? 'bg-white border-[#E7DED0]' : 'bg-neutral-900 border-neutral-700/20';
   const [ticketSel, setTicketSel] = useState<{ id: string; title: string; url: string; image?: string } | null>(null);
   const [ticketStep, setTicketStep] = useState<1 | 2 | 3>(1);
   const [ticketDate, setTicketDate] = useState<string | null>(null);
   const [buyerName, setBuyerName] = useState<string>('');
   const [buyerEmail, setBuyerEmail] = useState<string>('');
   const [paymentChoice, setPaymentChoice] = useState<'online' | 'onsite'>('onsite');
+
+  // Instagram thumbnails (server-side preview fetch)
+  const [instaThumbs, setInstaThumbs] = useState<Record<string, string | null>>({});
+  // Open state of gallery folders on Home
+  const [openGals, setOpenGals] = useState<Record<string, boolean>>({});
+
+  // Lightbox state
+  type LBItem = { type: 'image'|'video'|'youtube'|'instagram'; url: string; title?: string };
+  const [lbOpen, setLbOpen] = useState(false);
+  const [lbList, setLbList] = useState<LBItem[]>([]);
+  const [lbIndex, setLbIndex] = useState(0);
+  const openLightbox = (items: LBItem[], start: number) => {
+    setLbList(items);
+    setLbIndex(Math.max(0, Math.min(start, items.length - 1)));
+    setLbOpen(true);
+    document.body.style.overflow = 'hidden';
+  };
+  const closeLightbox = () => { setLbOpen(false); setLbList([]); setLbIndex(0); document.body.style.overflow = ''; };
+  const nextLb = () => setLbIndex(i => (i + 1) % (lbList.length || 1));
+  const prevLb = () => setLbIndex(i => (i - 1 + (lbList.length || 1)) % (lbList.length || 1));
+  useEffect(() => {
+    if (!lbOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowRight') nextLb();
+      if (e.key === 'ArrowLeft') prevLb();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [lbOpen, lbList.length]);
   const openTicket = (t: { id: string; title: string; url: string }) => {
     if (!authenticated) {
       setOrderOk('Bitte zuerst einloggen, um Tickets zu buchen.');
@@ -102,11 +133,6 @@ const HomePage: React.FC = () => {
       try {
         const res = await contentGet();
         setContent(res.content || {});
-        // load comments (approved only, public)
-        try {
-          const cm = await commentsPublicApproved();
-          setCommentsApproved(cm.approved || []);
-        } catch {}
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Fehler beim Laden');
       } finally {
@@ -114,6 +140,37 @@ const HomePage: React.FC = () => {
       }
     })();
   }, []);
+
+  // Fetch Instagram thumbnails when galleries change
+  useEffect(() => {
+    const urls = new Set<string>();
+    (content.galleries || []).forEach(g => (g.items||[]).forEach(it => { if (it.type === 'instagram' && it.url) urls.add(it.url); }));
+    const missing = Array.from(urls).filter(u => instaThumbs[u] === undefined);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const entries: Array<[string, string | null]> = [];
+      await Promise.all(missing.map(async (u) => {
+        try {
+          const q = new URLSearchParams({ url: u }).toString();
+          const resp = await fetch(`${API_BASE}/link_preview.php?${q}`, { credentials: 'include' });
+          const data = await resp.json().catch(() => ({}));
+          const thumb = data?.thumbnail || null;
+          entries.push([u, typeof thumb === 'string' ? thumb : null]);
+        } catch {
+          entries.push([u, null]);
+        }
+      }));
+      if (!cancelled && entries.length) {
+        setInstaThumbs(prev => {
+          const next = { ...prev } as Record<string, string | null>;
+          entries.forEach(([u, t]) => { next[u] = t; });
+          return next;
+        });
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [content.galleries]);
 
   // (Overview of own orders moved out of Home page by request)
 
@@ -131,24 +188,6 @@ const HomePage: React.FC = () => {
     return list.filter(t => t && (t.active !== false));
   }, [content.tickets]);
 
-  // Prepare reviews data (prefer content.reviews with ratings)
-  const reviews = useMemo(() => {
-    const r = Array.isArray(content.reviews) ? content.reviews : [];
-    return r.filter(x => !!x && typeof x.text === 'string');
-  }, [content.reviews]);
-
-  const ratingStats = useMemo(() => {
-    const rated = reviews.filter(r => typeof r.rating === 'number');
-    const count = rated.length;
-    const avg = count ? rated.reduce((s, r) => s + (r.rating || 0), 0) / count : 0;
-    const buckets = [0,0,0,0,0]; // index 0 => 1 star ... index 4 => 5 stars
-    rated.forEach(r => {
-      const v = Math.max(1, Math.min(5, Math.round(r.rating || 0)));
-      buckets[v-1] += 1;
-    });
-    return { count, avg, buckets };
-  }, [reviews]);
-
   const SocialIcon: React.FC<{ type?: string; className?: string }> = ({ type, className }) => {
     const cls = className || 'h-5 w-5 text-neutral-100';
     switch (type) {
@@ -165,71 +204,22 @@ const HomePage: React.FC = () => {
     }
   };
 
-  const formatRelative = (iso?: string) => {
-    if (!iso) return '';
-    try {
-      const d = new Date(iso);
-      const diffMs = Date.now() - d.getTime();
-      const days = Math.floor(diffMs / (1000*60*60*24));
-      if (days < 1) return 'Vor wenigen Stunden';
-      const months = Math.floor(days / 30);
-      if (months < 1) return `Vor ${days} Tagen`;
-      const years = Math.floor(months / 12);
-      if (years >= 1) return `Vor ${years} Jahren`;
-      return `Vor ${months} Monaten`;
-    } catch {
-      return '';
-    }
-  };
+  
+  const defaultOrder = ['news','booking','media','about','social','contact','map'] as const;
+  const sectionsOrderRaw = Array.isArray((content as any).sectionsOrder) && (content as any).sectionsOrder.length ? (content as any).sectionsOrder as string[] : [...defaultOrder];
+  const sectionsOrder = Array.from(new Set([...(sectionsOrderRaw||[]), ...defaultOrder]));
 
-  const sortedReviews = useMemo(() => {
-    const list = [...reviews];
-    if (sortBy === 'highest') {
-      return list.sort((a,b) => (b.rating || 0) - (a.rating || 0));
-    }
-    // newest
-    return list.sort((a,b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
-  }, [reviews, sortBy]);
-
-  const submitReview = async () => {
-    setFormBusy(true);
-    setFormOk(null);
-    setFormError(null);
-    try {
-      if (!formText.trim()) throw new Error('Bitte einen Text eingeben.');
-      await commentSubmit(formName.trim() || undefined, formText.trim(), formRating);
-      setFormOk('Danke! Ihre Bewertung wurde eingereicht und wartet auf Freigabe.');
-      setFormText('');
-      setFormName('');
-      setFormRating(5);
-      setShowForm(false);
-    } catch (e) {
-      setFormError(e instanceof Error ? e.message : 'Senden fehlgeschlagen');
-    } finally {
-      setFormBusy(false);
-    }
-  };
-
-  return (
-    <div className="w-full max-w-[1200px] mx-auto px-0 sm:px-6 self-start mt-2 md:mt-3">
-      <section className="relative bg-neutral-900/80 rounded-xl border-[0.5px] border-neutral-700/20 p-4 sm:p-6 space-y-6">
-        {error && <div className="p-3 rounded-lg bg-neutral-800/60 border border-neutral-700 text-[#F471B5] text-sm">{error}</div>}
-        {loading && <div className="text-neutral-400">Lade…</div>}
-        {orderOk && (
-          <div className="p-3 rounded-lg bg-neutral-900/60 border border-emerald-500/40 text-emerald-300 text-sm">
-            {orderOk}
-          </div>
-        )}
-
-        {!loading && (
-          <>
-            {/* Hero (Bild mit Overlay-Text) */}
+  const renderSection = (key: string) => {
+    switch (key) {
+      case 'news':
+        return (
+          <React.Fragment key="news">
+            <div id="news" />
             {(content.heroTitle || content.heroText || content.heroUrl) && (
-              <div className="relative left-1/2 w-screen -translate-x-1/2 sm:static sm:w-auto sm:translate-x-0">
-                <div className="relative rounded-none sm:rounded-xl overflow-hidden bg-neutral-800/60 border-t border-b sm:border border-neutral-700">
+              <div className="relative">
+                <div className="relative overflow-hidden">
                   <div className="w-full" style={{ height: `${content.heroHeight ?? 300}px` }}>
                     {content.heroUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={content.heroUrl}
                         alt="Hero"
@@ -245,7 +235,7 @@ const HomePage: React.FC = () => {
                     )}
                   </div>
                   {(content.heroTitle || content.heroText) && (
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent p-4 sm:p-6 flex items-center justify-center text-center">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent p-4 sm:p-6 flex items-center justify-center text-center hero-overlay">
                       <div className="max-w-3xl mx-auto">
                         {content.heroTitle && (
                           <h2 className="uppercase text-white drop-shadow tracking-wide text-2xl sm:text-3xl font-semibold">
@@ -263,259 +253,327 @@ const HomePage: React.FC = () => {
                 </div>
               </div>
             )}
-
-            {/* Begrüßung + Meine Bestellungen wurde in die Übersicht ausgelagert */}
-
-            {/* Tickets (unter dem Hero) */}
-            {ticketsActive.length > 0 && (
-              <div className="relative left-1/2 w-screen -translate-x-1/2 sm:static sm:w-auto sm:translate-x-0">
-                <div className="rounded-none sm:rounded-xl bg-neutral-900/80 border-t border-b sm:border sm:rounded-xl border-neutral-700/30 p-4 sm:p-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide">Tickets</h3>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {ticketsActive.map((t) => (
-                      <div key={t.id} className="p-4 rounded-none sm:rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 flex items-center gap-3">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={t.image || 'https://via.placeholder.com/100'}
-                          alt={t.title}
-                          className="w-14 h-14 rounded-full object-cover border border-neutral-700 flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="text-neutral-100 font-medium truncate">{t.title}</div>
-                          {t.description && (
-                            <div className="text-neutral-400 text-xs truncate mt-0.5">{t.description}</div>
-                          )}
-                        </div>
-                        <button onClick={() => openTicket(t as any)} disabled={!authenticated} className={`px-3 py-1.5 rounded-lg border-[0.5px] border-neutral-700/40 ${authenticated? 'text-neutral-100 hover:bg-neutral-800' : 'text-neutral-500 opacity-60 cursor-not-allowed'}`}>{authenticated ? 'Buchen' : 'Login nötig'}</button>
-                      </div>
-                    ))}
-                  </div>
+            {content.newsEnabled && Array.isArray(content.news) && content.news.some(p => p.published !== false && (p.title || p.html)) && (
+              <div className="mt-4">
+                <div className="mb-3 flex items-center justify-center">
+                  <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide text-center">{lang==='en' ? 'News' : 'News'}</h3>
+                </div>
+                <div className="space-y-4">
+                  {content.news.filter(p => p.published !== false).sort((a,b)=> (b.date||'').localeCompare(a.date||'')).map(p => (
+                    <article key={p.id} className={`p-3 ${cardBase} ${cardTone}`}>
+                      {p.title && <h3 className="text-neutral-100 text-lg font-semibold mb-1">{p.title}</h3>}
+                      {p.date && <div className="text-neutral-400 text-xs mb-2">{new Date(p.date).toLocaleDateString('de-DE')}</div>}
+                      <div className="prose prose-invert max-w-none text-neutral-200" dangerouslySetInnerHTML={{ __html: p.html || '' }} />
+                    </article>
+                  ))}
                 </div>
               </div>
             )}
-
-            {/* Über uns */}
-            {(content.about?.title || content.about?.text) && (
-              <div className="relative left-1/2 w-screen -translate-x-1/2 sm:static sm:w-auto sm:translate-x-0">
-                <div className="p-4 sm:p-6 rounded-none sm:rounded-xl bg-neutral-900/80 border-t border-b sm:border sm:rounded-xl border-neutral-700/30">
-                  {content.about?.title && <h3 className="text-neutral-100 font-semibold text-lg mb-1">{content.about.title}</h3>}
-                  {content.about?.text && <p className="text-neutral-300 text-sm whitespace-pre-line">{content.about.text}</p>}
-                </div>
+          </React.Fragment>
+        );
+      case 'booking':
+        return ticketsActive.length > 0 ? (
+          <div id="booking" className="relative" key="booking">
+            <div className="p-2 sm:p-3">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide">Tickets</h3>
               </div>
-            )}
-
-            {/* Kontakt */}
-            {(content.contact?.email || content.contact?.phone || content.contact?.address) && (
-              <div className="relative left-1/2 w-screen -translate-x-1/2 sm:static sm:w-auto sm:translate-x-0">
-                <div className="p-4 sm:p-6 rounded-none sm:rounded-xl bg-neutral-900/80 border-t border-b sm:border sm:rounded-xl border-neutral-700/30">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {content.contact?.email && (
-                      <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 text-neutral-200 text-sm">{content.contact.email}</div>
-                    )}
-                    {content.contact?.phone && (
-                      <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 text-neutral-200 text-sm">{content.contact.phone}</div>
-                    )}
-                    {content.contact?.address && (
-                      <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 text-neutral-200 text-sm">{content.contact.address}</div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Social (über Galerie) */}
-            {Array.isArray(content.socials) && content.socials.length > 0 && (
-              <div className="relative left-1/2 w-screen -translate-x-1/2 sm:static sm:w-auto sm:translate-x-0">
-                <div className="p-4 sm:p-6 rounded-none sm:rounded-xl bg-neutral-900/80 border-t border-b sm:border sm:rounded-xl border-neutral-700/30">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide">Social</h3>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    {content.socials.map((s, idx) => (
-                      <a
-                        key={idx}
-                        href={s.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        aria-label={s.type || 'link'}
-                        className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 hover:bg-neutral-800"
-                        title={s.type || s.url}
-                      >
-                        <SocialIcon type={s.type} />
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Galerie */}
-            {Array.isArray(content.gallery) && content.gallery.length > 0 && (
-              <div className="relative left-1/2 w-screen -translate-x-1/2 sm:static sm:w-auto sm:translate-x-0">
-                <div className="p-4 sm:p-6 rounded-none sm:rounded-xl bg-neutral-900/80 border-t border-b sm:border sm:rounded-xl border-neutral-700/30">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide">Galerie</h3>
-                  </div>
-                  <div className="overflow-x-auto no-scrollbar">
-                    <div className="flex gap-3 snap-x snap-mandatory items-start">
-                      {content.gallery.map((url, idx) => (
-                        <div key={idx} className="shrink-0 basis-1/2 sm:basis-1/3 md:basis-1/4 snap-start">
-                          <div className="w-full rounded-lg overflow-hidden bg-neutral-800/60 border border-neutral-700">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={url} alt={`Bild ${idx+1}`} className="w-full h-auto object-contain" />
-                          </div>
-                        </div>
-                      ))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {ticketsActive.map((t) => (
+                  <div key={t.id} className={`p-3 ${cardBase} ${cardToneAlt} flex items-center gap-3`}>
+                    <img src={t.image || 'https://via.placeholder.com/100'} alt={t.title} className="w-14 h-14 rounded-full object-cover border border-neutral-700 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-neutral-100 font-medium truncate">{t.title}</div>
+                      {t.description && (
+                        <div className="text-neutral-400 text-xs truncate mt-0.5">{t.description}</div>
+                      )}
                     </div>
+                    <button onClick={() => openTicket(t as any)} disabled={!authenticated} className={`px-3 py-1.5 rounded-lg border-[0.5px] border-neutral-700/40 ${authenticated? 'text-neutral-100 hover:bg-neutral-800' : 'text-neutral-500 opacity-60 cursor-not-allowed'}`}>{authenticated ? 'Buchen' : 'Login nötig'}</button>
                   </div>
-                </div>
+                ))}
               </div>
-            )}
-
-            {/* Bewertungen/Kommentare (oberhalb der Karte) */}
-            <div className="relative left-1/2 w-screen -translate-x-1/2 sm:static sm:w-auto sm:translate-x-0">
-              <div className="rounded-none sm:rounded-xl bg-neutral-900 border-t border-b sm:border sm:rounded-xl border-neutral-700/30 p-4 sm:p-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide">Bewertungen</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-neutral-400 text-sm">Sort by:</span>
-                    <select
-                      className="px-2 py-1 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 text-sm"
-                      value={sortBy}
-                      onChange={e => setSortBy(e.target.value as any)}
-                    >
-                      <option value="highest">Highest rated</option>
-                      <option value="newest">Newest</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                  {/* Histogramm links */}
-                  <div className="lg:col-span-6 space-y-2">
-                    {[5,4,3,2,1].map((star) => {
-                      const idx = star - 1;
-                      const total = ratingStats.count || (reviews.length ? 1 : commentsApproved.length || 1);
-                      const val = ratingStats.count ? (ratingStats.buckets[idx] || 0) : (star === 5 ? (commentsApproved.length || reviews.length) : 0);
-                      const pct = Math.round((val/total)*100);
-                      return (
-                        <div key={star} className="flex items-center gap-3">
-                          <div className="text-white text-sm">{'★'.repeat(star)}<span className="text-neutral-600">{'★'.repeat(5-star)}</span></div>
-                          <div className="flex-1 h-2 bg-neutral-800 rounded">
-                            <div className="h-2 bg-neutral-200 rounded" style={{ width: `${pct}%` }} />
-                          </div>
-                          <div className="w-6 text-right text-neutral-300 text-sm">{val}</div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Zusammenfassung rechts */}
-                  <div className="lg:col-span-6">
-                    <div className="relative h-full p-5 rounded-2xl bg-neutral-800/40 border-[0.5px] border-neutral-700/30 flex flex-col items-center justify-center overflow-hidden">
-                      {/* Summary block (avg/stars/count) */}
-                      <div className="relative flex flex-col items-center gap-1 py-2 px-20 sm:px-24">
-                        <div className="relative z-10 text-3xl font-semibold text-neutral-100">{(ratingStats.count ? ratingStats.avg : 5).toFixed(1)}</div>
-                        <div className="relative z-10 text-white leading-none">{'★'.repeat(5)}</div>
-                        <div className="relative z-10 text-neutral-300 text-sm">{ratingStats.count || commentsApproved.length} Bewertungen</div>
-                      </div>
-
-                      <button onClick={() => setShowForm(v => !v)} className="mt-4 px-4 py-2 rounded-xl border-[0.5px] border-neutral-600 text-neutral-100 hover:bg-neutral-800">Schreiben Sie eine Bewertung</button>
-                    </div>
-                  </div>
-                </div>
-
-                {showForm && (
-                  <div className="rounded-xl bg-neutral-900 border-[0.5px] border-neutral-700/30 p-4 space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <input
-                        value={formName}
-                        onChange={e => setFormName(e.target.value)}
-                        placeholder="Ihr Name (optional)"
-                        className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 placeholder-[#909296] focus:outline-none"
-                      />
-                      <div className="sm:col-span-2 flex items-center gap-2">
-                        <span className="text-neutral-300 text-sm">Bewertung:</span>
-                        {[1,2,3,4,5].map(n => (
-                          <button
-                            key={n}
-                            type="button"
-                            onClick={() => setFormRating(n)}
-                            className={(n <= formRating ? 'text-[#FFD166]' : 'text-neutral-600')+ ' text-lg'}
-                          >★</button>
-                        ))}
-                      </div>
-                    </div>
-                    <textarea
-                      value={formText}
-                      onChange={e => setFormText(e.target.value)}
-                      rows={4}
-                      placeholder="Ihre Erfahrung…"
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 placeholder-[#909296] focus:outline-none"
-                    />
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => setShowForm(false)} className="px-3 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Abbrechen</button>
-                      <button disabled={formBusy} onClick={submitReview} className="px-3 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-100 hover:bg-neutral-800 disabled:opacity-60">Absenden</button>
-                    </div>
-                    {formOk && <div className="text-[13px] text-[#4ECBD9]">{formOk}</div>}
-                    {formError && <div className="text-[13px] text-[#F471B5]">{formError}</div>}
-                  </div>
-                )}
-
-                {/* Liste */}
-                {(reviews.length > 0 || commentsApproved.length > 0) && (
-                  <div className="space-y-3">
-                    {(reviews.length > 0 ? sortedReviews : commentsApproved).map((r: any) => (
-                      <div key={r.id} className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
-                        <div className="flex items-center justify-between">
-                          <div className="text-neutral-100 text-sm font-medium">{r.author || 'Anonym'}</div>
-                          <div className="text-neutral-400 text-xs">{formatRelative(r.created_at)}</div>
-                        </div>
-                        {typeof r.rating === 'number' && (
-                          <div className="text-[13px] text-white mt-0.5">{'★'.repeat(Math.max(1, Math.min(5, Math.round(r.rating))))}</div>
-                        )}
-                        <div className="text-neutral-300 text-sm whitespace-pre-line mt-1">{r.text}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
             </div>
-
-            {/* Karte (ganz unten, full-bleed) */}
-            {mapSrc && (
-              <div className="relative left-1/2 w-screen -translate-x-1/2 sm:static sm:w-auto sm:translate-x-0">
-                <div className="relative overflow-hidden">
-                  <iframe
-                    title="Karte"
-                    src={mapSrc}
-                    className="w-screen sm:w-full h-72 md:h-96"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    style={{ filter: 'grayscale(100%) brightness(0.6) contrast(1.05)' }}
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-black/20" />
+          </div>
+        ) : null;
+      case 'about':
+        return (content.about?.title || content.about?.text || true) ? (
+          <div id="about" className="relative" key="about">
+            <div className="p-2 sm:p-3">
+              <div className={`${cardBase} ${cardTone} p-3`}>
+                <div className="mb-2 flex items-center justify-center">
+                  <h3 className="text-neutral-100 font-semibold text-lg text-center">{content.about?.title || (lang==='en' ? 'About' : 'Über uns')}</h3>
                 </div>
+                {content.about?.text && <p className="text-neutral-300 text-sm whitespace-pre-line text-center">{content.about.text}</p>}
               </div>
-            )}
+            </div>
+          </div>
+        ) : null;
+      case 'contact':
+        return (content.contact?.email || content.contact?.phone || content.contact?.address) ? (
+          <div className="relative" key="contact">
+            <div className="p-2 sm:p-3">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {content.contact?.email && (
+                  <div className={`p-3 ${cardBase} ${cardToneAlt} text-neutral-200 text-sm`}>{content.contact.email}</div>
+                )}
+                {content.contact?.phone && (
+                  <div className={`p-3 ${cardBase} ${cardToneAlt} text-neutral-200 text-sm`}>{content.contact.phone}</div>
+                )}
+                {content.contact?.address && (
+                  <div className={`p-3 ${cardBase} ${cardToneAlt} text-neutral-200 text-sm`}>{content.contact.address}</div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : null;
+      case 'social':
+        return (Array.isArray(content.socials) && content.socials.length > 0) ? (
+          <div className="relative" key="social">
+            <div className="p-2 sm:p-3">
+              <div className="mb-3 flex items-center justify-center">
+                <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide text-center">{lang==='en' ? 'Social' : 'Social'}</h3>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                {content.socials.map((s, idx) => (
+                  <a key={idx} href={s.url} target="_blank" rel="noreferrer" aria-label={s.type || 'link'} className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 hover:bg-neutral-800" title={s.type || s.url}>
+                    <SocialIcon type={s.type} />
+                  </a>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null;
+      case 'media':
+        return (Array.isArray(content.galleries) && content.galleries.length > 0) ? (
+          <div id="media" className="relative" key="media">
+            <div className="p-2 sm:p-3 space-y-6">
+              <div className="flex items-center justify-center">
+                <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide text-center">{lang==='en' ? 'Gallery' : 'Galerie'}</h3>
+              </div>
+              {(() => {
+                const byYear = new Map<number, { name: string; items: any[] }[]>();
+                (content.galleries || [])
+                  .filter(g => (g as any).status !== 'internal' && (g as any).status !== 'locked')
+                  .forEach(g => {
+                    const arr = byYear.get(g.year) || [];
+                    arr.push({ name: g.name, items: g.items || [] });
+                    byYear.set(g.year, arr);
+                  });
+                const years = Array.from(byYear.keys()).sort((a,b)=> b-a);
+                const getYTThumb = (u: string): string | null => {
+                  try {
+                    const url = new URL(u, window.location.origin);
+                    let id = '';
+                    if (url.hostname.includes('youtu.be')) id = url.pathname.replace('/', '');
+                    if (url.hostname.includes('youtube.com')) id = url.searchParams.get('v') || '';
+                    return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
+                  } catch { return null; }
+                };
+                const GalleryTile: React.FC<{ y: number; g: { name: string; items: any[] } }> = ({ y, g }) => {
+                  const key = `${y}:${g.name}`;
+                  let preview: { kind: 'image'|'youtube'|'instagram'|'video'|null; url: string|null } = { kind: null, url: null };
+                  for (const it of (g.items||[])) {
+                    if (it.type==='image') { preview = { kind:'image', url: it.url }; break; }
+                    if (it.type==='youtube') { preview = { kind:'youtube', url: getYTThumb(it.url) || it.url }; break; }
+                    if (it.type==='instagram') { preview = { kind:'instagram', url: instaThumbs[it.url] || null }; break; }
+                    if (it.type==='video') { preview = { kind:'video', url: null }; }
+                  }
+                  return (
+                    <div className={`${cardBase} ${theme==='light' ? 'bg-white border-[#E7DED0]' : 'bg-neutral-900 border-neutral-700/20'}`}>
+                      <button onClick={() => setOpenGals(prev => ({ ...prev, [key]: !prev[key] }))} className="w-full text-left">
+                        <div className="w-full h-44 sm:h-52 overflow-hidden">
+                          {preview.kind==='image' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
+                          {preview.kind==='youtube' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
+                          {preview.kind==='instagram' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
+                          {(!preview.url) && (<div className="w-full h-full flex items-center justify-center text-neutral-400 text-sm">Keine Vorschau</div>)}
+                        </div>
+                        <div className="p-2 flex items-center justify-between">
+                          <div className="text-neutral-100 font-medium truncate mr-2">{g.name}</div>
+                          <div className="text-neutral-400 text-sm">{(g.items||[]).length}</div>
+                        </div>
+                      </button>
+                    </div>
+                  );
+                };
+                return years.map(y => (
+                  <div key={y} className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide">{y}</h3>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {(byYear.get(y) || []).sort((a,b)=> a.name.localeCompare(b.name)).map(g => {
+                        const key = `${y}:${g.name}`;
+                        return (
+                          <React.Fragment key={g.name}>
+                            <GalleryTile y={y} g={g} />
+                            {openGals[key] && (
+                              <div className="col-span-2 sm:col-span-3 md:col-span-4">
+                                <div className={`${cardBase} ${cardTone} p-3`}>
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                    {(g.items||[]).map((it, idx) => (
+                                      <button key={idx} className={`rounded-lg overflow-hidden ${theme==='light' ? 'bg-white border-[#E7DED0]' : 'bg-neutral-900 border border-neutral-700/20'} text-left group`} onClick={() => openLightbox((g.items||[]) as LBItem[], idx)}>
+                                        {it.type==='image' ? (
+                                          <img src={it.url} alt={it.title||'Bild'} className="w-full h-64 sm:h-72 md:h-80 object-cover group-hover:opacity-95 transition" />
+                                        ) : it.type==='video' ? (
+                                          <div className="relative">
+                                            <video src={it.url} className="w-full h-64 sm:h-72 md:h-80 object-cover" />
+                                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-neutral-200">Öffnen</div>
+                                          </div>
+                                        ) : it.type==='youtube' ? (
+                                          (() => {
+                                            let id = '';
+                                            try {
+                                              const u = new URL(it.url, window.location.origin);
+                                              if (u.hostname.includes('youtu.be')) id = u.pathname.replace('/', '');
+                                              if (u.hostname.includes('youtube.com')) id = u.searchParams.get('v') || '';
+                                            } catch {}
+                                            const thumb = id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : '';
+                                            return thumb ? (
+                                              <img src={thumb} alt={it.title||'YouTube'} className="w-full h-64 sm:h-72 md:h-80 object-cover" />
+                                            ) : (
+                                              <div className="w-full h-64 sm:h-72 md:h-80 flex items-center justify-center text-neutral-300">YouTube öffnen</div>
+                                            );
+                                          })()
+                                        ) : (
+                                          <div className="w-full h-64 sm:h-72 md:h-80 flex items-center justify-center text-neutral-300">Instagram öffnen</div>
+                                        )}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+          </div>
+        ) : null;
+      case 'map':
+        return mapSrc ? (
+          <div className="relative" key="map">
+            <div className="relative overflow-hidden">
+              <iframe title="Karte" src={mapSrc} className="w-screen sm:w-full h-72 md:h-96" loading="lazy" referrerPolicy="no-referrer-when-downgrade" style={{ filter: 'grayscale(100%) brightness(0.6) contrast(1.05)' }} />
+              <div className="pointer-events-none absolute inset-0 bg-black/20" />
+            </div>
+          </div>
+        ) : null;
+      default:
+        return null;
+    }
+  };
+
+
+  return (
+    <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 self-start mt-2 md:mt-3">
+      <section className="relative p-3 sm:p-5 space-y-8">
+        {error && <div className="p-3 rounded-lg bg-neutral-800/60 border border-neutral-700 text-[#F471B5] text-sm">{error}</div>}
+        {loading && <div className="text-neutral-400">Lade…</div>}
+        {orderOk && (
+          <div className="p-3 rounded-lg bg-neutral-900/60 border border-emerald-500/40 text-emerald-300 text-sm">
+            {orderOk}
+          </div>
+        )}
+
+        {!loading && (
+          <>
+            {sectionsOrder.map(renderSection)}
           </>
         )}
       </section>
 
+      {/* Lightbox overlay */}
+      {lbOpen && lbList[lbIndex] && (
+        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4" onClick={closeLightbox}>
+          <div className="absolute inset-0" />
+          <div className="relative max-w-6xl w-full" onClick={e => e.stopPropagation()}>
+            <div className="absolute -top-10 right-0 flex items-center gap-3">
+              <button onClick={closeLightbox} className="px-3 py-1.5 rounded bg-neutral-800 text-neutral-200 border border-neutral-700">Schließen</button>
+            </div>
+            <div className="relative w-full flex items-center justify-center">
+              {lbList[lbIndex].type === 'image' && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={lbList[lbIndex].url} alt={lbList[lbIndex].title || 'Bild'} className="max-h-[80vh] w-auto h-auto object-contain" />
+              )}
+              {lbList[lbIndex].type === 'video' && (
+                <video src={lbList[lbIndex].url} controls autoPlay className="max-h-[80vh] w-auto h-auto object-contain" />
+              )}
+              {lbList[lbIndex].type === 'youtube' && (() => {
+                let id = '';
+                try {
+                  const u = new URL(lbList[lbIndex].url, window.location.origin);
+                  if (u.hostname.includes('youtu.be')) id = u.pathname.replace('/', '');
+                  if (u.hostname.includes('youtube.com')) id = u.searchParams.get('v') || '';
+                } catch {}
+                const src = id ? `https://www.youtube.com/embed/${id}` : lbList[lbIndex].url;
+                return <iframe className="w-full aspect-video max-h-[80vh]" src={src} title="YouTube video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen />;
+              })()}
+              {lbList[lbIndex].type === 'instagram' && (
+                <a href={lbList[lbIndex].url} target="_blank" rel="noreferrer" className="text-neutral-200 underline">Instagram öffnen</a>
+              )}
+            </div>
+            {lbList.length > 1 && (
+              <>
+                <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none">
+                  <button onClick={prevLb} className="pointer-events-auto ml-2 px-3 py-2 rounded bg-neutral-800/70 text-neutral-200 border border-neutral-700">‹</button>
+                  <button onClick={nextLb} className="pointer-events-auto mr-2 px-3 py-2 rounded bg-neutral-800/70 text-neutral-200 border border-neutral-700">›</button>
+                </div>
+                {/* Timeline thumbnails */}
+                <div className="mt-4 px-1">
+                  <div className="flex gap-2 overflow-x-auto no-scrollbar items-center">
+                    {lbList.map((it, i) => {
+                      let thumb: string | null = null;
+                      if (it.type === 'image') thumb = it.url;
+                      if (it.type === 'youtube') {
+                        try {
+                          const u = new URL(it.url, window.location.origin);
+                          let id = '';
+                          if (u.hostname.includes('youtu.be')) id = u.pathname.replace('/', '');
+                          if (u.hostname.includes('youtube.com')) id = u.searchParams.get('v') || '';
+                          thumb = id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
+                        } catch {}
+                      }
+                      if (it.type === 'instagram') {
+                        thumb = instaThumbs[it.url] || null;
+                      }
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => setLbIndex(i)}
+                          className={`relative h-16 rounded-md overflow-hidden border ${i===lbIndex? 'border-neutral-100' : 'border-neutral-700'} bg-neutral-800/40 flex items-center`}
+                          style={{ padding: 0, flex: '0 0 calc(100%/15)', maxWidth: 'calc(100%/15)' }}
+                        >
+                          {thumb ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={thumb} alt={it.title || 'thumb'} loading="lazy" className="h-full w-auto object-contain" />
+                          ) : (
+                            <div className="h-16 px-3 flex items-center justify-center text-[11px] text-neutral-300">{it.type}</div>
+                          )}
+                          {i===lbIndex && <div className="absolute inset-0 ring-2 ring-neutral-100 pointer-events-none" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Ticket Buchung Modal (2 Schritte) */}
       {ticketOpen && ticketSel && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60" onClick={() => setTicketOpen(false)} />
           <div className="relative w-full max-w-xl rounded-xl bg-neutral-900 border-[0.5px] border-neutral-700/40 p-5 space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="text-neutral-100 text-lg font-semibold">Service buchen</h3>
               <button onClick={() => setTicketOpen(false)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">✕</button>
             </div>
-
-            {/* Stepper */}
             <div className="flex items-center justify-center gap-4 text-sm">
               <div className={"w-7 h-7 rounded-full flex items-center justify-center "+(ticketStep===1?"bg-neutral-200 text-neutral-900":"bg-neutral-700 text-neutral-200")}>1</div>
               <div className="w-12 h-[2px] bg-neutral-700" />
@@ -523,18 +581,13 @@ const HomePage: React.FC = () => {
               <div className="w-12 h-[2px] bg-neutral-700" />
               <div className={"w-7 h-7 rounded-full flex items-center justify-center "+(ticketStep===3?"bg-neutral-200 text-neutral-900":"bg-neutral-700 text-neutral-200")}>3</div>
             </div>
-
             {ticketStep === 1 && (
               <div className="space-y-3">
                 <div className="uppercase text-sm text-neutral-300">Service auswählen</div>
                 <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 flex items-center gap-3">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={ticketSel.image || 'https://via.placeholder.com/100'}
-                    alt={ticketSel.title}
-                    className="w-12 h-12 rounded-full object-cover border border-neutral-700"
-                  />
-                  <div className="text-neutral-100 font-medium">{ticketSel.title}</div>
+                  <img src={ticketSel?.image || 'https://via.placeholder.com/100'} alt={ticketSel?.title || 'Ticket'} className="w-12 h-12 rounded-full object-cover border border-neutral-700" />
+                  <div className="text-neutral-100 font-medium">{ticketSel?.title || ''}</div>
                 </div>
                 <div>
                   <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-200 text-sm">
@@ -544,7 +597,6 @@ const HomePage: React.FC = () => {
                 <button onClick={() => setTicketStep(2)} className="w-full px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-900 bg-neutral-200 hover:bg-white">Weiter zum Termin</button>
               </div>
             )}
-
             {ticketStep === 2 && (
               <div className="space-y-3">
                 <div className="uppercase text-sm text-neutral-300">Datum wählen <span className="text-neutral-500">(nur Samstage verfügbar)</span></div>
@@ -557,31 +609,15 @@ const HomePage: React.FC = () => {
                   ))}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input
-                    value={buyerName}
-                    onChange={e => setBuyerName(e.target.value)}
-                    placeholder="Dein Name"
-                    className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 placeholder-[#909296] focus:outline-none"
-                  />
-                  <input
-                    value={buyerEmail}
-                    onChange={e => setBuyerEmail(e.target.value)}
-                    placeholder="Deine E-Mail"
-                    type="email"
-                    className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 placeholder-[#909296] focus:outline-none"
-                  />
+                  <input value={buyerName} onChange={e => setBuyerName(e.target.value)} placeholder="Dein Name" className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 placeholder-[#909296] focus:outline-none" />
+                  <input value={buyerEmail} onChange={e => setBuyerEmail(e.target.value)} placeholder="Deine E-Mail" type="email" className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 placeholder-[#909296] focus:outline-none" />
                 </div>
                 <div className="flex items-center justify-between gap-3 pt-1">
                   <button onClick={() => setTicketStep(1)} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Zurück</button>
-                  <button
-                    onClick={goCheckout}
-                    disabled={!ticketDate || !buyerName.trim() || !/^\S+@\S+\.\S+$/.test(buyerEmail.trim())}
-                    className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-900 bg-neutral-200 hover:bg-white disabled:opacity-50"
-                  >{paymentChoice==='online' ? 'Weiter zu Kontaktdaten' : 'Buchung bestätigen'}</button>
+                  <button onClick={goCheckout} disabled={!ticketDate || !buyerName.trim() || !/^\S+@\S+\.\S+$/.test(buyerEmail.trim())} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-900 bg-neutral-200 hover:bg-white disabled:opacity-50">{paymentChoice==='online' ? 'Weiter zu Kontaktdaten' : 'Buchung bestätigen'}</button>
                 </div>
               </div>
             )}
-
             {ticketStep === 3 && (
               <div className="space-y-3">
                 <div className="uppercase text-sm text-neutral-300">Bestätigung</div>
@@ -590,11 +626,7 @@ const HomePage: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <div className="rounded-lg bg-neutral-900 border border-neutral-700/40 p-2">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`${lastOrder.ticket_code || ''}|${lastOrder.qr_token || ''}`)}`}
-                          alt="Ticket QR"
-                          className="w-28 h-28 object-contain"
-                        />
+                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(`${lastOrder.ticket_code || ''}|${lastOrder.qr_token || ''}`)}`} alt="Ticket QR" className="w-28 h-28 object-contain" />
                       </div>
                       <div className="min-w-0">
                         <div className="text-neutral-100 font-medium">{lastOrder.title}</div>
@@ -608,22 +640,8 @@ const HomePage: React.FC = () => {
                       </div>
                     </div>
                   )}
-                  {/* existing confirmation content could follow here */}
                   <div className="flex justify-end">
-                    <button
-                      onClick={() => {
-                        if (lastOrder) {
-                          const msg = `Buchung erfasst: "${lastOrder.title}" am ${lastOrder.date}. ${paymentChoice==='onsite' ? 'Bitte vor Ort bezahlen.' : ''}`;
-                          setOrderOk(msg.trim());
-                        } else {
-                          setOrderOk('Buchung erfasst.');
-                        }
-                        setTicketSel(null);
-                        setTicketOpen(false);
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-900 bg-neutral-200 hover:bg-white"
-                    >Zur Startseite</button>
+                    <button onClick={() => { if (lastOrder) { const msg = `Buchung erfasst: "${lastOrder.title}" am ${lastOrder.date}. ${paymentChoice==='onsite' ? 'Bitte vor Ort bezahlen.' : ''}`; setOrderOk(msg.trim()); } else { setOrderOk('Buchung erfasst.'); } setTicketSel(null); setTicketOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-900 bg-neutral-200 hover:bg-white">Zur Startseite</button>
                   </div>
                 </div>
               </div>

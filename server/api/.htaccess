@@ -12,8 +12,8 @@
   SetEnvIfNoCase Origin "^http://localhost:5173$" ORIGIN_OK=1
   SetEnvIfNoCase Origin "^https://localhost:5173$" ORIGIN_OK=1
   SetEnvIfNoCase Origin "^http://127.0.0.1:5173$" ORIGIN_OK=1
-  SetEnvIfNoCase Origin "^https://tonbandleipzig\.de$" ORIGIN_OK=1
-  SetEnvIfNoCase Origin "^https://tonbandleipzig\.de\.w01fc61e\.kasserver\.com$" ORIGIN_OK=1
+  SetEnvIfNoCase Origin "^https://human-being-band.de$" ORIGIN_OK=1
+  SetEnvIfNoCase Origin "^https://human-being-band.de\.w020e2c0\.kasserver\.com$" ORIGIN_OK=1
 
 
   # Allow literal null origin (e.g., file:// contexts) when needed
