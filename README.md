@@ -1,19 +1,19 @@
-Booking.tonband – Booking App
+Human Being Band – Site & Admin
 
 # Überblick
-Booking.tonband ist eine leichte Booking-/Content-App mit kleinem PHP‑Backend (Datei‑Persistenz) und einem React/Vite‑Frontend.
+Human Being Band ist eine Content‑Site mit Admin‑Bereich. Frontend: React/Vite. Backend: kleines PHP‑API (Datei‑Persistenz in JSON).
 
 # Architektur
 - Backend (PHP): `server/api/*`
   - Persistenz: `server/data/content.json` (nur API liest/schreibt; direkte Zugriffe via `.htaccess` blockiert)
   - Uploads (generisch): `server/api/upload.php`
 - Frontend (React/Vite): `src/*`
-  - Kommuniziert ausschließlich mit der PHP‑API (kein Supabase).
+  - Kommuniziert ausschließlich mit der PHP‑API (kein Supabase)
 
 # Wichtige Dateien & Ordner
 - `server/.env`: Serverkonfiguration (CORS, BASE_URL, Session/Cookies, Pfade, Admin‑Login)
 - `server/api/*.php`: REST‑artige Endpunkte (Login/Logout, Content, Kommentare, Orders usw.)
-- `server/data/content.json`: Zentrale Inhalte (Hero, About, Contact, Gallery, Map, Socials, Reviews, Tickets, updated_at)
+- `server/data/content.json`: Zentrale Inhalte (Hero, About, Contact, Galleries, Map, Socials, News, Tickets, updated_at)
 - `src/components/`: UI‑Komponenten (`HomePage`, `AdminPage`, `OverviewPage`, `ResetPasswordPage`, `TwoFASetupCard` …)
 - `src/lib/api.ts`: API‑Helper (JSON/FormData je nach Endpoint)
 
@@ -27,17 +27,15 @@ Booking.tonband ist eine leichte Booking-/Content-App mit kleinem PHP‑Backend 
 
 # Features (Frontend)
 - Home
-  - Hero mit Bild/Overlay (Fokus/Zoom/Höhe steuerbar)
-  - Tickets‑Sektion: Buchungs‑Modal in Schritten; Button „Buchen“ (Login notwendig)
-  - Über uns, Kontakt
-  - Social‑Links (Icon‑Leiste, weiß)
-  - Galerie: bis 4 Bilder pro Viewport, horizontales Scrollen, originale Aspektratio
-  - Karte (Map): Full‑bleed mobil, im Container auf Desktop
-  - Bewertungen: Histogramm, Sortierung „Highest/Newest“, Formular für neue Bewertung
+  - Überschriften mittig: News, Social (Icons zentriert), Galerie, Über uns
+  - Karten‑Design konsistent (Light/Dark): `rounded‑xl`, warme Border im Light‑Mode, `bg‑neutral‑900` im Dark‑Mode
+  - Globales Hintergrundbild mit Filtern (brightness/contrast/saturate/grayscale/sepia/blur/hue) und Tint (Farbe/Deckkraft)
+  - Hintergrundbild‑Position steuerbar (X/Y in %)
+  - Tickets‑Sektion mit Modal; Über uns, Kontakt, Social, Galerie (mit Lightbox)
+  - Karte: mobil full‑bleed, Desktop im Container
 - Admin
-  - Content‑Panel: Hero, About, Contact, Gallery (mit Vorschau), Map, Reviews‑Moderation, Social (mit Dropdown + Icon, inkl. WhatsApp)
-  - Tickets‑Panel
-  - User‑Verwaltung
+  - Content‑Panel: Hero, Background (Filter/Tint/Pos X/Y), News (WYSIWYG ODER HTML‑Modus), About, Contact, Galleries (Jahr/Galerie/Items), Social, Map
+  - Layout stabil (eigener globaler BG‑Layer; Admin selbst nicht transparent)
 - Auth
   - Login, Registrierung, Passwort‑Reset, 2FA‑Setup (TOTP)
 
@@ -57,9 +55,10 @@ npm run build
 4) Frontend greift per `VITE_API_BASE` (Projekt-`.env`) auf die PHP‑API zu. Ohne Wert default: `/server/api`.
 
 # Deployment
-- Frontend: statische Auslieferung des `dist/` Ordners (z. B. auf Webspace, Nginx/Apache, oder beliebiges Static Hosting)
-- Backend: PHP 8.x mit Apache (oder kompatibel). `server/api/` deployen; `server/data/` muss beschreibbar sein.
-- Build‑Artefakte: `npm run build` → `dist/`
+- Frontend (z. B. Vercel/Static Hosting): `npm run build` → Ordner `dist/`
+- Backend (PHP 8.x): `server/api/` deployen; `server/data/` muss beschreibbar sein
+- Repository (Vercel): Projekt muss mit `Trinaxus/human-being-band` verknüpft sein (Branch `main`)
+- Domain: ggf. Domains vom alten Projekt trennen und hier hinzufügen
 
 ## Server‑Konfiguration (`server/.env`)
 - `CORS_ALLOWED_ORIGINS`: kommaseparierte Liste erlaubter Origins
@@ -73,10 +72,10 @@ npm run build
 - Für lokale Entwicklung alle Varianten eintragen: `http://localhost:5173, https://localhost:5173, http://127.0.0.1:5173`.
 
 # Troubleshooting
-- CORS/OPTIONS: Origin in `.env` ergänzen, Server neustarten/neu laden, Browser‑Cache leeren
-- 403 bei POST `content.php`: Admin‑Session notwendig
-- Map zu breit: Iframe nur mobil `w-screen`, ab `sm` `w-full`
-- Galerie gestreckt: `object-contain` wird verwendet; optional `max-h-*` setzen
+- Falsches Deploy‑Repo: In Vercel Projekt → Settings → Git → Repo auf `Trinaxus/human-being-band` setzen
+- API nicht erreichbar: `VITE_API_BASE` korrekt auf PHP‑Backend setzen (sonst Default `/server/api`)
+- CORS/OPTIONS: Origin in `.env` ergänzen, Server neustarten, Cache leeren
+- 403 bei POST `content.php`: Admin‑Login erforderlich
 
 # Lizenz / Hinweise
 Interne Projektbasis. Bei Bedarf ergänzen.

@@ -92,12 +92,10 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
         {/* Mobile: compact top bar */}
         <div className="flex items-center justify-between sm:hidden">
           <span className="w-9 h-9" />
-          <h1 className="text-xl font-bold bg-gradient-to-r from-[#F97316] to-[#B45309] text-transparent bg-clip-text tracking-tight">
-            <span className="inline-flex items-center gap-2">
-              
-              <span>HUMAN BEING BAND</span>
-            </span>
-          </h1>
+          <button onClick={handleHome} className="inline-flex items-center" title="Home">
+            <img src="/logo-hbb.png" alt="Human Being Band" className="h-7 w-auto block" />
+            <span className="sr-only">HUMAN BEING BAND</span>
+          </button>
           <button
             onClick={() => setMobileOpen(true)}
             onTouchStart={() => setMobileOpen(true)}
@@ -112,13 +110,11 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
 
         {/* Desktop: full header */}
         <div className="hidden sm:flex items-center justify-between">
-          {/* Logo + label */}
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-[#F97316] to-[#B45309] text-transparent bg-clip-text tracking-tight">
-            <span className="inline-flex items-center gap-3">
-             
-              <span>HUMAN BEING BAND</span>
-            </span>
-          </h1>
+          {/* Logo */}
+          <button onClick={handleHome} className="inline-flex items-center" title="Home">
+            <img src="/logo-hbb.png" alt="Human Being Band" className="h-9 w-auto block" />
+            <span className="sr-only">HUMAN BEING BAND</span>
+          </button>
 
           {/* Center nav */}
           <nav className="flex items-center gap-4">

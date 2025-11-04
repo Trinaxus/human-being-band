@@ -43,6 +43,7 @@ $allowed = [
   'mapAddress',    // string
   'map',           // { embedUrl?: string, lat?: number, lng?: number }
   'about',         // { title?: string, text?: string }
+  'mediaEmbeds',   // [ { id, type: 'spotify', url, title?, enabled?, order? } ]
   'socials',       // [ { type, url } ]
   'tickets',       // [ { id, title, url } ]
   'galleries',     // structured galleries

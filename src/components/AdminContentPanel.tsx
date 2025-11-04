@@ -257,6 +257,7 @@ const AdminContentPanel: React.FC = () => {
     about: false,
     socials: false,
     news: false,
+    mediaEmbeds: false,
   });
 
   
@@ -294,6 +295,112 @@ const AdminContentPanel: React.FC = () => {
                     </div>
                   ))}
                 </div>
+              );
+            })()}
+          </div>
+        )}
+      </section>
+
+      {/* Media/Embeds (Spotify) */}
+      <section>
+        <ToggleButton label="Media/Embeds (Spotify)" open={open.mediaEmbeds} onClick={() => setOpen(prev => ({ ...prev, mediaEmbeds: !prev.mediaEmbeds }))} />
+        {open.mediaEmbeds && (
+          <div className="mt-3 space-y-3">
+            {(() => {
+              const embeds = content.mediaEmbeds || [];
+              const setEmbeds = (next: NonNullable<SiteContent['mediaEmbeds']>) => setContent(prev => ({ ...prev, mediaEmbeds: next }));
+              const parseSpotify = (url: string) => {
+                try {
+                  const u = new URL(url);
+                  if (!u.hostname.includes('spotify.com')) return null;
+                  let parts = u.pathname.split('/').filter(Boolean);
+                  // handle regional prefix e.g. /intl-de/track/{id}
+                  if (parts[0] && parts[0].startsWith('intl-')) parts = parts.slice(1);
+                  // handle embed links e.g. /embed/track/{id}
+                  if (parts[0] === 'embed') parts = parts.slice(1);
+                  const type = parts[0];
+                  const id = parts[1];
+                  if (!type || !id) return null;
+                  const allowed = ['track','album','playlist','show','episode','artist'];
+                  if (!allowed.includes(type)) return null;
+                  return { type, id } as { type: string; id: string };
+                } catch { return null; }
+              };
+              const toEmbedSrc = (rawUrl: string) => {
+                const p = parseSpotify(rawUrl);
+                if (!p) return null;
+                return `https://open.spotify.com/embed/${p.type}/${p.id}`;
+              };
+              const add = () => {
+                const url = prompt('Spotify‑URL (Track/Album/Playlist/Show/Episode)');
+                if (!url) return;
+                const ok = parseSpotify(url);
+                if (!ok) { setError('Ungültige Spotify‑URL.'); return; }
+                const id = String(Date.now());
+                const order = embeds.length;
+                setError(null);
+                setEmbeds([ ...embeds, { id, type: 'spotify', url, title: '', enabled: true, order } ]);
+              };
+              const move = (idx: number, dir: -1|1) => {
+                const j = idx + dir; if (j<0 || j>=embeds.length) return;
+                const arr = embeds.slice(); const tmp = arr[idx]; arr[idx] = arr[j]; arr[j] = tmp;
+                // normalize order
+                setEmbeds(arr.map((e, i) => ({ ...e, order: i })));
+              };
+              const remove = (idx: number) => {
+                setEmbeds(embeds.filter((_,i)=> i!==idx).map((e,i)=>({ ...e, order: i })));
+              };
+              return (
+                <>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                    <div className="text-neutral-300 text-sm">Spotify‑Embeds verwalten</div>
+                    <button type="button" onClick={add} className="px-3 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700">Eintrag hinzufügen</button>
+                  </div>
+                  {embeds.length === 0 && (
+                    <div className="text-[#909296] text-sm">Keine Spotify‑Einträge vorhanden.</div>
+                  )}
+                  <div className="space-y-3">
+                    {embeds.map((m, idx) => {
+                      const src = toEmbedSrc(m.url || '');
+                      const p = parseSpotify(m.url || '') || { type: 'track' } as any;
+                      const largeTypes = ['track','album','playlist'];
+                      const height = largeTypes.includes(p.type) ? 352 : 152;
+                      return (
+                        <div key={m.id} className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <label className="flex items-center gap-2 text-neutral-200 text-sm">
+                              <input type="checkbox" checked={m.enabled !== false} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, enabled: e.target.checked } : x))} />
+                              Aktiv
+                            </label>
+                            <Input placeholder="Titel (optional)" value={m.title || ''} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, title: e.target.value } : x))} />
+                            <Input placeholder="Spotify‑URL" value={m.url} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, url: e.target.value } : x))} />
+                            <Input placeholder="Cover‑URL (1:1)" value={m.coverUrl || ''} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, coverUrl: e.target.value } : x))} />
+                            <div className="flex items-center gap-1 ml-auto">
+                              <button onClick={()=>move(idx,-1)} disabled={idx===0} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40" title="Nach oben">↑</button>
+                              <button onClick={()=>move(idx,1)} disabled={idx===embeds.length-1} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40" title="Nach unten">↓</button>
+                              <button onClick={()=>remove(idx)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Entfernen</button>
+                            </div>
+                          </div>
+                          <div className="rounded-xl overflow-hidden border border-neutral-700/40 bg-neutral-900">
+                            {src ? (
+                              <iframe
+                                title={m.title || 'Spotify'}
+                                src={src}
+                                width="100%"
+                                height={height}
+                                frameBorder="0"
+                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="p-6 text-neutral-400 text-sm">Ungültige Spotify‑URL</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               );
             })()}
           </div>

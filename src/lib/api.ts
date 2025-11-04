@@ -321,6 +321,16 @@ export type SiteContent = {
     published?: boolean;
   }>;
   about?: { title?: string; text?: string };
+  // Admin-managed media embeds (starting with Spotify)
+  mediaEmbeds?: Array<{
+    id: string;
+    type: 'spotify';
+    url: string;
+    coverUrl?: string;
+    title?: string;
+    enabled?: boolean;
+    order?: number;
+  }>;
   // Social links for display across the site
   socials?: Array<{ type: 'instagram' | 'facebook' | 'youtube' | 'tiktok' | 'twitter' | 'linkedin' | 'spotify' | 'soundcloud' | 'bandcamp' | 'website' | 'whatsapp'; url: string }>;
   // Tickets: list of external ticket links (no payment processing here)

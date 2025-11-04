@@ -22,8 +22,8 @@ const HomePage: React.FC = () => {
     try { const t = window.localStorage.getItem('theme'); return (t === 'light' ? 'light' : 'dark'); } catch { return 'dark'; }
   }, []);
   const cardBase = 'rounded-xl border';
-  const cardTone = theme === 'light' ? 'bg-white border-[#E7DED0]' : 'bg-neutral-900 border-neutral-700/20';
-  const cardToneAlt = theme === 'light' ? 'bg-white border-[#E7DED0]' : 'bg-neutral-900 border-neutral-700/20';
+  const cardTone = theme === 'light' ? 'bg-white border-neutral-200' : 'bg-neutral-900 border-neutral-700/20';
+  const cardToneAlt = theme === 'light' ? 'bg-white border-neutral-200' : 'bg-neutral-900 border-neutral-700/20';
   const [ticketSel, setTicketSel] = useState<{ id: string; title: string; url: string; image?: string } | null>(null);
   const [ticketStep, setTicketStep] = useState<1 | 2 | 3>(1);
   const [ticketDate, setTicketDate] = useState<string | null>(null);
@@ -35,6 +35,8 @@ const HomePage: React.FC = () => {
   const [instaThumbs, setInstaThumbs] = useState<Record<string, string | null>>({});
   // Open state of gallery folders on Home
   const [openGals, setOpenGals] = useState<Record<string, boolean>>({});
+  // Open state for Spotify embed expansion on Home
+  const [openSpotify, setOpenSpotify] = useState<Record<string, boolean>>({});
 
   // Lightbox state
   type LBItem = { type: 'image'|'video'|'youtube'|'instagram'; url: string; title?: string };
@@ -344,58 +346,201 @@ const HomePage: React.FC = () => {
           </div>
         ) : null;
       case 'media':
-        return (Array.isArray(content.galleries) && content.galleries.length > 0) ? (
-          <div id="media" className="relative" key="media">
-            <div className="p-2 sm:p-3 space-y-6">
-              <div className="flex items-center justify-center">
-                <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide text-center">{lang==='en' ? 'Gallery' : 'Galerie'}</h3>
+        return (() => {
+          const byYear = new Map<number, { name: string; items: any[] }[]>();
+          (content.galleries || [])
+            .filter(g => (g as any).status !== 'internal' && (g as any).status !== 'locked')
+            .forEach(g => {
+              const arr = byYear.get(g.year) || [];
+              arr.push({ name: g.name, items: g.items || [] });
+              byYear.set(g.year, arr);
+            });
+          const years = Array.from(byYear.keys()).sort((a,b)=> b-a);
+          const getYTThumb = (u: string): string | null => {
+            try {
+              const url = new URL(u, window.location.origin);
+              let id = '';
+              if (url.hostname.includes('youtu.be')) id = url.pathname.replace('/', '');
+              if (url.hostname.includes('youtube.com')) id = url.searchParams.get('v') || '';
+              return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
+            } catch { return null; }
+          };
+          const GalleryTile: React.FC<{ y: number; g: { name: string; items: any[] } }> = ({ y, g }) => {
+            const key = `${y}:${g.name}`;
+            let preview: { kind: 'image'|'youtube'|'instagram'|'video'|null; url: string|null } = { kind: null, url: null };
+            for (const it of (g.items||[])) {
+              if (it.type==='image') { preview = { kind:'image', url: it.url }; break; }
+              if (it.type==='youtube') { preview = { kind:'youtube', url: getYTThumb(it.url) || it.url }; break; }
+              if (it.type==='instagram') { preview = { kind:'instagram', url: instaThumbs[it.url] || null }; break; }
+              if (it.type==='video') { preview = { kind:'video', url: null }; }
+            }
+            return (
+              <div className={`${cardBase} ${theme==='light' ? 'bg-white border-neutral-200' : 'bg-neutral-900 border-neutral-700/20'}`}>
+                <button onClick={() => setOpenGals(prev => ({ ...prev, [key]: !prev[key] }))} className="w-full text-left">
+                  <div className="w-full h-44 sm:h-52 overflow-hidden">
+                    {preview.kind==='image' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
+                    {preview.kind==='youtube' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
+                    {preview.kind==='instagram' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
+                    {(!preview.url) && (<div className="w-full h-full flex items-center justify-center text-neutral-400 text-sm">Keine Vorschau</div>)}
+                  </div>
+                  <div className="p-2 flex items-center justify-between">
+                    <div className="text-neutral-100 font-medium truncate mr-2">{g.name}</div>
+                    <div className="text-neutral-400 text-sm">{(g.items||[]).length}</div>
+                  </div>
+                </button>
               </div>
-              {(() => {
-                const byYear = new Map<number, { name: string; items: any[] }[]>();
-                (content.galleries || [])
-                  .filter(g => (g as any).status !== 'internal' && (g as any).status !== 'locked')
-                  .forEach(g => {
-                    const arr = byYear.get(g.year) || [];
-                    arr.push({ name: g.name, items: g.items || [] });
-                    byYear.set(g.year, arr);
-                  });
-                const years = Array.from(byYear.keys()).sort((a,b)=> b-a);
-                const getYTThumb = (u: string): string | null => {
-                  try {
-                    const url = new URL(u, window.location.origin);
-                    let id = '';
-                    if (url.hostname.includes('youtu.be')) id = url.pathname.replace('/', '');
-                    if (url.hostname.includes('youtube.com')) id = url.searchParams.get('v') || '';
-                    return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
-                  } catch { return null; }
-                };
-                const GalleryTile: React.FC<{ y: number; g: { name: string; items: any[] } }> = ({ y, g }) => {
-                  const key = `${y}:${g.name}`;
-                  let preview: { kind: 'image'|'youtube'|'instagram'|'video'|null; url: string|null } = { kind: null, url: null };
-                  for (const it of (g.items||[])) {
-                    if (it.type==='image') { preview = { kind:'image', url: it.url }; break; }
-                    if (it.type==='youtube') { preview = { kind:'youtube', url: getYTThumb(it.url) || it.url }; break; }
-                    if (it.type==='instagram') { preview = { kind:'instagram', url: instaThumbs[it.url] || null }; break; }
-                    if (it.type==='video') { preview = { kind:'video', url: null }; }
-                  }
-                  return (
-                    <div className={`${cardBase} ${theme==='light' ? 'bg-white border-[#E7DED0]' : 'bg-neutral-900 border-neutral-700/20'}`}>
-                      <button onClick={() => setOpenGals(prev => ({ ...prev, [key]: !prev[key] }))} className="w-full text-left">
-                        <div className="w-full h-44 sm:h-52 overflow-hidden">
-                          {preview.kind==='image' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
-                          {preview.kind==='youtube' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
-                          {preview.kind==='instagram' && preview.url && (<img src={preview.url} alt={g.name} className="w-full h-full object-cover" />)}
-                          {(!preview.url) && (<div className="w-full h-full flex items-center justify-center text-neutral-400 text-sm">Keine Vorschau</div>)}
+            );
+          };
+          const SpotifyEmbed: React.FC<{ item: any; open: boolean; onToggle: () => void }> = ({ item, open, onToggle }) => {
+            const parseSpotify = (url: string) => {
+              try {
+                const u = new URL(url);
+                if (!u.hostname.includes('spotify.com')) return null as any;
+                let parts = u.pathname.split('/').filter(Boolean);
+                if (parts[0] && parts[0].startsWith('intl-')) parts = parts.slice(1);
+                if (parts[0] === 'embed') parts = parts.slice(1);
+                const type = parts[0];
+                const id = parts[1];
+                if (!type || !id) return null as any;
+                return { type, id } as { type: string; id: string };
+              } catch { return null as any; }
+            };
+            const p = parseSpotify(item.url || '') || { type: 'track' } as any;
+            const src = (() => {
+              const parsed = parseSpotify(item.url || '');
+              return parsed ? `https://open.spotify.com/embed/${parsed.type}/${parsed.id}` : '';
+            })();
+            const largeTypes = ['track','album','playlist'];
+            const height = largeTypes.includes(p.type) ? 352 : 152;
+            return (
+              <div className={`${open ? 'col-span-2 sm:col-span-3 md:col-span-4' : ''} ${cardBase} ${theme==='light' ? 'bg-white border-neutral-200' : 'bg-neutral-900 border border-neutral-700/20'} overflow-hidden`}>
+                <button onClick={onToggle} className="w-full text-left">
+                  <div className="p-3">
+                    {item.title && <div className="text-neutral-200 text-sm font-medium mb-2">{item.title}</div>}
+                    {open ? (
+                      <div className="flex items-center gap-3">
+                        {item.coverUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.coverUrl} alt={item.title || 'Cover'} className="w-12 h-12 rounded-md object-cover border border-neutral-700/40" />
+                        ) : (
+                          <div className="w-12 h-12 rounded-md bg-neutral-800/40 border border-neutral-700/40" />
+                        )}
+                        <div className="text-neutral-300 text-xs">{lang==='en'?'Hide player':'Player ausblenden'}</div>
+                      </div>
+                    ) : (
+                      <div className="w-full aspect-square rounded-lg overflow-hidden border border-neutral-700/30 bg-neutral-800/40 flex items-center justify-center">
+                        {item.coverUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={item.coverUrl} alt={item.title || 'Cover'} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="text-neutral-400 text-sm">Cover hinzufügen</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </button>
+                {open && (
+                  <div className="px-3 pb-3">
+                    {src ? (
+                      <iframe
+                        title={item.title || 'Spotify'}
+                        src={src}
+                        width="100%"
+                        height={height}
+                        frameBorder="0"
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="p-6 text-neutral-400 text-sm">Spotify‑Link ungültig</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          };
+          const mediaEmbedsRaw = (content.mediaEmbeds || [])
+            .filter(me => me.type === 'spotify' && me.enabled)
+            .map(me => me);
+          const parseSpotifyUrl = (url: string) => {
+            try {
+              const u = new URL(url);
+              if (!u.hostname.includes('spotify.com')) return null as any;
+              let parts = u.pathname.split('/').filter(Boolean);
+              if (parts[0] && parts[0].startsWith('intl-')) parts = parts.slice(1);
+              if (parts[0] === 'embed') parts = parts.slice(1);
+              const type = parts[0];
+              const id = parts[1];
+              if (!type || !id) return null as any;
+              return { type, id } as { type: string; id: string };
+            } catch { return null as any; }
+          };
+          const kindOf = (m: any): 'single'|'album'|'other' => {
+            const t = (m.title || '').toString().trim().toUpperCase();
+            if (t.includes('SINGLE')) return 'single';
+            if (t.includes('ALBUM')) return 'album';
+            const p = parseSpotifyUrl(m.url || '');
+            if (p?.type === 'track') return 'single';
+            if (p?.type === 'album') return 'album';
+            return 'other';
+          };
+          const singles = mediaEmbedsRaw.filter(m => kindOf(m) === 'single');
+          const albums  = mediaEmbedsRaw.filter(m => kindOf(m) === 'album');
+          const others  = mediaEmbedsRaw.filter(m => kindOf(m) === 'other');
+          return (
+            <div id="media" className="relative" key="media">
+              <div className="p-2 sm:p-3 space-y-6">
+                {(singles.length>0 || albums.length>0 || others.length>0) && (
+                  <div className="mb-6">
+                    <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide text-center">{lang==='en' ? 'Media' : 'Medien'}</h3>
+                    {albums.length>0 && (
+                      <div className="mt-4 space-y-2">
+                        <div className="text-neutral-300 text-sm font-medium">{lang==='en'?'Albums':'Alben'}</div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                          {albums.map((me, idx) => (
+                            <SpotifyEmbed
+                              key={me.id || `album-${idx}`}
+                              item={me}
+                              open={!!openSpotify[me.id]}
+                              onToggle={() => setOpenSpotify(prev => ({ ...prev, [me.id]: !prev[me.id] }))}
+                            />
+                          ))}
                         </div>
-                        <div className="p-2 flex items-center justify-between">
-                          <div className="text-neutral-100 font-medium truncate mr-2">{g.name}</div>
-                          <div className="text-neutral-400 text-sm">{(g.items||[]).length}</div>
+                      </div>
+                    )}
+                    {singles.length>0 && (
+                      <div className="mt-6 space-y-2">
+                        <div className="text-neutral-300 text-sm font-medium">{lang==='en'?'Singles':'Singles'}</div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                          {singles.map((me, idx) => (
+                            <SpotifyEmbed
+                              key={me.id || `single-${idx}`}
+                              item={me}
+                              open={!!openSpotify[me.id]}
+                              onToggle={() => setOpenSpotify(prev => ({ ...prev, [me.id]: !prev[me.id] }))}
+                            />
+                          ))}
                         </div>
-                      </button>
-                    </div>
-                  );
-                };
-                return years.map(y => (
+                      </div>
+                    )}
+                    {others.length>0 && (
+                      <div className="mt-6 space-y-2">
+                        <div className="text-neutral-300 text-sm font-medium">{lang==='en'?'Other':'Weitere'}</div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                          {others.map((me, idx) => (
+                            <SpotifyEmbed
+                              key={me.id || `other-${idx}`}
+                              item={me}
+                              open={!!openSpotify[me.id]}
+                              onToggle={() => setOpenSpotify(prev => ({ ...prev, [me.id]: !prev[me.id] }))}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {years.map(y => (
                   <div key={y} className="space-y-3">
                     <div className="flex items-center justify-between">
                       <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide">{y}</h3>
@@ -448,16 +593,24 @@ const HomePage: React.FC = () => {
                       })}
                     </div>
                   </div>
-                ));
-              })()}
+                ))}
+              </div>
             </div>
-          </div>
-        ) : null;
+          );
+        })();
       case 'map':
         return mapSrc ? (
           <div className="relative" key="map">
-            <div className="relative overflow-hidden">
-              <iframe title="Karte" src={mapSrc} className="w-screen sm:w-full h-72 md:h-96" loading="lazy" referrerPolicy="no-referrer-when-downgrade" style={{ filter: 'grayscale(100%) brightness(0.6) contrast(1.05)' }} />
+            {/* Full-bleed wrapper to span viewport width */}
+            <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen overflow-hidden">
+              <iframe
+                title="Karte"
+                src={mapSrc}
+                className="w-screen h-72 md:h-96"
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                style={{ filter: 'grayscale(100%) brightness(0.6) contrast(1.05)' }}
+              />
               <div className="pointer-events-none absolute inset-0 bg-black/20" />
             </div>
           </div>
