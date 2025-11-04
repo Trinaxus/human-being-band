@@ -49,7 +49,9 @@ $allowed = [
   'galleries',     // structured galleries
   'sectionsOrder', // custom order of sections on Home
   'newsEnabled',   // toggle for news/blog visibility
-  'news'           // array of posts { id, title, html, date, published }
+  'news',          // array of posts { id, title, html, date, published }
+  'booking',       // booking config { enabled?, headline?, recipientEmail?, phone?, note? }
+  'events'         // scheduler events [{ id, date, time?, title, location?, link?, description?, published? }]
 ];
 // Start from existing content and overlay only provided keys
 $existing = json_read_file($contentFile);

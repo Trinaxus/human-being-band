@@ -320,7 +320,7 @@ export type SiteContent = {
     date?: string;
     published?: boolean;
   }>;
-  about?: { title?: string; text?: string };
+  about?: { title?: string; text?: string; members?: Array<{ id: string; name: string; role?: string; bio?: string; image?: string; order?: number }> };
   // Admin-managed media embeds (starting with Spotify)
   mediaEmbeds?: Array<{
     id: string;
@@ -335,6 +335,25 @@ export type SiteContent = {
   socials?: Array<{ type: 'instagram' | 'facebook' | 'youtube' | 'tiktok' | 'twitter' | 'linkedin' | 'spotify' | 'soundcloud' | 'bandcamp' | 'website' | 'whatsapp'; url: string }>;
   // Tickets: list of external ticket links (no payment processing here)
   tickets?: Array<{ id: string; title: string; url: string; image?: string; description?: string; active?: boolean; paymentType?: 'online' | 'onsite' }>;
+  // Booking (Band anfragen)
+  booking?: {
+    enabled?: boolean;
+    headline?: string;
+    recipientEmail?: string; // where booking requests are sent
+    phone?: string;          // optional phone shown
+    note?: string;           // helper text shown under form
+  };
+  // Events / Scheduler (Admin-managed)
+  events?: Array<{
+    id: string;
+    date: string;        // YYYY-MM-DD
+    time?: string;       // HH:MM (optional)
+    title: string;
+    location?: string;
+    link?: string;
+    description?: string;
+    published?: boolean; // default true
+  }>;
   updated_at?: string;
 };
 
@@ -344,6 +363,19 @@ export async function contentGet() {
 
 export async function contentSave(content: SiteContent) {
   return apiPost<{ ok: boolean; content: SiteContent }>(`/content.php`, content);
+}
+
+// --- Booking requests ---
+export async function bookingRequest(payload: {
+  name: string;
+  email: string;
+  date?: string;
+  event?: string;
+  location?: string;
+  message?: string;
+  budget?: string;
+}) {
+  return apiPost<{ ok: boolean; id: string }>(`/booking_request.php`, payload);
 }
 
 // --- Uploads scanner ---

@@ -254,6 +254,7 @@ const AdminContentPanel: React.FC = () => {
     contact: false,
     gallery: false,
     map: false,
+    booking: false,
     about: false,
     socials: false,
     news: false,
@@ -275,14 +276,20 @@ const AdminContentPanel: React.FC = () => {
         {(open as any).sections && (
           <div className="mt-3 space-y-2">
             {(() => {
-              const defaultOrder = ['news','booking','media','about','social','contact','map'];
-              const current = Array.isArray(content.sectionsOrder) && content.sectionsOrder.length ? content.sectionsOrder : defaultOrder;
+              // Allowed sections (no 'map' here)
+              const labels: Record<string,string> = { news: 'News (Hero)', events: 'Events / Termine', booking: 'Booking', media: 'Media (Galerien)', about: 'Über uns', social: 'Social Media', contact: 'Kontakt' };
+              const allowed = Object.keys(labels);
+              const defaultOrder = ['news','events','booking','media','about','social','contact'];
+              const saved = (Array.isArray(content.sectionsOrder) && content.sectionsOrder.length ? content.sectionsOrder : defaultOrder) as string[];
+              // Filter out disallowed (e.g., legacy 'map') and append any missing allowed keys
+              const filtered = saved.filter(k => allowed.includes(k));
+              for (const k of allowed) if (!filtered.includes(k)) filtered.push(k);
+              const current = filtered;
               const setOrder = (next: string[]) => setContent(prev => ({ ...prev, sectionsOrder: next }));
               const move = (idx: number, dir: -1|1) => {
                 const j = idx + dir; if (j < 0 || j >= current.length) return;
                 const arr = current.slice(); const tmp = arr[idx]; arr[idx] = arr[j]; arr[j] = tmp; setOrder(arr);
               };
-              const labels: Record<string,string> = { news: 'News (Hero)', booking: 'Booking (Tickets)', media: 'Media (Galerien)', about: 'Über uns', social: 'Social Media', contact: 'Kontakt', map: 'Karte' };
               return (
                 <div className="space-y-2">
                   {current.map((key, idx) => (
@@ -301,111 +308,42 @@ const AdminContentPanel: React.FC = () => {
         )}
       </section>
 
-      {/* Media/Embeds (Spotify) */}
+
+      {/* Booking (Band anfragen) */}
       <section>
-        <ToggleButton label="Media/Embeds (Spotify)" open={open.mediaEmbeds} onClick={() => setOpen(prev => ({ ...prev, mediaEmbeds: !prev.mediaEmbeds }))} />
-        {open.mediaEmbeds && (
+        <ToggleButton label="Booking" open={(open as any).booking === true} onClick={() => setOpen(prev => ({ ...prev, booking: !(prev as any).booking }))} />
+        {(open as any).booking && (
           <div className="mt-3 space-y-3">
-            {(() => {
-              const embeds = content.mediaEmbeds || [];
-              const setEmbeds = (next: NonNullable<SiteContent['mediaEmbeds']>) => setContent(prev => ({ ...prev, mediaEmbeds: next }));
-              const parseSpotify = (url: string) => {
-                try {
-                  const u = new URL(url);
-                  if (!u.hostname.includes('spotify.com')) return null;
-                  let parts = u.pathname.split('/').filter(Boolean);
-                  // handle regional prefix e.g. /intl-de/track/{id}
-                  if (parts[0] && parts[0].startsWith('intl-')) parts = parts.slice(1);
-                  // handle embed links e.g. /embed/track/{id}
-                  if (parts[0] === 'embed') parts = parts.slice(1);
-                  const type = parts[0];
-                  const id = parts[1];
-                  if (!type || !id) return null;
-                  const allowed = ['track','album','playlist','show','episode','artist'];
-                  if (!allowed.includes(type)) return null;
-                  return { type, id } as { type: string; id: string };
-                } catch { return null; }
-              };
-              const toEmbedSrc = (rawUrl: string) => {
-                const p = parseSpotify(rawUrl);
-                if (!p) return null;
-                return `https://open.spotify.com/embed/${p.type}/${p.id}`;
-              };
-              const add = () => {
-                const url = prompt('Spotify‑URL (Track/Album/Playlist/Show/Episode)');
-                if (!url) return;
-                const ok = parseSpotify(url);
-                if (!ok) { setError('Ungültige Spotify‑URL.'); return; }
-                const id = String(Date.now());
-                const order = embeds.length;
-                setError(null);
-                setEmbeds([ ...embeds, { id, type: 'spotify', url, title: '', enabled: true, order } ]);
-              };
-              const move = (idx: number, dir: -1|1) => {
-                const j = idx + dir; if (j<0 || j>=embeds.length) return;
-                const arr = embeds.slice(); const tmp = arr[idx]; arr[idx] = arr[j]; arr[j] = tmp;
-                // normalize order
-                setEmbeds(arr.map((e, i) => ({ ...e, order: i })));
-              };
-              const remove = (idx: number) => {
-                setEmbeds(embeds.filter((_,i)=> i!==idx).map((e,i)=>({ ...e, order: i })));
-              };
-              return (
-                <>
-                  <div className="flex items-center justify-between p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
-                    <div className="text-neutral-300 text-sm">Spotify‑Embeds verwalten</div>
-                    <button type="button" onClick={add} className="px-3 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700">Eintrag hinzufügen</button>
-                  </div>
-                  {embeds.length === 0 && (
-                    <div className="text-[#909296] text-sm">Keine Spotify‑Einträge vorhanden.</div>
-                  )}
-                  <div className="space-y-3">
-                    {embeds.map((m, idx) => {
-                      const src = toEmbedSrc(m.url || '');
-                      const p = parseSpotify(m.url || '') || { type: 'track' } as any;
-                      const largeTypes = ['track','album','playlist'];
-                      const height = largeTypes.includes(p.type) ? 352 : 152;
-                      return (
-                        <div key={m.id} className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 space-y-3">
-                          <div className="flex items-center gap-2">
-                            <label className="flex items-center gap-2 text-neutral-200 text-sm">
-                              <input type="checkbox" checked={m.enabled !== false} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, enabled: e.target.checked } : x))} />
-                              Aktiv
-                            </label>
-                            <Input placeholder="Titel (optional)" value={m.title || ''} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, title: e.target.value } : x))} />
-                            <Input placeholder="Spotify‑URL" value={m.url} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, url: e.target.value } : x))} />
-                            <Input placeholder="Cover‑URL (1:1)" value={m.coverUrl || ''} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, coverUrl: e.target.value } : x))} />
-                            <div className="flex items-center gap-1 ml-auto">
-                              <button onClick={()=>move(idx,-1)} disabled={idx===0} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40" title="Nach oben">↑</button>
-                              <button onClick={()=>move(idx,1)} disabled={idx===embeds.length-1} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40" title="Nach unten">↓</button>
-                              <button onClick={()=>remove(idx)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Entfernen</button>
-                            </div>
-                          </div>
-                          <div className="rounded-xl overflow-hidden border border-neutral-700/40 bg-neutral-900">
-                            {src ? (
-                              <iframe
-                                title={m.title || 'Spotify'}
-                                src={src}
-                                width="100%"
-                                height={height}
-                                frameBorder="0"
-                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                                loading="lazy"
-                              />
-                            ) : (
-                              <div className="p-6 text-neutral-400 text-sm">Ungültige Spotify‑URL</div>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              );
-            })()}
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 grid grid-cols-1 md:grid-cols-2 gap-3">
+              <label className="flex items-center gap-2 text-neutral-200 text-sm">
+                <input type="checkbox" checked={!!content.booking?.enabled} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), enabled: e.target.checked } }))} />
+                Aktiviert
+              </label>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">Überschrift</label>
+                <Input placeholder="Booking / Band anfragen" value={content.booking?.headline || ''} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), headline: e.target.value } }))} />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">Empfänger‑E‑Mail</label>
+                <Input placeholder="booking@domain.tld" value={content.booking?.recipientEmail || ''} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), recipientEmail: e.target.value } }))} />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">Telefon (optional)</label>
+                <Input placeholder="+49 …" value={content.booking?.phone || ''} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), phone: e.target.value } }))} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-xs text-neutral-400 mb-1">Hinweistext (optional)</label>
+                <Textarea rows={3} placeholder="Kurzer Hinweis unter dem Formular" value={content.booking?.note || ''} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), note: e.target.value } }))} />
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button disabled={saving} onClick={save} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 disabled:opacity-60">{saving ? 'Speichert…' : 'Speichern'}</button>
+            </div>
           </div>
         )}
       </section>
+
+      
 
       {/* Hero */}
       <section>
@@ -698,7 +636,51 @@ const AdminContentPanel: React.FC = () => {
         {open.about && (
           <div className="mt-3 grid grid-cols-1 gap-3">
             <Input placeholder="Titel (Über uns)" value={content.about?.title || ''} onChange={e => setContent({ ...content, about: { ...(content.about||{}), title: e.target.value } })} />
-            <Textarea rows={5} placeholder="Text (Über uns)" value={content.about?.text || ''} onChange={e => setContent({ ...content, about: { ...(content.about||{}), text: e.target.value } })} />
+            <Textarea rows={4} placeholder="Über uns Text" value={content.about?.text || ''} onChange={e => setContent({ ...content, about: { ...(content.about||{}), text: e.target.value } })} />
+            {/* Bandmitglieder */}
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-neutral-300 text-sm">Bandmitglieder</div>
+                <button
+                  type="button"
+                  onClick={() => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: [ ...((prev.about?.members)||[]), { id: crypto.randomUUID(), name: 'Neues Mitglied', role: '', bio: '', image: '', order: (prev.about?.members?.length||0) } ] } }))}
+                  className="px-3 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700"
+                >Mitglied hinzufügen</button>
+              </div>
+              {((content.about?.members)||[]).length === 0 && (
+                <div className="text-[#909296] text-sm">Noch keine Bandmitglieder angelegt.</div>
+              )}
+              <div className="space-y-3">
+                {((content.about?.members)||[]).slice().sort((a,b)=> (a.order??0)-(b.order??0)).map((m, idx, arr) => (
+                  <div key={m.id||idx} className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 items-start">
+                      <div className="md:col-span-1 space-y-2">
+                        <Input placeholder="Name" value={m.name||''} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, name: e.target.value } : x) } }))} />
+                        <Input placeholder="Rolle (z. B. Gesang, Gitarre)" value={m.role||''} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, role: e.target.value } : x) } }))} />
+                        <Input placeholder="Bild‑URL" value={m.image||''} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, image: e.target.value } : x) } }))} />
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, order: Math.max(0, (m.order??idx)-1) } : x).sort((a,b)=> (a.order??0)-(b.order??0)) } }))} disabled={idx===0} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40">↑</button>
+                          <button onClick={() => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, order: Math.min((arr.length-1), (m.order??idx)+1) } : x).sort((a,b)=> (a.order??0)-(b.order??0)) } }))} disabled={idx===arr.length-1} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40">↓</button>
+                          <button onClick={() => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).filter(x => x.id!==m.id).map((x,i)=>({ ...x, order: i })) } }))} className="ml-2 px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Entfernen</button>
+                        </div>
+                      </div>
+                      <div className="md:col-span-3">
+                        <Textarea rows={5} placeholder="Kurzbiografie / Portfolio" value={m.bio||''} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, bio: e.target.value } : x) } }))} />
+                        {m.image && (
+                          <div className="mt-2">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={m.image} alt={m.name||'Profil'} className="h-28 w-28 object-cover rounded-lg border border-neutral-700/40" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button disabled={saving} onClick={save} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 disabled:opacity-60">{saving ? 'Speichert…' : 'Speichern'}</button>
+            </div>
           </div>
         )}
       </section>
@@ -774,6 +756,109 @@ const AdminContentPanel: React.FC = () => {
             <Input placeholder="E-Mail" value={content.contact?.email || ''} onChange={e => setContent({ ...content, contact: { ...(content.contact||{}), email: e.target.value } })} />
             <Input placeholder="Telefon" value={content.contact?.phone || ''} onChange={e => setContent({ ...content, contact: { ...(content.contact||{}), phone: e.target.value } })} />
             <Input placeholder="Adresse" value={content.contact?.address || ''} onChange={e => setContent({ ...content, contact: { ...(content.contact||{}), address: e.target.value } })} />
+          </div>
+        )}
+      </section>
+
+      {/* Media/Embeds (Spotify) */}
+      <section>
+        <ToggleButton label="Media/Embeds (Spotify)" open={open.mediaEmbeds} onClick={() => setOpen(prev => ({ ...prev, mediaEmbeds: !prev.mediaEmbeds }))} />
+        {open.mediaEmbeds && (
+          <div className="mt-3 space-y-3">
+            {(() => {
+              const embeds = content.mediaEmbeds || [];
+              const setEmbeds = (next: NonNullable<SiteContent['mediaEmbeds']>) => setContent(prev => ({ ...prev, mediaEmbeds: next }));
+              const parseSpotify = (url: string) => {
+                try {
+                  const u = new URL(url);
+                  if (!u.hostname.includes('spotify.com')) return null;
+                  let parts = u.pathname.split('/').filter(Boolean);
+                  if (parts[0] && parts[0].startsWith('intl-')) parts = parts.slice(1);
+                  if (parts[0] === 'embed') parts = parts.slice(1);
+                  const type = parts[0];
+                  const id = parts[1];
+                  if (!type || !id) return null;
+                  const allowed = ['track','album','playlist','show','episode','artist'];
+                  if (!allowed.includes(type)) return null;
+                  return { type, id } as { type: string; id: string };
+                } catch { return null; }
+              };
+              const toEmbedSrc = (rawUrl: string) => {
+                const p = parseSpotify(rawUrl);
+                if (!p) return null;
+                return `https://open.spotify.com/embed/${p.type}/${p.id}`;
+              };
+              const add = () => {
+                const url = prompt('Spotify‑URL (Track/Album/Playlist/Show/Episode)');
+                if (!url) return;
+                const ok = parseSpotify(url);
+                if (!ok) { setError('Ungültige Spotify‑URL.'); return; }
+                const id = String(Date.now());
+                const order = embeds.length;
+                setError(null);
+                setEmbeds([ ...embeds, { id, type: 'spotify', url, title: '', enabled: true, order } ]);
+              };
+              const move = (idx: number, dir: -1|1) => {
+                const j = idx + dir; if (j<0 || j>=embeds.length) return;
+                const arr = embeds.slice(); const tmp = arr[idx]; arr[idx] = arr[j]; arr[j] = tmp;
+                setEmbeds(arr.map((e, i) => ({ ...e, order: i })));
+              };
+              const remove = (idx: number) => {
+                setEmbeds(embeds.filter((_,i)=> i!==idx).map((e,i)=>({ ...e, order: i })));
+              };
+              return (
+                <>
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                    <div className="text-neutral-300 text-sm">Spotify‑Embeds verwalten</div>
+                    <button type="button" onClick={add} className="px-3 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700">Eintrag hinzufügen</button>
+                  </div>
+                  {embeds.length === 0 && (
+                    <div className="text-[#909296] text-sm">Keine Spotify‑Einträge vorhanden.</div>
+                  )}
+                  <div className="space-y-3">
+                    {embeds.map((m, idx) => {
+                      const src = toEmbedSrc(m.url || '');
+                      const p = parseSpotify(m.url || '') || { type: 'track' } as any;
+                      const largeTypes = ['track','album','playlist'];
+                      const height = largeTypes.includes(p.type) ? 352 : 152;
+                      return (
+                        <div key={m.id} className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 space-y-3">
+                          <div className="flex items-center gap-2">
+                            <label className="flex items-center gap-2 text-neutral-200 text-sm">
+                              <input type="checkbox" checked={m.enabled !== false} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, enabled: e.target.checked } : x))} />
+                              Aktiv
+                            </label>
+                            <Input placeholder="Titel (optional)" value={m.title || ''} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, title: e.target.value } : x))} />
+                            <Input placeholder="Spotify‑URL" value={m.url} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, url: e.target.value } : x))} />
+                            <Input placeholder="Cover‑URL (1:1)" value={m.coverUrl || ''} onChange={e => setEmbeds(embeds.map((x,i)=> i===idx ? { ...x, coverUrl: e.target.value } : x))} />
+                            <div className="flex items-center gap-1 ml-auto">
+                              <button onClick={()=>move(idx,-1)} disabled={idx===0} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40" title="Nach oben">↑</button>
+                              <button onClick={()=>move(idx,1)} disabled={idx===embeds.length-1} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40" title="Nach unten">↓</button>
+                              <button onClick={()=>remove(idx)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Entfernen</button>
+                            </div>
+                          </div>
+                          <div className="rounded-xl overflow-hidden border border-neutral-700/40 bg-neutral-900">
+                            {src ? (
+                              <iframe
+                                title={m.title || 'Spotify'}
+                                src={src}
+                                width="100%"
+                                height={height}
+                                frameBorder="0"
+                                allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                                loading="lazy"
+                              />
+                            ) : (
+                              <div className="p-6 text-neutral-400 text-sm">Ungültige Spotify‑URL</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         )}
       </section>
@@ -996,33 +1081,6 @@ const AdminContentPanel: React.FC = () => {
       </section>
 
       
-
-      {/* Karte (zuletzt) */}
-      <section>
-        <ToggleButton label="Karte / Google Maps" open={open.map} onClick={() => setOpen(prev => ({ ...prev, map: !prev.map }))} />
-        {open.map && (
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Input placeholder="Adresse (z. B. Karl-Liebknecht-Straße 1, Leipzig)" value={content.mapAddress || ''} onChange={e => setContent({ ...content, mapAddress: e.target.value })} />
-            <Input placeholder="Maps Embed URL (optional)" value={content.map?.embedUrl || ''} onChange={e => setContent({ ...content, map: { ...(content.map||{}), embedUrl: e.target.value } })} />
-            <div className="md:col-span-3">
-              {content.map?.embedUrl ? (
-                <div className="relative left-1/2 -translate-x-1/2 w-[min(1200px,100vw)]">
-                  <iframe
-                    title="Karte Vorschau"
-                    src={content.map.embedUrl}
-                    className="w-full h-72 md:h-96 rounded-lg border border-neutral-700/40"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                  />
-                </div>
-              ) : (
-                <div className="text-[#909296] text-sm">Füge eine Maps Embed URL ein, um die Vorschau zu sehen.</div>
-              )}
-            </div>
-          </div>
-        )}
-      </section>
-
       {/* Save button at the very end */}
       <div className="flex justify-end">
         <button disabled={saving} onClick={save} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 disabled:opacity-60">{saving ? 'Speichert…' : 'Speichern'}</button>

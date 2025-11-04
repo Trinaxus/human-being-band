@@ -1,7 +1,8 @@
+ 
 import React, { useEffect, useState, useMemo } from 'react';
 import { API_BASE } from '../lib/api';
 import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle } from 'lucide-react';
-import { contentGet, ordersCreate, type SiteContent, type OrderItem } from '../lib/api';
+import { contentGet, ordersCreate, bookingRequest, type SiteContent, type OrderItem } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 
 const HomePage: React.FC = () => {
@@ -48,6 +49,58 @@ const HomePage: React.FC = () => {
     setLbIndex(Math.max(0, Math.min(start, items.length - 1)));
     setLbOpen(true);
     document.body.style.overflow = 'hidden';
+  };
+
+  // Booking form component
+  const BookingForm: React.FC<{ note?: string; phone?: string }> = ({ note, phone }) => {
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [date, setDate] = useState('');
+    const [event, setEvent] = useState('');
+    const [location, setLocation] = useState('');
+    const [budget, setBudget] = useState('');
+    const [message, setMessage] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [okMsg, setOkMsg] = useState<string|null>(null);
+    const [errMsg, setErrMsg] = useState<string|null>(null);
+
+    const onSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setOkMsg(null); setErrMsg(null);
+      if (!name.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+        setErrMsg(lang==='en' ? 'Please enter name and a valid email.' : 'Bitte Name und eine gültige E‑Mail angeben.');
+        return;
+      }
+      setBusy(true);
+      try {
+        await bookingRequest({ name, email, date, event, location, message, budget });
+        setOkMsg(lang==='en' ? 'Vielen Dank! Wir melden uns.' : 'Vielen Dank! Wir melden uns.');
+        setName(''); setEmail(''); setDate(''); setEvent(''); setLocation(''); setBudget(''); setMessage('');
+      } catch (e) {
+        setErrMsg(e instanceof Error ? e.message : (lang==='en'?'Submission failed':'Absenden fehlgeschlagen'));
+      } finally { setBusy(false); }
+    };
+
+    return (
+      <form onSubmit={onSubmit} className={`${cardBase} ${cardTone} p-4 space-y-3 max-w-3xl mx-auto`}>
+        {okMsg && <div className="p-2 rounded bg-emerald-600/15 border border-emerald-500/30 text-emerald-200 text-sm">{okMsg}</div>}
+        {errMsg && <div className="p-2 rounded bg-rose-600/15 border border-rose-500/30 text-rose-200 text-sm">{errMsg}</div>}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" placeholder={lang==='en'?'Name*':'Name*'} value={name} onChange={e=>setName(e.target.value)} />
+          <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" placeholder={lang==='en'?'Email*':'E‑Mail*'} value={email} onChange={e=>setEmail(e.target.value)} />
+          <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" type="date" value={date} onChange={e=>setDate(e.target.value)} />
+          <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" placeholder={lang==='en'?'Event':'Event'} value={event} onChange={e=>setEvent(e.target.value)} />
+          <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" placeholder={lang==='en'?'Location':'Ort / Location'} value={location} onChange={e=>setLocation(e.target.value)} />
+          <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" placeholder={lang==='en'?'Budget (optional)':'Budget (optional)'} value={budget} onChange={e=>setBudget(e.target.value)} />
+        </div>
+        <textarea className="w-full px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" rows={4} placeholder={lang==='en'?'Message':'Nachricht'} value={message} onChange={e=>setMessage(e.target.value)} />
+        {note && <div className="text-xs text-neutral-400">{note}</div>}
+        {phone && <div className="text-xs text-neutral-400">{lang==='en'?'Phone':'Telefon'}: <span className="text-neutral-300">{phone}</span></div>}
+        <div className="flex justify-end">
+          <button disabled={busy} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 disabled:opacity-60">{busy ? (lang==='en'?'Sending…':'Senden…') : (lang==='en'?'Send request':'Anfrage senden')}</button>
+        </div>
+      </form>
+    );
   };
   const closeLightbox = () => { setLbOpen(false); setLbList([]); setLbIndex(0); document.body.style.overflow = ''; };
   const nextLb = () => setLbIndex(i => (i + 1) % (lbList.length || 1));
@@ -207,9 +260,14 @@ const HomePage: React.FC = () => {
   };
 
   
-  const defaultOrder = ['news','booking','media','about','social','contact','map'] as const;
-  const sectionsOrderRaw = Array.isArray((content as any).sectionsOrder) && (content as any).sectionsOrder.length ? (content as any).sectionsOrder as string[] : [...defaultOrder];
-  const sectionsOrder = Array.from(new Set([...(sectionsOrderRaw||[]), ...defaultOrder]));
+  const allowedSections = ['news','events','booking','media','about','social','contact'] as const;
+  const defaultOrder = ['news','events','booking','media','about','social','contact'] as const;
+  const sectionsOrderRaw = (Array.isArray((content as any).sectionsOrder) && (content as any).sectionsOrder.length ? (content as any).sectionsOrder as string[] : [...defaultOrder]);
+  const sectionsOrder = (() => {
+    const filtered = (sectionsOrderRaw||[]).filter(k => (allowedSections as readonly string[]).includes(k));
+    for (const k of allowedSections) if (!filtered.includes(k)) filtered.push(k);
+    return filtered;
+  })();
 
   const renderSection = (key: string) => {
     switch (key) {
@@ -273,32 +331,22 @@ const HomePage: React.FC = () => {
             )}
           </React.Fragment>
         );
-      case 'booking':
-        return ticketsActive.length > 0 ? (
+      case 'booking': {
+        const cfg = content.booking || {};
+        if (!cfg.enabled) return null;
+        return (
           <div id="booking" className="relative" key="booking">
             <div className="p-2 sm:p-3">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide">Tickets</h3>
+              <div className="mb-3 flex items-center justify-center">
+                <h3 className="text-neutral-100 text-lg font-semibold uppercase tracking-wide text-center">{cfg.headline || (lang==='en'?'Booking':'Booking')}</h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {ticketsActive.map((t) => (
-                  <div key={t.id} className={`p-3 ${cardBase} ${cardToneAlt} flex items-center gap-3`}>
-                    <img src={t.image || 'https://via.placeholder.com/100'} alt={t.title} className="w-14 h-14 rounded-full object-cover border border-neutral-700 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-neutral-100 font-medium truncate">{t.title}</div>
-                      {t.description && (
-                        <div className="text-neutral-400 text-xs truncate mt-0.5">{t.description}</div>
-                      )}
-                    </div>
-                    <button onClick={() => openTicket(t as any)} disabled={!authenticated} className={`px-3 py-1.5 rounded-lg border-[0.5px] border-neutral-700/40 ${authenticated? 'text-neutral-100 hover:bg-neutral-800' : 'text-neutral-500 opacity-60 cursor-not-allowed'}`}>{authenticated ? 'Buchen' : 'Login nötig'}</button>
-                  </div>
-                ))}
-              </div>
+              <BookingForm note={cfg.note} phone={cfg.phone} />
             </div>
           </div>
-        ) : null;
+        );
+      }
       case 'about':
-        return (content.about?.title || content.about?.text || true) ? (
+        return (content.about?.title || content.about?.text || (content.about?.members||[]).length>0) ? (
           <div id="about" className="relative" key="about">
             <div className="p-2 sm:p-3">
               <div className={`${cardBase} ${cardTone} p-3`}>
@@ -307,6 +355,25 @@ const HomePage: React.FC = () => {
                 </div>
                 {content.about?.text && <p className="text-neutral-300 text-sm whitespace-pre-line text-center">{content.about.text}</p>}
               </div>
+              {(content.about?.members||[]).length>0 && (
+                <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                  {(content.about?.members||[]).slice().sort((a,b)=> (a.order??0)-(b.order??0)).map((m, idx) => (
+                    <div key={m.id||idx} className={`${cardBase} ${cardTone} p-3`}>
+                      <div className="flex flex-col items-center text-center gap-2">
+                        {m.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={m.image} alt={m.name||'Profil'} className="w-28 h-28 rounded-full object-cover border border-neutral-700/30" />
+                        ) : (
+                          <div className="w-28 h-28 rounded-full bg-neutral-800/40 border border-neutral-700/30" />
+                        )}
+                        <div className="text-neutral-100 font-medium">{m.name||''}</div>
+                        {m.role && <div className="text-neutral-400 text-sm">{m.role}</div>}
+                        {m.bio && <div className="text-neutral-300 text-xs whitespace-pre-line">{m.bio}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         ) : null;
