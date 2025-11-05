@@ -16,8 +16,23 @@ const HomePage: React.FC = () => {
 
   // Tickets modal state
   const [ticketOpen, setTicketOpen] = useState(false);
-  const lang = useMemo<'de'|'en'>(() => {
+  const [lang, setLang] = useState<'de'|'en'>(() => {
     try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
+  });
+  useEffect(() => {
+    const onLang = (e: Event) => {
+      try {
+        const v = (e as CustomEvent).detail as any;
+        if (v === 'de' || v === 'en') { setLang(v); return; }
+        const ls = window.localStorage.getItem('lang');
+        setLang(ls === 'en' ? 'en' : 'de');
+      } catch {
+        const ls = window.localStorage.getItem('lang');
+        setLang(ls === 'en' ? 'en' : 'de');
+      }
+    };
+    window.addEventListener('lang:changed', onLang as any);
+    return () => window.removeEventListener('lang:changed', onLang as any);
   }, []);
   const theme = useMemo<'dark'|'light'>(() => {
     try { const t = window.localStorage.getItem('theme'); return (t === 'light' ? 'light' : 'dark'); } catch { return 'dark'; }
@@ -31,6 +46,13 @@ const HomePage: React.FC = () => {
   const [buyerName, setBuyerName] = useState<string>('');
   const [buyerEmail, setBuyerEmail] = useState<string>('');
   const [paymentChoice, setPaymentChoice] = useState<'online' | 'onsite'>('onsite');
+
+  // Helper: pick language-specific value (supports string or {de,en})
+  const L = (v: any): string => {
+    if (v == null) return '';
+    if (typeof v === 'string') return v;
+    return (lang === 'en' ? (v?.en || v?.de || '') : (v?.de || v?.en || '')) as string;
+  };
 
   // Instagram thumbnails (server-side preview fetch)
   const [instaThumbs, setInstaThumbs] = useState<Record<string, string | null>>({});
@@ -321,9 +343,9 @@ const HomePage: React.FC = () => {
                 <div className="space-y-4">
                   {content.news.filter(p => p.published !== false).sort((a,b)=> (b.date||'').localeCompare(a.date||'')).map(p => (
                     <article key={p.id} className={`p-3 ${cardBase} ${cardTone}`}>
-                      {p.title && <h3 className="text-neutral-100 text-lg font-semibold mb-1">{p.title}</h3>}
+                      {(p.title) && <h3 className="text-neutral-100 text-lg font-semibold mb-1">{L(p.title as any)}</h3>}
                       {p.date && <div className="text-neutral-400 text-xs mb-2">{new Date(p.date).toLocaleDateString('de-DE')}</div>}
-                      <div className="prose prose-invert max-w-none text-neutral-200" dangerouslySetInnerHTML={{ __html: p.html || '' }} />
+                      <div className="prose prose-invert max-w-none text-neutral-200" dangerouslySetInnerHTML={{ __html: L(p.html as any) }} />
                     </article>
                   ))}
                 </div>
@@ -338,9 +360,9 @@ const HomePage: React.FC = () => {
           <div id="booking" className="relative" key="booking">
             <div className="p-2 sm:p-3">
               <div className="mb-3 flex items-center justify-center">
-                <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{cfg.headline || (lang==='en'?'Booking':'Booking')}</h3>
+                <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{L(cfg.headline as any) || (lang==='en'?'Booking':'Booking')}</h3>
               </div>
-              <BookingForm note={cfg.note} phone={cfg.phone} />
+              <BookingForm note={L(cfg.note as any)} phone={cfg.phone} />
             </div>
           </div>
         );
@@ -349,11 +371,11 @@ const HomePage: React.FC = () => {
         return (content.about?.title || content.about?.text || (content.about?.members||[]).length>0) ? (
           <div id="about" className="relative" key="about">
             <div className="p-2 sm:p-3">
+              <div className="mb-2 flex items-center justify-center">
+                <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{L(content.about?.title as any) || (lang==='en' ? 'About' : 'Über uns')}</h3>
+              </div>
               <div className={`${cardBase} ${cardTone} p-3`}>
-                <div className="mb-2 flex items-center justify-center">
-                  <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{content.about?.title || (lang==='en' ? 'About' : 'Über uns')}</h3>
-                </div>
-                {content.about?.text && <p className="text-neutral-300 text-sm whitespace-pre-line text-center">{content.about.text}</p>}
+                {content.about?.text && <p className="text-neutral-300 text-sm whitespace-pre-line text-center">{L(content.about?.text as any)}</p>}
               </div>
               {(content.about?.members||[]).length>0 && (
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
@@ -368,7 +390,7 @@ const HomePage: React.FC = () => {
                         )}
                         <div className="text-neutral-100 font-medium">{m.name||''}</div>
                         {m.role && <div className="text-neutral-400 text-sm">{m.role}</div>}
-                        {m.bio && <div className="text-neutral-300 text-xs whitespace-pre-line">{m.bio}</div>}
+                        {m.bio && <div className="text-neutral-300 text-xs whitespace-pre-line">{L(m.bio as any)}</div>}
                       </div>
                     </div>
                   ))}

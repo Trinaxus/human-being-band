@@ -40,6 +40,18 @@ const AdminContentPanel: React.FC = () => {
   const [ok, setOk] = useState<string | null>(null);
   const [content, setContent] = useState<SiteContent>({});
   const [localNewsHtmlMode, setLocalNewsHtmlMode] = useState<Record<string, boolean>>({});
+  
+  const readI18n = (v: string | { de?: string; en?: string } | undefined, l: 'de'|'en'): string => {
+    if (!v) return '';
+    if (typeof v === 'string') return v;
+    return (v[l] || '') as string;
+  };
+  const writeI18n = (v: string | { de?: string; en?: string } | undefined, l: 'de'|'en', next: string): { de?: string; en?: string } | string => {
+    if (typeof v === 'string') {
+      return l === 'de' ? { de: next, en: v } : { de: v, en: next };
+    }
+    return { ...(v||{}), [l]: next } as any;
+  };
   const [bookingReqs, setBookingReqs] = useState<Array<{ id: string; name: string; email: string; date?: string; event?: string; location?: string; budget?: string; message?: string; created_at?: string }>>([]);
   const [bookingReqsLoading, setBookingReqsLoading] = useState(false);
   const [bookingReqsError, setBookingReqsError] = useState<string | null>(null);
@@ -345,9 +357,15 @@ const AdminContentPanel: React.FC = () => {
                 <input type="checkbox" checked={!!content.booking?.enabled} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), enabled: e.target.checked } }))} />
                 Aktiviert
               </label>
-              <div>
-                <label className="block text-xs text-neutral-400 mb-1">Überschrift</label>
-                <Input placeholder="Booking / Band anfragen" value={content.booking?.headline || ''} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), headline: e.target.value } }))} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">Überschrift (DE)</label>
+                  <Input placeholder="Booking / Band anfragen" value={readI18n(content.booking?.headline, 'de')} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), headline: writeI18n(prev.booking?.headline, 'de', e.target.value) } }))} />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">Überschrift (EN)</label>
+                  <Input placeholder="Booking / Band request" value={readI18n(content.booking?.headline, 'en')} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), headline: writeI18n(prev.booking?.headline, 'en', e.target.value) } }))} />
+                </div>
               </div>
               <div>
                 <label className="block text-xs text-neutral-400 mb-1">Empfänger‑E‑Mail</label>
@@ -357,9 +375,15 @@ const AdminContentPanel: React.FC = () => {
                 <label className="block text-xs text-neutral-400 mb-1">Telefon (optional)</label>
                 <Input placeholder="+49 …" value={content.booking?.phone || ''} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), phone: e.target.value } }))} />
               </div>
-              <div className="md:col-span-2">
-                <label className="block text-xs text-neutral-400 mb-1">Hinweistext (optional)</label>
-                <Textarea rows={3} placeholder="Kurzer Hinweis unter dem Formular" value={content.booking?.note || ''} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), note: e.target.value } }))} />
+              <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">Hinweis (DE, optional)</label>
+                  <Textarea rows={3} placeholder="Kurzer Hinweis unter dem Formular" value={readI18n(content.booking?.note, 'de')} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), note: writeI18n(prev.booking?.note, 'de', e.target.value) } }))} />
+                </div>
+                <div>
+                  <label className="block text-xs text-neutral-400 mb-1">Note (EN, optional)</label>
+                  <Textarea rows={3} placeholder="Short note under the form" value={readI18n(content.booking?.note, 'en')} onChange={e => setContent(prev => ({ ...prev, booking: { ...(prev.booking||{}), note: writeI18n(prev.booking?.note, 'en', e.target.value) } }))} />
+                </div>
               </div>
             </div>
             <div className="flex justify-end">
@@ -647,7 +671,8 @@ const AdminContentPanel: React.FC = () => {
               {(content.news||[]).map((p, idx) => (
                 <div key={p.id} className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 space-y-3">
                   <div className="flex items-center gap-2">
-                    <Input placeholder="Titel" value={p.title || ''} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, title: e.target.value } : x) }))} />
+                    <Input placeholder="Titel (DE)" value={readI18n(p.title as any, 'de')} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, title: writeI18n(x.title as any, 'de', e.target.value) } : x) }))} />
+                    <Input placeholder="Title (EN)" value={readI18n(p.title as any, 'en')} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, title: writeI18n(x.title as any, 'en', e.target.value) } : x) }))} />
                     <input type="date" value={(p.date||'').slice(0,10)} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, date: e.target.value } : x) }))} className="px-2 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 text-sm" />
                     <label className="flex items-center gap-2 text-neutral-200 text-sm">
                       <input type="checkbox" checked={p.published !== false} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, published: e.target.checked } : x) }))} />
@@ -662,35 +687,31 @@ const AdminContentPanel: React.FC = () => {
                     <button type="button" onClick={() => setContent(prev => ({ ...prev, news: (prev.news||[]).filter((_,i)=> i!==idx) }))} className="ml-auto px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Entfernen</button>
                   </div>
                   {localNewsHtmlMode[p.id] ? (
-                    <textarea
-                      className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
-                      value={p.html || ''}
-                      onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: e.target.value } : x) }))}
-                      placeholder="<p>HTML‑Inhalt…</p>"
-                    />
-                  ) : (
-                    <>
-                      {/* Simple Rich Text Toolbar */}
-                      <div className="flex items-center gap-2 px-2 py-1 rounded bg-neutral-800/60 border border-neutral-700/40 text-neutral-200 text-sm">
-                        <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('bold')}>B</button>
-                        <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('italic')}>I</button>
-                        <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('underline')}>U</button>
-                        <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => { const url = prompt('Link-URL'); if (url) document.execCommand('createLink', false, url); }}>Link</button>
-                        <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('unlink', false)}>Link entfernen</button>
-                        <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => { const c = prompt('Farbe (z.B. #ff0088 oder red)'); if (c) document.execCommand('foreColor', false, c); }}>Farbe</button>
-                        <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('removeFormat', false)}>Format löschen</button>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-neutral-400 mb-1">HTML (DE)</label>
+                        <textarea
+                          className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
+                          value={readI18n(p.html as any, 'de')}
+                          onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'de', e.target.value) } : x) }))}
+                          placeholder="<p>HTML‑Inhalt…</p>"
+                        />
                       </div>
-                      <div
-                        className="min-h-[140px] p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 prose-invert"
-                        contentEditable
-                        suppressContentEditableWarning
-                        onInput={(e) => {
-                          const html = (e.currentTarget as HTMLDivElement).innerHTML;
-                          setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html } : x) }));
-                        }}
-                        dangerouslySetInnerHTML={{ __html: p.html || '' }}
-                      />
-                    </>
+                      <div>
+                        <label className="block text-xs text-neutral-400 mb-1">HTML (EN)</label>
+                        <textarea
+                          className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
+                          value={readI18n(p.html as any, 'en')}
+                          onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'en', e.target.value) } : x) }))}
+                          placeholder="<p>HTML content…</p>"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="min-h-[100px] p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 prose-invert"
+                      dangerouslySetInnerHTML={{ __html: readI18n(p.html as any, 'de') }}
+                    />
                   )}
                 </div>
               ))}
@@ -704,8 +725,22 @@ const AdminContentPanel: React.FC = () => {
         <ToggleButton label="Über uns" open={open.about} onClick={() => setOpen(prev => ({ ...prev, about: !prev.about }))} />
         {open.about && (
           <div className="mt-3 grid grid-cols-1 gap-3">
-            <Input placeholder="Titel (Über uns)" value={content.about?.title || ''} onChange={e => setContent({ ...content, about: { ...(content.about||{}), title: e.target.value } })} />
-            <Textarea rows={4} placeholder="Über uns Text" value={content.about?.text || ''} onChange={e => setContent({ ...content, about: { ...(content.about||{}), text: e.target.value } })} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Input placeholder="Titel (DE)" value={readI18n(content.about?.title as any, 'de')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), title: writeI18n(prev.about?.title as any, 'de', e.target.value) } }))} />
+              </div>
+              <div>
+                <Input placeholder="Title (EN)" value={readI18n(content.about?.title as any, 'en')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), title: writeI18n(prev.about?.title as any, 'en', e.target.value) } }))} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <Textarea rows={4} placeholder="Über uns Text (DE)" value={readI18n(content.about?.text as any, 'de')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, 'de', e.target.value) } }))} />
+              </div>
+              <div>
+                <Textarea rows={4} placeholder="About text (EN)" value={readI18n(content.about?.text as any, 'en')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, 'en', e.target.value) } }))} />
+              </div>
+            </div>
             {/* Bandmitglieder */}
             <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
               <div className="flex items-center justify-between mb-2">
@@ -729,18 +764,19 @@ const AdminContentPanel: React.FC = () => {
                         <Input placeholder="Bild‑URL" value={m.image||''} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, image: e.target.value } : x) } }))} />
                         <div className="flex items-center gap-1">
                           <button onClick={() => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, order: Math.max(0, (m.order??idx)-1) } : x).sort((a,b)=> (a.order??0)-(b.order??0)) } }))} disabled={idx===0} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40">↑</button>
-                          <button onClick={() => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, order: Math.min((arr.length-1), (m.order??idx)+1) } : x).sort((a,b)=> (a.order??0)-(b.order??0)) } }))} disabled={idx===arr.length-1} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40">↓</button>
-                          <button onClick={() => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).filter(x => x.id!==m.id).map((x,i)=>({ ...x, order: i })) } }))} className="ml-2 px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Entfernen</button>
+                          <button onClick={() => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, order: Math.min(arr.length-1, (m.order??idx)+1) } : x).sort((a,b)=> (a.order??0)-(b.order??0)) } }))} disabled={idx===arr.length-1} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40">↓</button>
+                          <button onClick={() => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).filter(x => x.id!==m.id).map((x,i)=> ({ ...x, order: i })) } }))} className="ml-2 px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Entfernen</button>
                         </div>
                       </div>
                       <div className="md:col-span-3">
-                        <Textarea rows={5} placeholder="Kurzbiografie / Portfolio" value={m.bio||''} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, bio: e.target.value } : x) } }))} />
-                        {m.image && (
-                          <div className="mt-2">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={m.image} alt={m.name||'Profil'} className="h-28 w-28 object-cover rounded-lg border border-neutral-700/40" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <Textarea rows={5} placeholder="Kurzbiografie (DE)" value={readI18n(m.bio as any, 'de')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, bio: writeI18n(x.bio as any, 'de', e.target.value) } : x) } }))} />
                           </div>
-                        )}
+                          <div>
+                            <Textarea rows={5} placeholder="Short bio (EN)" value={readI18n(m.bio as any, 'en')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, bio: writeI18n(x.bio as any, 'en', e.target.value) } : x) } }))} />
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -26,6 +26,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
   // Persist language
   React.useEffect(() => {
     try { window.localStorage.setItem('lang', lang); } catch {}
+    try { window.dispatchEvent(new CustomEvent('lang:changed', { detail: lang })); } catch {}
   }, [lang]);
 
   // Apply theme to <html>

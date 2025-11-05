@@ -315,12 +315,16 @@ export type SiteContent = {
   newsEnabled?: boolean;
   news?: Array<{
     id: string;
-    title: string;
-    html: string;
+    title: string | { de?: string; en?: string };
+    html: string | { de?: string; en?: string };
     date?: string;
     published?: boolean;
   }>;
-  about?: { title?: string; text?: string; members?: Array<{ id: string; name: string; role?: string; bio?: string; image?: string; order?: number }> };
+  about?: {
+    title?: string | { de?: string; en?: string };
+    text?: string | { de?: string; en?: string };
+    members?: Array<{ id: string; name: string; role?: string; bio?: string | { de?: string; en?: string }; image?: string; order?: number }>;
+  };
   // Admin-managed media embeds (starting with Spotify)
   mediaEmbeds?: Array<{
     id: string;
@@ -338,10 +342,10 @@ export type SiteContent = {
   // Booking (Band anfragen)
   booking?: {
     enabled?: boolean;
-    headline?: string;
+    headline?: string | { de?: string; en?: string };
     recipientEmail?: string; // where booking requests are sent
     phone?: string;          // optional phone shown
-    note?: string;           // helper text shown under form
+    note?: string | { de?: string; en?: string }; // helper text shown under form
   };
   // Events / Scheduler (Admin-managed)
   events?: Array<{
