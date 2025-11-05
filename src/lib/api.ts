@@ -311,6 +311,8 @@ export type SiteContent = {
     status?: 'public' | 'internal' | 'locked';
     items: Array<{ type: 'image' | 'video' | 'youtube' | 'instagram'; url: string; title?: string }>;
   }>;
+  // Galleries to ignore on scan (do not auto/propose re-add)
+  galleriesIgnore?: Array<{ year: number; name: string }>;
   sectionsOrder?: string[];
   newsEnabled?: boolean;
   news?: Array<{
@@ -388,11 +390,18 @@ export async function bookingRequestsList() {
 }
 
 export async function bookingRequestsUpdate(id: string, status: 'open'|'confirmed'|'done'|'archived') {
-  return apiPost<{ ok: boolean }>(`/booking_requests.php`, { action: 'update', id, status });
+  const form = new FormData();
+  form.append('action', 'update');
+  form.append('id', id);
+  form.append('status', status);
+  return apiPost<{ ok: boolean }>(`/booking_requests.php`, form);
 }
 
 export async function bookingRequestsDelete(id: string) {
-  return apiPost<{ ok: boolean }>(`/booking_requests.php`, { action: 'delete', id });
+  const form = new FormData();
+  form.append('action', 'delete');
+  form.append('id', id);
+  return apiPost<{ ok: boolean }>(`/booking_requests.php`, form);
 }
 
 // --- Uploads scanner ---

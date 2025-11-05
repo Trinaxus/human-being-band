@@ -112,32 +112,32 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
 
         {/* Desktop: full header */}
         <div className="hidden sm:flex items-center justify-between">
-          {/* Logo */}
+          {/* Logo (left) */}
           <button onClick={handleHome} className="inline-flex items-center" title="Home">
             <img src="/human-being-logo-weiß.png" alt="Human Being Band" className="header-logo h-9 w-auto block" />
             <span className="sr-only">HUMAN BEING BAND</span>
           </button>
 
-          {/* Center nav */}
-          <nav className="flex items-center gap-4">
-            {[
-              { id: 'news', label: 'News' },
-              { id: 'about', label: 'About' },
-              { id: 'media', label: 'Media' },
-              { id: 'booking', label: 'Booking' },
-            ].map(link => (
-              <button
-                key={link.id}
-                onClick={() => {
-                  try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
-                }}
-                className="px-3 py-1.5 text-base md:text-lg rounded-md text-white hover:text-white hover:bg-neutral-700/40 uppercase font-display tracking-wider"
-              >{link.label}</button>
-            ))}
-          </nav>
+          {/* Right cluster: nav then settings */}
+          <div className="flex items-center gap-4">
+            <nav className="flex items-center gap-4">
+              {[
+                { id: 'news', label: 'News' },
+                { id: 'about', label: 'About' },
+                { id: 'media', label: 'Media' },
+                { id: 'booking', label: 'Booking' },
+              ].map(link => (
+                <button
+                  key={link.id}
+                  onClick={() => {
+                    try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+                  }}
+                  className="px-3 py-1.5 text-base md:text-lg rounded-md text-white hover:text-white hover:bg-neutral-700/40 uppercase font-display tracking-wider"
+                >{link.label}</button>
+              ))}
+            </nav>
 
-          {/* Right side buttons */}
-          <div className="flex items-center gap-3">
+            {/* Settings gear dropdown */}
             {/* Settings gear dropdown */}
             <div id="header-settings" className="relative">
               <button onClick={() => setSettingsOpen(v=>!v)} className="px-3 py-2 text-sm rounded-lg border-[0.5px] border-neutral-600/50 bg-neutral-700/50 text-neutral-300 hover:bg-neutral-600/40 hover:text-white transition-colors" title="Einstellungen" aria-haspopup>

@@ -42,7 +42,10 @@ const AdminBookingRequestsPanel: React.FC = () => {
     if (!confirm('Anfrage wirklich löschen?')) return;
     try {
       await bookingRequestsDelete(id);
-      setItems(prev => prev.filter(x => x.id !== id));
+      // Reload from server to make sure it's persisted and reflect canonical state
+      await load();
+      // Optional lightweight feedback
+      try { alert('Anfrage gelöscht.'); } catch {}
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Fehler beim Löschen');
     }

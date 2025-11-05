@@ -102,6 +102,21 @@ const AdminContentPanel: React.FC = () => {
 
   const upsertContent = (patch: Partial<SiteContent>) => setContent(prev => ({ ...prev, ...patch }));
   const setGalleries = (next: SiteContent['galleries']) => upsertContent({ galleries: next });
+  // Manage ignore list for scanned galleries so deleted ones don't reappear
+  const getIgnore = () => (Array.isArray((content as any).galleriesIgnore) ? (content as any).galleriesIgnore as Array<{ year: number; name: string }> : []);
+  const addIgnore = (year: number, name: string) => {
+    const key = `${year}:::${name}`.toLowerCase();
+    const list = getIgnore();
+    if (!list.some(g => `${g.year}:::${g.name}`.toLowerCase() === key)) {
+      upsertContent({ galleriesIgnore: [ ...list, { year, name } ] as any });
+    }
+  };
+  const removeIgnore = (year: number, name: string) => {
+    const key = `${year}:::${name}`.toLowerCase();
+    const list = getIgnore();
+    const next = list.filter(g => `${g.year}:::${g.name}`.toLowerCase() !== key);
+    if (next.length !== list.length) upsertContent({ galleriesIgnore: next as any });
+  };
   const norm = (s: string) => s.trim().replace(/\s+/g, ' ');
   const galleryExists = (year: number, name: string) => (galleries||[]).some(g => g.year === year && g.name.toLowerCase() === name.toLowerCase());
   const validYear = (y: number) => Number.isFinite(y) && y >= 1900 && y <= 2999;
@@ -113,6 +128,7 @@ const AdminContentPanel: React.FC = () => {
     if (galleryExists(y, n)) { setError('Diese Galerie existiert bereits.'); return; }
     setError(null);
     setGalleries([...(galleries||[]), { year: y, name: n, items: [] }]);
+    removeIgnore(y, n);
   };
 
   // Gallery status helpers
@@ -200,27 +216,58 @@ const AdminContentPanel: React.FC = () => {
     try {
       const res = await scanUploads();
       const scanned = Array.isArray(res.galleries) ? res.galleries : [];
-      // Merge: union with existing by (year,name), preserve prev items and status, add new files from scan
+      // Merge: union with existing by (year,name), preserve prev items and status.
+      // DO NOT resurrect deleted galleries or items unless admin confirms.
       const keyOf = (y: number, n: string) => `${y}:::${n}`.toLowerCase();
       const prevMap = new Map<string, any>();
       (galleries||[]).forEach(pg => prevMap.set(keyOf(pg.year, pg.name), { ...pg, items: (pg.items||[]).slice() }));
       const outMap = new Map<string, any>(prevMap);
+      const newGalleries: any[] = [];
+      const newItemsByKey: Record<string, any[]> = {};
+      const sig = (it: any) => `${it.type||''}@@${it.url||''}`;
+      const ignoredSet = new Set<string>(getIgnore().map(g => `${g.year}:::${g.name}`.toLowerCase()));
       scanned.forEach((sg: any) => {
         const k = keyOf(sg.year, sg.name);
         const prev = prevMap.get(k);
         const status = sg.status ?? prev?.status ?? undefined;
-        const prevItems = Array.isArray(prev?.items) ? prev.items : [];
         const scanItems = Array.isArray(sg.items) ? sg.items : [];
-        const seen = new Set<string>();
-        const mergedItems: any[] = [];
-        const sig = (it: any) => `${it.type||''}@@${it.url||''}`;
-        // Keep previous items first (so custom videos/youtube/instagram remain)
-        prevItems.forEach((it: any) => { const s = sig(it); if (!seen.has(s)) { seen.add(s); mergedItems.push(it); } });
-        // Add any new scanned files (images/videos) that aren't already present
-        scanItems.forEach((it: any) => { const s = sig(it); if (!seen.has(s)) { seen.add(s); mergedItems.push(it); } });
-        outMap.set(k, { year: sg.year, name: sg.name, status, items: mergedItems });
+        if (!prev) {
+          // New gallery found by scan; skip if ignored, otherwise propose
+          if (!ignoredSet.has(k)) newGalleries.push({ year: sg.year, name: sg.name, status, items: scanItems });
+          return;
+        }
+        // Existing gallery: keep previous items, track new ones separately
+        const prevItems = Array.isArray(prev.items) ? prev.items : [];
+        const seen = new Set<string>(prevItems.map(sig));
+        const newOnes: any[] = [];
+        scanItems.forEach((it: any) => { const s = sig(it); if (!seen.has(s)) newOnes.push(it); });
+        if (newOnes.length) newItemsByKey[k] = newOnes;
+        outMap.set(k, { year: sg.year, name: sg.name, status, items: prevItems });
       });
-      // Preserve galleries that existed but weren't in scan (e.g., external-only galleries)
+
+      // Ask for confirmation to add newly discovered galleries and items
+      let confirmText = '';
+      if (newGalleries.length) confirmText += `Neue Ordner gefunden: ${newGalleries.length}. `;
+      const newItemsTotal = Object.values(newItemsByKey).reduce((a,b)=> a + (b?.length||0), 0);
+      if (newItemsTotal) confirmText += `Neue Dateien gefunden: ${newItemsTotal}. `;
+      if (confirmText) {
+        confirmText += '\nSollen diese übernommen werden?';
+        const ok = window.confirm(confirmText);
+        if (ok) {
+          // Add galleries
+          newGalleries.forEach(g => { outMap.set(keyOf(g.year, g.name), g); removeIgnore(g.year, g.name); });
+          // Add new items into existing galleries
+          Object.entries(newItemsByKey).forEach(([k, arr]) => {
+            const cur = outMap.get(k);
+            const currItems = Array.isArray(cur?.items) ? cur.items.slice() : [];
+            const seen = new Set<string>(currItems.map(sig));
+            for (const it of arr) { const s = sig(it); if (!seen.has(s)) { seen.add(s); currItems.push(it); } }
+            outMap.set(k, { ...cur, items: currItems });
+          });
+        }
+      }
+
+      // Preserve galleries that existed but weren't in scan (e.g., external-only galleries) are already in outMap
       const merged = Array.from(outMap.values());
       const next: SiteContent = { ...content, galleries: merged };
       const saved = await contentSave(next);
@@ -240,7 +287,10 @@ const AdminContentPanel: React.FC = () => {
     setError(null);
     setGalleries((galleries||[]).map(g => (g.year===y && g.name===oldName) ? { ...g, name: n } : g));
   };
-  const removeGallery = (year: number, name: string) => setGalleries((galleries||[]).filter(g => !(g.year===year && g.name===name)));
+  const removeGallery = (year: number, name: string) => {
+    setGalleries((galleries||[]).filter(g => !(g.year===year && g.name===name)));
+    addIgnore(year, name);
+  };
   const addItemUrl = (year: number, name: string, type: 'image'|'video'|'youtube'|'instagram', url: string) => setGalleries((galleries||[]).map(g => (g.year===year && g.name===name) ? { ...g, items: [ ...(g.items||[]), { type, url } ] } : g));
   const removeItem = (year: number, name: string, idx: number) => setGalleries((galleries||[]).map(g => (g.year===year && g.name===name) ? { ...g, items: (g.items||[]).filter((_,i)=>i!==idx) } : g));
   const moveItem = (year: number, name: string, idx: number, dir: -1|1) => setGalleries((galleries||[]).map(g => {
@@ -1246,9 +1296,7 @@ const AdminContentPanel: React.FC = () => {
                 </div>
               ))}
             </div>
-            <div className="flex justify-end">
-              <button disabled={saving} onClick={save} className="mt-2 px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 disabled:opacity-60">{saving ? 'Speichert…' : 'Speichern'}</button>
-            </div>
+            
           </div>
         )}
       </section>

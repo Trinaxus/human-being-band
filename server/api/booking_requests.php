@@ -30,7 +30,14 @@ if ($raw !== '') {
   $json = json_decode($raw, true);
   if (is_array($json)) $body = $json;
 }
-if (!is_array($body)) $body = [];
+// Fallback: accept form submissions (FormData / x-www-form-urlencoded)
+if (!is_array($body) || empty($body)) {
+  if (!empty($_POST) && is_array($_POST)) {
+    $body = $_POST;
+  } else {
+    $body = [];
+  }
+}
 
 $action = (string)($body['action'] ?? '');
 if ($action === 'update') {

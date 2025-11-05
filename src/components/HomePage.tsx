@@ -77,10 +77,6 @@ const HomePage: React.FC = () => {
   const BookingForm: React.FC<{ note?: string; phone?: string }> = ({ note, phone }) => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [date, setDate] = useState('');
-    const [event, setEvent] = useState('');
-    const [location, setLocation] = useState('');
-    const [budget, setBudget] = useState('');
     const [message, setMessage] = useState('');
     const [busy, setBusy] = useState(false);
     const [okMsg, setOkMsg] = useState<string|null>(null);
@@ -95,9 +91,9 @@ const HomePage: React.FC = () => {
       }
       setBusy(true);
       try {
-        await bookingRequest({ name, email, date, event, location, message, budget });
+        await bookingRequest({ name, email, message });
         setOkMsg(lang==='en' ? 'Vielen Dank! Wir melden uns.' : 'Vielen Dank! Wir melden uns.');
-        setName(''); setEmail(''); setDate(''); setEvent(''); setLocation(''); setBudget(''); setMessage('');
+        setName(''); setEmail(''); setMessage('');
       } catch (e) {
         setErrMsg(e instanceof Error ? e.message : (lang==='en'?'Submission failed':'Absenden fehlgeschlagen'));
       } finally { setBusy(false); }
@@ -110,10 +106,6 @@ const HomePage: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" placeholder={lang==='en'?'Name*':'Name*'} value={name} onChange={e=>setName(e.target.value)} />
           <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" placeholder={lang==='en'?'Email*':'E‑Mail*'} value={email} onChange={e=>setEmail(e.target.value)} />
-          <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" type="date" value={date} onChange={e=>setDate(e.target.value)} />
-          <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" placeholder={lang==='en'?'Event':'Event'} value={event} onChange={e=>setEvent(e.target.value)} />
-          <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" placeholder={lang==='en'?'Location':'Ort / Location'} value={location} onChange={e=>setLocation(e.target.value)} />
-          <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" placeholder={lang==='en'?'Budget (optional)':'Budget (optional)'} value={budget} onChange={e=>setBudget(e.target.value)} />
         </div>
         <textarea className="w-full px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" rows={4} placeholder={lang==='en'?'Message':'Nachricht'} value={message} onChange={e=>setMessage(e.target.value)} />
         {note && <div className="text-xs text-neutral-400">{note}</div>}
@@ -266,7 +258,7 @@ const HomePage: React.FC = () => {
   }, [content.tickets]);
 
   const SocialIcon: React.FC<{ type?: string; className?: string }> = ({ type, className }) => {
-    const cls = className || 'h-5 w-5 text-neutral-100';
+    const cls = className || 'h-10 w-10 text-neutral-100';
     switch (type) {
       case 'instagram': return <Instagram className={cls} />;
       case 'facebook': return <Facebook className={cls} />;
@@ -375,18 +367,18 @@ const HomePage: React.FC = () => {
                 <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{L(content.about?.title as any) || (lang==='en' ? 'About' : 'Über uns')}</h3>
               </div>
               <div className={`${cardBase} ${cardTone} p-3`}>
-                {content.about?.text && <p className="text-neutral-300 text-sm whitespace-pre-line text-center">{L(content.about?.text as any)}</p>}
+                {content.about?.text && <p className="text-neutral-300 text-sm whitespace-pre-line text-left">{L(content.about?.text as any)}</p>}
               </div>
               {(content.about?.members||[]).length>0 && (
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                   {(content.about?.members||[]).slice().sort((a,b)=> (a.order??0)-(b.order??0)).map((m, idx) => (
                     <div key={m.id||idx} className={`${cardBase} ${cardTone} p-3`}>
-                      <div className="flex flex-col items-center text-center gap-2">
+                      <div className="flex flex-col items-start text-left gap-2">
                         {m.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={m.image} alt={m.name||'Profil'} className="w-28 h-28 rounded-full object-cover border border-neutral-700/30" />
+                          <img src={m.image} alt={m.name||'Profil'} className="self-center w-28 h-28 rounded-full object-cover border border-neutral-700/30" />
                         ) : (
-                          <div className="w-28 h-28 rounded-full bg-neutral-800/40 border border-neutral-700/30" />
+                          <div className="self-center w-28 h-28 rounded-full bg-neutral-800/40 border border-neutral-700/30" />
                         )}
                         <div className="text-neutral-100 font-medium">{m.name||''}</div>
                         {m.role && <div className="text-neutral-400 text-sm">{m.role}</div>}
@@ -424,9 +416,17 @@ const HomePage: React.FC = () => {
               <div className="mb-3 flex items-center justify-center">
                 <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{lang==='en' ? 'Social' : 'Social'}</h3>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-3">
+              <div className="flex flex-wrap items-center justify-center gap-8">
                 {content.socials.map((s, idx) => (
-                  <a key={idx} href={s.url} target="_blank" rel="noreferrer" aria-label={s.type || 'link'} className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 hover:bg-neutral-800" title={s.type || s.url}>
+                  <a
+                    key={idx}
+                    href={s.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    aria-label={s.type || 'link'}
+                    className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#77111c] border-[0.5px] border-[#77111c]/60 hover:bg-[#8b1522] transition-all duration-200 shadow-[0_0_0_0_rgba(139,21,34,0)] hover:shadow-[0_0_24px_8px_rgba(139,21,34,0.7)]"
+                    title={s.type || s.url}
+                  >
                     <SocialIcon type={s.type} />
                   </a>
                 ))}

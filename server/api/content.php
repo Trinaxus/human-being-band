@@ -47,6 +47,7 @@ $allowed = [
   'socials',       // [ { type, url } ]
   'tickets',       // [ { id, title, url } ]
   'galleries',     // structured galleries
+  'galleriesIgnore', // [{ year, name }] to suppress re-importing specific folders
   'sectionsOrder', // custom order of sections on Home
   'newsEnabled',   // toggle for news/blog visibility
   'news',          // array of posts { id, title, html, date, published }
