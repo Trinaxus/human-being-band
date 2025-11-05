@@ -88,7 +88,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
   };
 
   return (
-    <header className="relative z-40 bg-neutral-900/85 border-b-[0.5px] border-neutral-800 backdrop-blur-sm shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)]">
+    <>
+    <header className="fixed inset-x-0 top-0 z-40 bg-neutral-900/85 border-b-[0.5px] border-neutral-800 backdrop-blur-sm shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)]">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {/* Mobile: compact top bar */}
         <div className="flex items-center justify-between sm:hidden">
@@ -227,6 +228,9 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
       {/* Gradient hairline */}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[0.5px] bg-gradient-to-r from-[#77111c33] via-[#77111c] to-[#77111c33] opacity-60" />
     </header>
+    {/* Spacer to offset fixed header height */}
+    <div aria-hidden className="h-[68px] sm:h-[96px]" />
+    </>
   );
 };
 
