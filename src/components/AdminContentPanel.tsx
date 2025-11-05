@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { API_BASE } from '../lib/api';
-import { contentGet, contentSave, uploadFile, scanUploads, writeMetadata, type SiteContent } from '../lib/api';
+import { contentGet, contentSave, uploadFile, scanUploads, writeMetadata, bookingRequestsList, type SiteContent } from '../lib/api';
 import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle } from 'lucide-react';
 
 const SectionTitle: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
@@ -40,6 +40,9 @@ const AdminContentPanel: React.FC = () => {
   const [ok, setOk] = useState<string | null>(null);
   const [content, setContent] = useState<SiteContent>({});
   const [localNewsHtmlMode, setLocalNewsHtmlMode] = useState<Record<string, boolean>>({});
+  const [bookingReqs, setBookingReqs] = useState<Array<{ id: string; name: string; email: string; date?: string; event?: string; location?: string; budget?: string; message?: string; created_at?: string }>>([]);
+  const [bookingReqsLoading, setBookingReqsLoading] = useState(false);
+  const [bookingReqsError, setBookingReqsError] = useState<string | null>(null);
 
   
 
@@ -361,6 +364,49 @@ const AdminContentPanel: React.FC = () => {
             </div>
             <div className="flex justify-end">
               <button disabled={saving} onClick={save} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 disabled:opacity-60">{saving ? 'Speichert…' : 'Speichern'}</button>
+            </div>
+
+            <div className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-neutral-200 text-sm">Eingegangene Anfragen</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setBookingReqsError(null); setBookingReqsLoading(true);
+                      try {
+                        const res = await bookingRequestsList();
+                        setBookingReqs(res.requests || []);
+                      } catch (e) {
+                        setBookingReqsError(e instanceof Error ? e.message : 'Fehler beim Laden');
+                      } finally { setBookingReqsLoading(false); }
+                    }}
+                    className="px-3 py-1.5 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800"
+                  >Aktualisieren</button>
+                </div>
+              </div>
+              {bookingReqsError && <div className="text-rose-300 text-sm mb-2">{bookingReqsError}</div>}
+              {bookingReqsLoading ? (
+                <div className="text-[#909296] text-sm">Lade…</div>
+              ) : (
+                <div className="space-y-2 max-h-[420px] overflow-auto">
+                  {bookingReqs.length === 0 && (
+                    <div className="text-[#909296] text-sm">Keine Anfragen vorhanden.</div>
+                  )}
+                  {bookingReqs.map((r) => (
+                    <div key={r.id} className="p-2 rounded-lg bg-neutral-800/60 border border-neutral-700/40">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-neutral-100 text-sm font-medium truncate">{r.name} <span className="text-neutral-400 font-normal">&lt;{r.email}&gt;</span></div>
+                        <div className="text-neutral-400 text-xs">{r.created_at ? new Date(r.created_at).toLocaleString('de-DE') : ''}</div>
+                      </div>
+                      <div className="text-neutral-300 text-xs mt-1">
+                        {[r.date, r.event, r.location, r.budget].filter(Boolean).join(' · ')}
+                      </div>
+                      {r.message && <div className="text-neutral-200 text-sm mt-1 whitespace-pre-line">{r.message}</div>}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

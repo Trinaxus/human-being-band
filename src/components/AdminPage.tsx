@@ -2,11 +2,12 @@ import React from 'react';
 import AdminContentPanel from './AdminContentPanel';
 import AdminEventsPanel from './AdminEventsPanel';
 import AdminSchedulerPanel from './AdminSchedulerPanel';
+import AdminBookingRequestsPanel from './AdminBookingRequestsPanel';
 import { useAuth } from '../hooks/useAuth';
 
 const AdminPage: React.FC = () => {
   const { authenticated } = useAuth();
-  const [tab, setTab] = React.useState<'content'|'events'|'scheduler'>('content');
+  const [tab, setTab] = React.useState<'content'|'events'|'scheduler'|'bookings'>('content');
   return (
     <div className="relative flex-1 w-full">
       <div className="relative z-10 w-full max-w-[1200px] mx-auto px-6 self-start mt-2 md:mt-3">
@@ -17,6 +18,7 @@ const AdminPage: React.FC = () => {
                 { key: 'content', label: 'Content' },
                 { key: 'events', label: 'Events' },
                 { key: 'scheduler', label: 'Scheduler' },
+                { key: 'bookings', label: 'Booking Anfragen' },
               ] as const).map(t => (
                 <button key={t.key}
                   onClick={() => setTab(t.key)}
@@ -29,6 +31,7 @@ const AdminPage: React.FC = () => {
                 {tab==='content' && <AdminContentPanel />}
                 {tab==='events' && <AdminEventsPanel />}
                 {tab==='scheduler' && <AdminSchedulerPanel />}
+                {tab==='bookings' && <AdminBookingRequestsPanel />}
               </div>
             </div>
           </>

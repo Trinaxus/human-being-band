@@ -39,6 +39,7 @@ $record = [
   'created_at' => date('c'),
   'ip' => $_SERVER['REMOTE_ADDR'] ?? null,
   'ua' => $_SERVER['HTTP_USER_AGENT'] ?? null,
+  'status' => 'open',
 ];
 
 // Persist requests to JSON file

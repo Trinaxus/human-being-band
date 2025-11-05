@@ -378,6 +378,19 @@ export async function bookingRequest(payload: {
   return apiPost<{ ok: boolean; id: string }>(`/booking_request.php`, payload);
 }
 
+// Admin: list booking requests
+export async function bookingRequestsList() {
+  return apiGet<{ ok: boolean; requests: Array<{ id: string; name: string; email: string; date?: string; event?: string; location?: string; budget?: string; message?: string; created_at?: string }> }>(`/booking_requests.php`);
+}
+
+export async function bookingRequestsUpdate(id: string, status: 'open'|'confirmed'|'done'|'archived') {
+  return apiPost<{ ok: boolean }>(`/booking_requests.php`, { action: 'update', id, status });
+}
+
+export async function bookingRequestsDelete(id: string) {
+  return apiPost<{ ok: boolean }>(`/booking_requests.php`, { action: 'delete', id });
+}
+
 // --- Uploads scanner ---
 export async function scanUploads() {
   return apiGet<{ ok: boolean; galleries: Array<{ year: number; name: string; items: Array<{ type: 'image' | 'video'; url: string }> }> }>(`/scan_uploads.php`);
