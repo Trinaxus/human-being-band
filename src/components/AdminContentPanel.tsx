@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { API_BASE } from '../lib/api';
 import { contentGet, contentSave, uploadFile, scanUploads, writeMetadata, bookingRequestsList, type SiteContent } from '../lib/api';
 import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle } from 'lucide-react';
@@ -33,6 +33,26 @@ const ToggleButton: React.FC<{ label: string; open: boolean; onClick: () => void
   </button>
 );
 
+const ContentEditableEditor: React.FC<{ value: string; onChange: (html: string) => void; className?: string }> = ({ value, onChange, className }) => {
+  const ref = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (el.innerHTML !== value) {
+      el.innerHTML = value || '';
+    }
+  }, [value]);
+  return (
+    <div
+      ref={ref}
+      className={className}
+      contentEditable
+      suppressContentEditableWarning
+      onInput={(e) => onChange((e.currentTarget as HTMLDivElement).innerHTML)}
+    />
+  );
+};
+
 const AdminContentPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,6 +60,9 @@ const AdminContentPanel: React.FC = () => {
   const [ok, setOk] = useState<string | null>(null);
   const [content, setContent] = useState<SiteContent>({});
   const [localNewsHtmlMode, setLocalNewsHtmlMode] = useState<Record<string, boolean>>({});
+  const [newsLang, setNewsLang] = useState<'de'|'en'>(() => {
+    try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
+  });
   
   const readI18n = (v: string | { de?: string; en?: string } | undefined, l: 'de'|'en'): string => {
     if (!v) return '';
@@ -653,15 +676,21 @@ const AdminContentPanel: React.FC = () => {
                 <input type="checkbox" checked={!!content.newsEnabled} onChange={e => setContent({ ...content, newsEnabled: e.target.checked })} />
                 News auf der Startseite anzeigen
               </label>
-              <button
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 mr-2">
+                  <button type="button" onClick={() => setNewsLang('de')} className={`px-2 py-1 rounded border ${newsLang==='de'?'border-neutral-300 text-neutral-100':'border-neutral-700 text-neutral-300'} bg-neutral-800 hover:bg-neutral-700`}>DE</button>
+                  <button type="button" onClick={() => setNewsLang('en')} className={`px-2 py-1 rounded border ${newsLang==='en'?'border-neutral-300 text-neutral-100':'border-neutral-700 text-neutral-300'} bg-neutral-800 hover:bg-neutral-700`}>EN</button>
+                </div>
+                <button
                 type="button"
                 onClick={() => {
                   const id = String(Date.now());
-                  const post = { id, title: 'Neuer Beitrag', html: '<p>Text...</p>', date: new Date().toISOString().slice(0,10), published: true } as any;
+                  const post = { id, title: { de: 'Neuer Beitrag', en: 'New post' }, html: { de: '<p>Text…</p>', en: '<p>Text…</p>' }, date: new Date().toISOString().slice(0,10), published: true } as any;
                   setContent(prev => ({ ...prev, news: [ ...(prev.news||[]), post ] }));
                 }}
                 className="px-3 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700"
               >Beitrag hinzufügen</button>
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -671,8 +700,11 @@ const AdminContentPanel: React.FC = () => {
               {(content.news||[]).map((p, idx) => (
                 <div key={p.id} className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 space-y-3">
                   <div className="flex items-center gap-2">
-                    <Input placeholder="Titel (DE)" value={readI18n(p.title as any, 'de')} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, title: writeI18n(x.title as any, 'de', e.target.value) } : x) }))} />
-                    <Input placeholder="Title (EN)" value={readI18n(p.title as any, 'en')} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, title: writeI18n(x.title as any, 'en', e.target.value) } : x) }))} />
+                    {newsLang==='de' ? (
+                      <Input placeholder="Titel (DE)" value={readI18n(p.title as any, 'de')} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, title: writeI18n(x.title as any, 'de', e.target.value) } : x) }))} />
+                    ) : (
+                      <Input placeholder="Title (EN)" value={readI18n(p.title as any, 'en')} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, title: writeI18n(x.title as any, 'en', e.target.value) } : x) }))} />
+                    )}
                     <input type="date" value={(p.date||'').slice(0,10)} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, date: e.target.value } : x) }))} className="px-2 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 text-sm" />
                     <label className="flex items-center gap-2 text-neutral-200 text-sm">
                       <input type="checkbox" checked={p.published !== false} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, published: e.target.checked } : x) }))} />
@@ -687,31 +719,67 @@ const AdminContentPanel: React.FC = () => {
                     <button type="button" onClick={() => setContent(prev => ({ ...prev, news: (prev.news||[]).filter((_,i)=> i!==idx) }))} className="ml-auto px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Entfernen</button>
                   </div>
                   {localNewsHtmlMode[p.id] ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs text-neutral-400 mb-1">HTML (DE)</label>
-                        <textarea
-                          className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
-                          value={readI18n(p.html as any, 'de')}
-                          onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'de', e.target.value) } : x) }))}
-                          placeholder="<p>HTML‑Inhalt…</p>"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-neutral-400 mb-1">HTML (EN)</label>
-                        <textarea
-                          className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
-                          value={readI18n(p.html as any, 'en')}
-                          onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'en', e.target.value) } : x) }))}
-                          placeholder="<p>HTML content…</p>"
-                        />
-                      </div>
+                    <div className="grid grid-cols-1 gap-3">
+                      {newsLang==='de' ? (
+                        <div>
+                          <label className="block text-xs text-neutral-400 mb-1">HTML (DE)</label>
+                          <textarea
+                            className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
+                            value={readI18n(p.html as any, 'de')}
+                            onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'de', e.target.value) } : x) }))}
+                            placeholder="<p>HTML‑Inhalt…</p>"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <label className="block text-xs text-neutral-400 mb-1">HTML (EN)</label>
+                          <textarea
+                            className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
+                            value={readI18n(p.html as any, 'en')}
+                            onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'en', e.target.value) } : x) }))}
+                            placeholder="<p>HTML content…</p>"
+                          />
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div
-                      className="min-h-[100px] p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 prose-invert"
-                      dangerouslySetInnerHTML={{ __html: readI18n(p.html as any, 'de') }}
-                    />
+                    <div className="grid grid-cols-1 gap-3">
+                      {newsLang==='de' ? (
+                        <div>
+                          <div className="flex items-center gap-2 px-2 py-1 rounded bg-neutral-800/60 border border-neutral-700/40 text-neutral-200 text-sm mb-1">
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('bold')}>B</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('italic')}>I</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('underline')}>U</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => { const url = prompt('Link-URL'); if (url) document.execCommand('createLink', false, url); }}>Link</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('unlink', false)}>Link entfernen</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => { const c = prompt('Farbe (z.B. #ff0088 oder red)'); if (c) document.execCommand('foreColor', false, c); }}>Farbe</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('removeFormat', false)}>Format löschen</button>
+                          </div>
+                          <ContentEditableEditor
+                            value={readI18n(p.html as any, 'de')}
+                            onChange={(html) => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'de', html) } : x) }))}
+                            className="min-h-[140px] p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 prose-invert"
+                          />
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="flex items-center gap-2 px-2 py-1 rounded bg-neutral-800/60 border border-neutral-700/40 text-neutral-200 text-sm mb-1">
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('bold')}>B</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('italic')}>I</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('underline')}>U</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => { const url = prompt('Link-URL'); if (url) document.execCommand('createLink', false, url); }}>Link</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('unlink', false)}>Link entfernen</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => { const c = prompt('Farbe (z.B. #ff0088 oder red)'); if (c) document.execCommand('foreColor', false, c); }}>Farbe</button>
+                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('removeFormat', false)}>Format löschen</button>
+                          </div>
+                          <ContentEditableEditor
+                            value={readI18n(p.html as any, 'en')}
+                            onChange={(html) => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'en', html) } : x) }))}
+                            className="min-h-[140px] p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 prose-invert"
+                          />
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
