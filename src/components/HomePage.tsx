@@ -288,7 +288,7 @@ const HomePage: React.FC = () => {
       case 'news':
         return (
           <React.Fragment key="news">
-            <div id="news" />
+            <div id="news" className="scroll-mt-[68px] sm:scroll-mt-[96px]" />
             {(content.heroTitle || content.heroText || content.heroUrl) && (
               <div className="relative">
                 <div className="relative overflow-hidden">
@@ -349,7 +349,7 @@ const HomePage: React.FC = () => {
         const cfg = content.booking || {};
         if (!cfg.enabled) return null;
         return (
-          <div id="booking" className="relative" key="booking">
+          <div id="booking" className="relative scroll-mt-[68px] sm:scroll-mt-[96px]" key="booking">
             <div className="p-2 sm:p-3">
               <div className="mb-3 flex items-center justify-center">
                 <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{L(cfg.headline as any) || (lang==='en'?'Booking':'Booking')}</h3>
@@ -361,13 +361,18 @@ const HomePage: React.FC = () => {
       }
       case 'about':
         return (content.about?.title || content.about?.text || (content.about?.members||[]).length>0) ? (
-          <div id="about" className="relative" key="about">
+          <div id="about" className="relative scroll-mt-[68px] sm:scroll-mt-[96px]" key="about">
             <div className="p-2 sm:p-3">
               <div className="mb-2 flex items-center justify-center">
                 <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{L(content.about?.title as any) || (lang==='en' ? 'About' : 'Über uns')}</h3>
               </div>
               <div className={`${cardBase} ${cardTone} p-3`}>
-                {content.about?.text && <p className="text-neutral-300 text-sm whitespace-pre-line text-left">{L(content.about?.text as any)}</p>}
+                {content.about?.text && (
+                  <div
+                    className="prose prose-invert max-w-none text-neutral-300 text-sm text-left"
+                    dangerouslySetInnerHTML={{ __html: L(content.about?.text as any) }}
+                  />
+                )}
               </div>
               {(content.about?.members||[]).length>0 && (
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
@@ -577,7 +582,7 @@ const HomePage: React.FC = () => {
           const albums  = mediaEmbedsRaw.filter(m => kindOf(m) === 'album');
           const others  = mediaEmbedsRaw.filter(m => kindOf(m) === 'other');
           return (
-            <div id="media" className="relative" key="media">
+            <div id="media" className="relative scroll-mt-[68px] sm:scroll-mt-[96px]" key="media">
               <div className="p-2 sm:p-3 space-y-6">
                 {(singles.length>0 || albums.length>0 || others.length>0) && (
                   <div className="mb-6">

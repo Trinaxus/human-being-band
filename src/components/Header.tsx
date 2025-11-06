@@ -68,8 +68,11 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
 
   // Default button behaviors if no handlers are provided
   const handleHome = () => {
-    if (onHomeClick) return onHomeClick();
-    try { window.location.assign('/'); } catch {}
+    try { onHomeClick?.(); } catch {}
+    try {
+      setMobileOpen(false);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch {}
   };
   const handleLogin = () => {
     if (onLoginClick) return onLoginClick();

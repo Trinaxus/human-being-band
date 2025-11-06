@@ -63,6 +63,9 @@ const AdminContentPanel: React.FC = () => {
   const [newsLang, setNewsLang] = useState<'de'|'en'>(() => {
     try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
   });
+  const [aboutLang, setAboutLang] = useState<'de'|'en'>(() => {
+    try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
+  });
   
   const readI18n = (v: string | { de?: string; en?: string } | undefined, l: 'de'|'en'): string => {
     if (!v) return '';
@@ -78,6 +81,8 @@ const AdminContentPanel: React.FC = () => {
   const [bookingReqs, setBookingReqs] = useState<Array<{ id: string; name: string; email: string; date?: string; event?: string; location?: string; budget?: string; message?: string; created_at?: string }>>([]);
   const [bookingReqsLoading, setBookingReqsLoading] = useState(false);
   const [bookingReqsError, setBookingReqsError] = useState<string | null>(null);
+  // About main text: mode per language ('editor' | 'html' | 'preview')
+  const [aboutTextMode, setAboutTextMode] = useState<Record<'de'|'en', 'editor'|'html'|'preview'>>({ de: 'editor', en: 'editor' });
 
   
 
@@ -843,20 +848,54 @@ const AdminContentPanel: React.FC = () => {
         <ToggleButton label="Über uns" open={open.about} onClick={() => setOpen(prev => ({ ...prev, about: !prev.about }))} />
         {open.about && (
           <div className="mt-3 grid grid-cols-1 gap-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Input placeholder="Titel (DE)" value={readI18n(content.about?.title as any, 'de')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), title: writeI18n(prev.about?.title as any, 'de', e.target.value) } }))} />
-              </div>
-              <div>
-                <Input placeholder="Title (EN)" value={readI18n(content.about?.title as any, 'en')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), title: writeI18n(prev.about?.title as any, 'en', e.target.value) } }))} />
-              </div>
+            {/* Language switcher like News */}
+            <div className="flex items-center gap-2 mb-2">
+              <button type="button" onClick={() => setAboutLang('de')} className={`px-3 py-1.5 rounded border text-sm ${aboutLang==='de' ? 'border-neutral-300 text-neutral-100 bg-neutral-700/40' : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'}`}>DE</button>
+              <button type="button" onClick={() => setAboutLang('en')} className={`px-3 py-1.5 rounded border text-sm ${aboutLang==='en' ? 'border-neutral-300 text-neutral-100 bg-neutral-700/40' : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'}`}>EN</button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-3">
               <div>
-                <Textarea rows={4} placeholder="Über uns Text (DE)" value={readI18n(content.about?.text as any, 'de')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, 'de', e.target.value) } }))} />
+                <Input
+                  placeholder={aboutLang==='en' ? 'Title (EN)' : 'Titel (DE)'}
+                  value={readI18n(content.about?.title as any, aboutLang)}
+                  onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), title: writeI18n(prev.about?.title as any, aboutLang, e.target.value) } }))}
+                />
               </div>
               <div>
-                <Textarea rows={4} placeholder="About text (EN)" value={readI18n(content.about?.text as any, 'en')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, 'en', e.target.value) } }))} />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs text-neutral-400">{aboutLang==='en' ? 'About text (EN)' : 'Über uns Text (DE)'}</label>
+                  <div className="inline-flex items-center rounded-md border border-neutral-700/40 overflow-hidden">
+                    {(['editor','html','preview'] as const).map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => setAboutTextMode(prev => ({ ...prev, [aboutLang]: m }))}
+                        className={`px-2 py-1 text-xs ${aboutTextMode[aboutLang]===m ? 'bg-neutral-700/40 text-neutral-100' : 'text-neutral-300 hover:bg-neutral-800'}`}
+                      >{m==='editor' ? 'Editor' : m==='html' ? 'HTML' : 'Vorschau'}</button>
+                    ))}
+                  </div>
+                </div>
+                {aboutTextMode[aboutLang] === 'editor' && (
+                  <Textarea
+                    rows={4}
+                    placeholder={aboutLang==='en' ? 'About text (EN)' : 'Über uns Text (DE)'}
+                    value={readI18n(content.about?.text as any, aboutLang)}
+                    onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, aboutLang, e.target.value) } }))}
+                  />
+                )}
+                {aboutTextMode[aboutLang] === 'html' && (
+                  <textarea
+                    className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
+                    value={readI18n(content.about?.text as any, aboutLang)}
+                    onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, aboutLang, e.target.value) } }))}
+                    placeholder={aboutLang==='en' ? '<p>HTML content…</p>' : '<p>HTML‑Inhalt…</p>'}
+                  />
+                )}
+                {aboutTextMode[aboutLang] === 'preview' && (
+                  <div className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40">
+                    <div className="prose prose-invert max-w-none text-neutral-300 text-sm" dangerouslySetInnerHTML={{ __html: readI18n(content.about?.text as any, aboutLang) }} />
+                  </div>
+                )}
               </div>
             </div>
             {/* Bandmitglieder */}
@@ -887,14 +926,18 @@ const AdminContentPanel: React.FC = () => {
                         </div>
                       </div>
                       <div className="md:col-span-3">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          <div>
-                            <Textarea rows={5} placeholder="Kurzbiografie (DE)" value={readI18n(m.bio as any, 'de')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, bio: writeI18n(x.bio as any, 'de', e.target.value) } : x) } }))} />
-                          </div>
-                          <div>
-                            <Textarea rows={5} placeholder="Short bio (EN)" value={readI18n(m.bio as any, 'en')} onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), members: (prev.about?.members||[]).map(x => x.id===m.id? { ...x, bio: writeI18n(x.bio as any, 'en', e.target.value) } : x) } }))} />
-                          </div>
-                        </div>
+                        <Textarea
+                          rows={5}
+                          placeholder={aboutLang==='en' ? 'Short bio (EN)' : 'Kurzbiografie (DE)'}
+                          value={readI18n(m.bio as any, aboutLang)}
+                          onChange={e => setContent(prev => ({
+                            ...prev,
+                            about: {
+                              ...(prev.about||{}),
+                              members: (prev.about?.members||[]).map(x => x.id===m.id ? { ...x, bio: writeI18n(x.bio as any, aboutLang, e.target.value) } : x)
+                            }
+                          }))}
+                        />
                       </div>
                     </div>
                   </div>
