@@ -135,7 +135,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                   onClick={() => {
                     try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
                   }}
-                  className="px-3 py-1.5 text-base md:text-lg rounded-md text-white hover:text-white hover:bg-neutral-700/40 uppercase font-display tracking-wider"
+                  className={`px-3 py-1.5 text-base md:text-lg rounded-md uppercase font-display tracking-wider ${theme==='light' ? 'text-neutral-900 hover:text-neutral-900 hover:bg-neutral-200/60' : 'text-white hover:text-white hover:bg-neutral-700/40'}`}
                 >{link.label}</button>
               ))}
             </nav>

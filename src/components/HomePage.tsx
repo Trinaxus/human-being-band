@@ -1,7 +1,7 @@
  
 import React, { useEffect, useState, useMemo } from 'react';
 import { API_BASE } from '../lib/api';
-import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle } from 'lucide-react';
+import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle, X as IconX } from 'lucide-react';
 import { contentGet, ordersCreate, bookingRequest, type SiteContent, type OrderItem } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -273,7 +273,8 @@ const HomePage: React.FC = () => {
   }, [content.tickets]);
 
   const SocialIcon: React.FC<{ type?: string; className?: string }> = ({ type, className }) => {
-    const cls = className || 'h-10 w-10 text-neutral-100';
+    // Fixed white icon color to look identical across themes
+    const cls = className || 'h-10 w-10 text-white';
     switch (type) {
       case 'instagram': return <Instagram className={cls} />;
       case 'facebook': return <Facebook className={cls} />;
@@ -779,11 +780,13 @@ const HomePage: React.FC = () => {
 
       {/* Lightbox overlay */}
       {lbOpen && lbList[lbIndex] && (
-        <div className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 ${theme==='light' ? 'bg-white/90' : 'bg-black/90'}`} onClick={closeLightbox}>
+        <div className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 ${theme==='light' ? 'bg-white/40' : 'bg-black/50'} backdrop-blur-md`} onClick={closeLightbox}>
           <div className="absolute inset-0" />
           <div className="relative max-w-6xl w-full" onClick={e => e.stopPropagation()}>
-            <div className="absolute -top-10 right-0 flex items-center gap-3">
-              <button onClick={closeLightbox} className={`px-3 py-1.5 rounded border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'bg-neutral-800 text-neutral-200 border-neutral-700'}`}>Schließen</button>
+            <div className="absolute top-0 right-[-3rem] flex items-center gap-3">
+              <button onClick={closeLightbox} aria-label="Schließen" title="Schließen" className="w-10 h-10 inline-flex items-center justify-center rounded-full bg-[#77111c] hover:bg-[#8b1522] text-white shadow border border-[#77111c]">
+                <IconX className="w-6 h-6" />
+              </button>
             </div>
             <div className="relative w-full flex items-center justify-center">
               {lbList[lbIndex].type === 'image' && (
@@ -809,10 +812,8 @@ const HomePage: React.FC = () => {
             </div>
             {lbList.length > 1 && (
               <>
-                <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none">
-                  <button onClick={prevLb} className={`pointer-events-auto ml-2 px-3 py-2 rounded border ${theme==='light' ? 'bg-white/70 text-neutral-900 border-neutral-300 hover:bg-white' : 'bg-neutral-800/70 text-neutral-200 border-neutral-700'}`}>‹</button>
-                  <button onClick={nextLb} className={`pointer-events-auto mr-2 px-3 py-2 rounded border ${theme==='light' ? 'bg-white/70 text-neutral-900 border-neutral-300 hover:bg-white' : 'bg-neutral-800/70 text-neutral-200 border-neutral-700'}`}>›</button>
-                </div>
+                <button onClick={prevLb} className={`absolute top-1/2 -translate-y-1/2 left-[-3rem] px-3 py-2 rounded border ${theme==='light' ? 'bg-white/70 text-neutral-900 border-neutral-300 hover:bg-white' : 'bg-neutral-800/70 text-neutral-200 border-neutral-700'}`}>‹</button>
+                <button onClick={nextLb} className={`absolute top-1/2 -translate-y-1/2 right-[-3rem] px-3 py-2 rounded border ${theme==='light' ? 'bg-white/70 text-neutral-900 border-neutral-300 hover:bg-white' : 'bg-neutral-800/70 text-neutral-200 border-neutral-700'}`}>›</button>
                 {/* Timeline thumbnails */}
                 <div className="mt-4 px-1">
                   <div className="flex gap-2 overflow-x-auto no-scrollbar items-center">
@@ -835,7 +836,7 @@ const HomePage: React.FC = () => {
                         <button
                           key={i}
                           onClick={() => setLbIndex(i)}
-                          className={`relative h-16 rounded-md overflow-hidden border flex items-center ${theme==='light' ? (i===lbIndex ? 'border-neutral-900' : 'border-neutral-300 bg-white/70') : (i===lbIndex ? 'border-neutral-100' : 'border-neutral-700 bg-neutral-800/40')}`}
+                          className={`relative h-16 rounded-md overflow-hidden border flex items-center justify-center ${theme==='light' ? (i===lbIndex ? 'border-neutral-900' : 'border-neutral-300 bg-white/70') : (i===lbIndex ? 'border-neutral-100' : 'border-neutral-700 bg-neutral-800/40')}`}
                           style={{ padding: 0, flex: '0 0 calc(100%/15)', maxWidth: 'calc(100%/15)' }}
                         >
                           {thumb ? (

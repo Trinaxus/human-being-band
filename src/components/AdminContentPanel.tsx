@@ -1206,17 +1206,20 @@ const AdminContentPanel: React.FC = () => {
                     </div>
                   </div>
                   <div className="p-3 space-y-2">
-                    {(galleriesByYear.get(y) || []).map((g, gi, arrByYear) => (
-                      <div key={g.name} className="rounded-lg bg-neutral-900/60 border border-neutral-700/40">
+                    {(galleriesByYear.get(y) || []).map((g, gi, arrByYear) => {
+                      const rowKey = `${y}:${gi}`;
+                      const isOpen = !!adminOpen[rowKey];
+                      return (
+                      <div key={rowKey} className="rounded-lg bg-neutral-900/60 border border-neutral-700/40">
                         <div
                           className="flex items-center justify-between px-3 py-2 border-b border-neutral-700/30 cursor-pointer"
                           onClick={(e) => {
                             const target = e.target as HTMLElement;
                             if (target.closest('button, input, a, label')) return;
-                            toggleAdminOpen(y, g.name);
+                            setAdminOpen(prev => ({ ...prev, [rowKey]: !prev[rowKey] }));
                           }}
                           role="button"
-                          aria-expanded={!!adminOpen[`${y}:${g.name}`]}
+                          aria-expanded={isOpen}
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             {/* Collapsed preview */}
@@ -1264,12 +1267,12 @@ const AdminContentPanel: React.FC = () => {
                               className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 text-xs"
                             >Galerie löschen</button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); toggleAdminOpen(y, g.name); }}
+                              onClick={(e) => { e.stopPropagation(); setAdminOpen(prev => ({ ...prev, [rowKey]: !prev[rowKey] })); }}
                               className="w-7 h-7 inline-flex items-center justify-center rounded-md border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800"
-                              title={adminOpen[`${y}:${g.name}`] ? 'Zuklappen' : 'Aufklappen'}
-                              aria-label={adminOpen[`${y}:${g.name}`] ? 'Zuklappen' : 'Aufklappen'}
+                              title={isOpen ? 'Zuklappen' : 'Aufklappen'}
+                              aria-label={isOpen ? 'Zuklappen' : 'Aufklappen'}
                             >
-                              <span className="text-base leading-none">{adminOpen[`${y}:${g.name}`] ? '−' : '+'}</span>
+                              <span className="text-base leading-none">{isOpen ? '−' : '+'}</span>
                             </button>
                             {/* Reorder within year */}
                             <button
@@ -1288,7 +1291,7 @@ const AdminContentPanel: React.FC = () => {
                             >↓</button>
                           </div>
                         </div>
-                        {adminOpen[`${y}:${g.name}`] && (
+                        {adminOpen[rowKey] && (
                         <div className="p-3 space-y-2">
                           {/* Items list */}
                           {(g.items||[]).length === 0 && <div className="text-[#909296] text-sm">Keine Elemente</div>}
@@ -1378,7 +1381,8 @@ const AdminContentPanel: React.FC = () => {
                         </div>
                         )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
