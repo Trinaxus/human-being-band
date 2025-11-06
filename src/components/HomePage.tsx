@@ -34,12 +34,27 @@ const HomePage: React.FC = () => {
     window.addEventListener('lang:changed', onLang as any);
     return () => window.removeEventListener('lang:changed', onLang as any);
   }, []);
-  const theme = useMemo<'dark'|'light'>(() => {
+  const [theme, setTheme] = useState<'dark'|'light'>(() => {
     try { const t = window.localStorage.getItem('theme'); return (t === 'light' ? 'light' : 'dark'); } catch { return 'dark'; }
+  });
+  useEffect(() => {
+    // Update on <html data-theme> changes (preferred)
+    const observer = new MutationObserver(() => {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      setTheme(isLight ? 'light' : 'dark');
+    });
+    try { observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); } catch {}
+    // Fallback: react to storage changes
+    const onStorage = (e: StorageEvent) => { if (e.key === 'theme') setTheme(e.newValue === 'light' ? 'light' : 'dark'); };
+    window.addEventListener('storage', onStorage);
+    return () => { try { observer.disconnect(); } catch {}; window.removeEventListener('storage', onStorage); };
   }, []);
   const cardBase = 'rounded-xl border';
   const cardTone = theme === 'light' ? 'bg-white/85 border-neutral-200' : 'bg-neutral-900/70 border-neutral-700/20';
   const cardToneAlt = theme === 'light' ? 'bg-white/85 border-neutral-200' : 'bg-neutral-900/70 border-neutral-700/20';
+  const textHeading = theme === 'light' ? 'text-neutral-900' : 'text-neutral-100';
+  const textMuted = theme === 'light' ? 'text-neutral-700' : 'text-neutral-300';
+  const textBody = theme === 'light' ? 'text-neutral-800' : 'text-neutral-300';
   const [ticketSel, setTicketSel] = useState<{ id: string; title: string; url: string; image?: string } | null>(null);
   const [ticketStep, setTicketStep] = useState<1 | 2 | 3>(1);
   const [ticketDate, setTicketDate] = useState<string | null>(null);
@@ -364,12 +379,12 @@ const HomePage: React.FC = () => {
           <div id="about" className="relative scroll-mt-[68px] sm:scroll-mt-[96px]" key="about">
             <div className="p-2 sm:p-3">
               <div className="mb-2 flex items-center justify-center">
-                <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{L(content.about?.title as any) || (lang==='en' ? 'About' : 'Über uns')}</h3>
+                <h3 className={`font-display ${textHeading} text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center`}>{L(content.about?.title as any) || (lang==='en' ? 'About' : 'Über uns')}</h3>
               </div>
               <div className={`${cardBase} ${cardTone} p-3`}>
                 {content.about?.text && (
                   <div
-                    className="prose prose-invert max-w-none text-neutral-300 text-sm text-left"
+                    className={`prose prose-invert max-w-none ${textBody} text-sm text-left`}
                     dangerouslySetInnerHTML={{ __html: L(content.about?.text as any) }}
                   />
                 )}
@@ -475,7 +490,9 @@ const HomePage: React.FC = () => {
                     {preview.kind==='image' && preview.url && (<img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />)}
                     {preview.kind==='youtube' && preview.url && (<img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />)}
                     {preview.kind==='instagram' && preview.url && (<img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />)}
-                    {(!preview.url) && (<div className="w-full h-full flex items-center justify-center text-neutral-400 text-sm">Keine Vorschau</div>)}
+                    {(!preview.url) && (
+                      <div className={`w-full h-full flex items-center justify-center text-sm ${theme==='light' ? 'bg-white/70 text-neutral-600' : 'text-neutral-400'}`}>Keine Vorschau</div>
+                    )}
                   </div>
                   <div className="p-2 flex items-center justify-between">
                     <div className="text-neutral-100 font-medium truncate mr-2">{g.name}</div>
@@ -517,12 +534,12 @@ const HomePage: React.FC = () => {
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={item.coverUrl} alt={item.title || 'Cover'} className="w-12 h-12 rounded-md object-cover border border-neutral-700/40" />
                         ) : (
-                          <div className="w-12 h-12 rounded-md bg-neutral-800/40 border border-neutral-700/40" />
+                          <div className={`w-12 h-12 rounded-md border ${theme==='light' ? 'bg-white/70 border-neutral-200' : 'bg-neutral-800/40 border-neutral-700/40'}`} />
                         )}
                         <div className="text-neutral-300 text-xs">{lang==='en'?'Hide player':'Player ausblenden'}</div>
                       </div>
                     ) : (
-                      <div className="w-full aspect-square rounded-lg overflow-hidden border border-neutral-700/30 bg-neutral-800/40 flex items-center justify-center">
+                      <div className={`w-full aspect-square rounded-lg overflow-hidden border flex items-center justify-center ${theme==='light' ? 'bg-white/70 border-neutral-200' : 'border-neutral-700/30 bg-neutral-800/40'}`}>
                         {item.coverUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={item.coverUrl} alt={item.title || 'Cover'} className="w-full h-full object-cover" />
@@ -586,10 +603,10 @@ const HomePage: React.FC = () => {
               <div className="p-2 sm:p-3 space-y-6">
                 {(singles.length>0 || albums.length>0 || others.length>0) && (
                   <div className="mb-6">
-                    <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{lang==='en' ? 'Music' : 'Musik'}</h3>
+                    <h3 className={`font-display ${textHeading} text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center`}>{lang==='en' ? 'Music' : 'Musik'}</h3>
                     {albums.length>0 && (
                       <div className="mt-4 space-y-2">
-                        <div className="text-neutral-300 text-sm font-medium">{lang==='en'?'Albums':'Alben'}</div>
+                        <div className={`${textMuted} text-sm font-medium`}>{lang==='en'?'Albums':'Alben'}</div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {albums.map((me, idx) => (
                             <SpotifyEmbed
@@ -604,7 +621,7 @@ const HomePage: React.FC = () => {
                     )}
                     {singles.length>0 && (
                       <div className="mt-6 space-y-2">
-                        <div className="text-neutral-300 text-sm font-medium">{lang==='en'?'Singles':'Singles'}</div>
+                        <div className={`${textMuted} text-sm font-medium`}>{lang==='en'?'Singles':'Singles'}</div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {singles.map((me, idx) => (
                             <SpotifyEmbed
@@ -619,7 +636,7 @@ const HomePage: React.FC = () => {
                     )}
                     {others.length>0 && (
                       <div className="mt-6 space-y-2">
-                        <div className="text-neutral-300 text-sm font-medium">{lang==='en'?'Other':'Weitere'}</div>
+                        <div className={`${textMuted} text-sm font-medium`}>{lang==='en'?'Other':'Weitere'}</div>
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                           {others.map((me, idx) => (
                             <SpotifyEmbed
@@ -637,18 +654,25 @@ const HomePage: React.FC = () => {
                 {/* Galerie Heading */}
                 {years.length>0 && (
                   <div className="mb-2">
-                    <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{lang==='en' ? 'Gallery' : 'Galerie'}</h3>
+                    <h3 className={`font-display ${textHeading} text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center`}>{lang==='en' ? 'Gallery' : 'Galerie'}</h3>
                   </div>
                 )}
-                {years.map(y => (
-                  <div key={y} className="space-y-3">
-                    {/* Jahrentitel entfernt */}
+                {(() => {
+                  // Flatten galleries preserving saved order
+                  const all: Array<{ year: number; name: string; items: any[] }> = [];
+                  for (const y of years) {
+                    for (const g of (byYear.get(y) || [])) all.push({ year: y, name: g.name, items: g.items||[] });
+                  }
+                  const hasVideo = (g: { items: any[] }) => (g.items||[]).some(it => it.type==='video' || it.type==='youtube');
+                  const imgs = all.filter(g => !hasVideo(g));
+                  const vids = all.filter(hasVideo);
+                  const renderGroup = (list: typeof all) => (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                      {(byYear.get(y) || []).sort((a,b)=> a.name.localeCompare(b.name)).map(g => {
-                        const key = `${y}:${g.name}`;
+                      {list.map(g => {
+                        const key = `${g.year}:${g.name}`;
                         return (
-                          <React.Fragment key={g.name}>
-                            <GalleryTile y={y} g={g} />
+                          <React.Fragment key={key}>
+                            <GalleryTile y={g.year} g={{ name: g.name, items: g.items }} />
                             {openGals[key] && (
                               <div className="col-span-2 sm:col-span-3 md:col-span-4">
                                 <div className={`${cardBase} ${cardTone} p-3`}>
@@ -690,8 +714,24 @@ const HomePage: React.FC = () => {
                         );
                       })}
                     </div>
-                  </div>
-                ))}
+                  );
+                  return (
+                    <>
+                      {imgs.length>0 && (
+                        <div className="space-y-2">
+                          <div className={`${textMuted} text-sm font-medium text-center`}>{lang==='en' ? 'Galleries · Images' : 'Galerien · Bilder'}</div>
+                          {renderGroup(imgs)}
+                        </div>
+                      )}
+                      {vids.length>0 && (
+                        <div className="space-y-2 mt-6">
+                          <div className={`${textMuted} text-sm font-medium text-center`}>{lang==='en' ? 'Galleries · Videos' : 'Galerien · Videos'}</div>
+                          {renderGroup(vids)}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
             </div>
           );
@@ -739,11 +779,11 @@ const HomePage: React.FC = () => {
 
       {/* Lightbox overlay */}
       {lbOpen && lbList[lbIndex] && (
-        <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4" onClick={closeLightbox}>
+        <div className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 ${theme==='light' ? 'bg-white/90' : 'bg-black/90'}`} onClick={closeLightbox}>
           <div className="absolute inset-0" />
           <div className="relative max-w-6xl w-full" onClick={e => e.stopPropagation()}>
             <div className="absolute -top-10 right-0 flex items-center gap-3">
-              <button onClick={closeLightbox} className="px-3 py-1.5 rounded bg-neutral-800 text-neutral-200 border border-neutral-700">Schließen</button>
+              <button onClick={closeLightbox} className={`px-3 py-1.5 rounded border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'bg-neutral-800 text-neutral-200 border-neutral-700'}`}>Schließen</button>
             </div>
             <div className="relative w-full flex items-center justify-center">
               {lbList[lbIndex].type === 'image' && (
@@ -770,8 +810,8 @@ const HomePage: React.FC = () => {
             {lbList.length > 1 && (
               <>
                 <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between pointer-events-none">
-                  <button onClick={prevLb} className="pointer-events-auto ml-2 px-3 py-2 rounded bg-neutral-800/70 text-neutral-200 border border-neutral-700">‹</button>
-                  <button onClick={nextLb} className="pointer-events-auto mr-2 px-3 py-2 rounded bg-neutral-800/70 text-neutral-200 border border-neutral-700">›</button>
+                  <button onClick={prevLb} className={`pointer-events-auto ml-2 px-3 py-2 rounded border ${theme==='light' ? 'bg-white/70 text-neutral-900 border-neutral-300 hover:bg-white' : 'bg-neutral-800/70 text-neutral-200 border-neutral-700'}`}>‹</button>
+                  <button onClick={nextLb} className={`pointer-events-auto mr-2 px-3 py-2 rounded border ${theme==='light' ? 'bg-white/70 text-neutral-900 border-neutral-300 hover:bg-white' : 'bg-neutral-800/70 text-neutral-200 border-neutral-700'}`}>›</button>
                 </div>
                 {/* Timeline thumbnails */}
                 <div className="mt-4 px-1">
@@ -795,16 +835,16 @@ const HomePage: React.FC = () => {
                         <button
                           key={i}
                           onClick={() => setLbIndex(i)}
-                          className={`relative h-16 rounded-md overflow-hidden border ${i===lbIndex? 'border-neutral-100' : 'border-neutral-700'} bg-neutral-800/40 flex items-center`}
+                          className={`relative h-16 rounded-md overflow-hidden border flex items-center ${theme==='light' ? (i===lbIndex ? 'border-neutral-900' : 'border-neutral-300 bg-white/70') : (i===lbIndex ? 'border-neutral-100' : 'border-neutral-700 bg-neutral-800/40')}`}
                           style={{ padding: 0, flex: '0 0 calc(100%/15)', maxWidth: 'calc(100%/15)' }}
                         >
                           {thumb ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={thumb} alt={it.title || 'thumb'} loading="lazy" className="h-full w-auto object-contain" />
                           ) : (
-                            <div className="h-16 px-3 flex items-center justify-center text-[11px] text-neutral-300">{it.type}</div>
+                            <div className={`h-16 px-3 flex items-center justify-center text-[11px] ${theme==='light' ? 'text-neutral-600' : 'text-neutral-300'}`}>{it.type}</div>
                           )}
-                          {i===lbIndex && <div className="absolute inset-0 ring-2 ring-neutral-100 pointer-events-none" />}
+                          {i===lbIndex && <div className={`absolute inset-0 ring-2 ${theme==='light' ? 'ring-neutral-900' : 'ring-neutral-100'} pointer-events-none`} />}
                         </button>
                       );
                     })}

@@ -2,26 +2,53 @@ import React from 'react';
 import { Github, Heart } from 'lucide-react';
 
 const Footer: React.FC = () => {
+  const [theme, setTheme] = React.useState<'dark'|'light'>(() => {
+    try {
+      const htmlTheme = document.documentElement.getAttribute('data-theme');
+      if (htmlTheme === 'light') return 'light';
+      const t = window.localStorage.getItem('theme');
+      return t === 'light' ? 'light' : 'dark';
+    } catch { return 'dark'; }
+  });
+  React.useEffect(() => {
+    // React to html[data-theme] changes (same-tab immediate updates)
+    const observer = new MutationObserver(() => {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      setTheme(isLight ? 'light' : 'dark');
+    });
+    try { observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); } catch {}
+    // Fallback: storage event (cross-tab)
+    const onStorage = (e: StorageEvent) => { if (e.key === 'theme') setTheme(e.newValue === 'light' ? 'light' : 'dark'); };
+    window.addEventListener('storage', onStorage);
+    return () => { try { observer.disconnect(); } catch {}; window.removeEventListener('storage', onStorage); };
+  }, []);
+
+  const wrapCls = theme==='light'
+    ? 'relative bg-white/85 backdrop-blur-sm py-6 border-t border-neutral-200'
+    : 'relative bg-neutral-900/85 backdrop-blur-sm py-6 border-t-[0.5px] border-neutral-800';
+  const textMuted = theme==='light' ? 'text-neutral-600' : 'text-neutral-400';
+  const textMutedHover = theme==='light' ? 'hover:text-neutral-800' : 'hover:text-neutral-200';
+
   return (
-    <footer className="relative bg-neutral-900/85 backdrop-blur-sm py-6 border-t-[0.5px] border-neutral-800">
+    <footer className={wrapCls}>
       <div className="max-w-[1200px] mx-auto px-4">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="text-neutral-400 text-sm flex items-center">
+          <div className={`${textMuted} text-sm flex items-center`}>
             <span>Made with</span>
-            <Heart size={16} className="text-neutral-400 mx-1" />
+            <Heart size={16} className={`mx-1 ${textMuted}`} />
             <span>for Human Being Band by trinax</span>
           </div>
           <div className="flex items-center gap-4">
             <a 
               href="https://human-being-band.de" 
-              className="text-neutral-400 hover:text-neutral-200 transition-colors"
+              className={`${textMuted} ${textMutedHover} transition-colors`}
               target="_blank"
               rel="noopener noreferrer"
               title="human-being-band.de"
             >
               <Github size={20} />
             </a>
-            <span className="text-neutral-400 text-sm">2025</span>
+            <span className={`${textMuted} text-sm`}>2025</span>
           </div>
         </div>
       </div>

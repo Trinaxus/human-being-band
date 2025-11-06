@@ -36,7 +36,9 @@ $allowed = [
   'backgroundUrl', // static page background image URL
   'backgroundPosX', // bg position X percent
   'backgroundPosY', // bg position Y percent
-  'backgroundFilter', // filters and tint for background image
+  'backgroundFilter', // filters and tint for background image (legacy / fallback)
+  'backgroundFilterLight', // theme-specific filters for light mode
+  'backgroundFilterDark',  // theme-specific filters for dark mode
   'contact',       // { email, phone, address }
   'gallery',       // [urls]
   'buildUrl',      // string

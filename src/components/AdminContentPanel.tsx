@@ -83,6 +83,10 @@ const AdminContentPanel: React.FC = () => {
   const [bookingReqsError, setBookingReqsError] = useState<string | null>(null);
   // About main text: mode per language ('editor' | 'html' | 'preview')
   const [aboutTextMode, setAboutTextMode] = useState<Record<'de'|'en', 'editor'|'html'|'preview'>>({ de: 'editor', en: 'editor' });
+  // Background filter theme being edited/previewed
+  const [bgTheme, setBgTheme] = useState<'light'|'dark'>(() => {
+    try { return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'; } catch { return 'light'; }
+  });
 
   
 
@@ -94,14 +98,13 @@ const AdminContentPanel: React.FC = () => {
     return Array.from(set).sort((a,b)=> b-a);
   }, [galleries]);
   const galleriesByYear = useMemo(() => {
+    // Preserve saved order within each year (array order)
     const map = new Map<number, { name: string; items: any[]; status?: 'public'|'internal'|'locked' }[]>();
     for (const g of galleries) {
       const arr = map.get(g.year) || [];
       arr.push({ name: g.name, items: g.items||[], status: (g as any).status });
       map.set(g.year, arr);
     }
-    // sort galleries by name
-    for (const [y, arr] of map.entries()) map.set(y, arr.slice().sort((a,b)=>a.name.localeCompare(b.name)) as any);
     return map;
   }, [galleries]);
 
@@ -295,6 +298,21 @@ const AdminContentPanel: React.FC = () => {
   const removeGallery = (year: number, name: string) => {
     setGalleries((galleries||[]).filter(g => !(g.year===year && g.name===name)));
     addIgnore(year, name);
+  };
+  const moveGallery = (year: number, name: string, dir: -1|1) => {
+    setContent(prev => {
+      type Gal = NonNullable<SiteContent['galleries']>[number];
+      const arr = ((prev.galleries || []) as NonNullable<SiteContent['galleries']>).slice();
+      const idxs = (arr as Gal[]).map((g, i) => [g, i] as const).filter(([g]) => g.year === year).map(([, i]) => i);
+      const currentIndex = (arr as Gal[]).findIndex(g => g.year === year && g.name === name);
+      if (currentIndex < 0) return prev;
+      const posInYear = idxs.indexOf(currentIndex);
+      const neighborPos = posInYear + dir;
+      if (neighborPos < 0 || neighborPos >= idxs.length) return prev;
+      const j = idxs[neighborPos];
+      const tmp = arr[currentIndex]; (arr as Gal[])[currentIndex] = arr[j] as Gal; (arr as Gal[])[j] = tmp as Gal;
+      return { ...prev, galleries: arr };
+    });
   };
   const addItemUrl = (year: number, name: string, type: 'image'|'video'|'youtube'|'instagram', url: string) => setGalleries((galleries||[]).map(g => (g.year===year && g.name===name) ? { ...g, items: [ ...(g.items||[]), { type, url } ] } : g));
   const removeItem = (year: number, name: string, idx: number) => setGalleries((galleries||[]).map(g => (g.year===year && g.name===name) ? { ...g, items: (g.items||[]).filter((_,i)=>i!==idx) } : g));
@@ -635,9 +653,19 @@ const AdminContentPanel: React.FC = () => {
             </div>
             {/* Filter Controls */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="sm:col-span-2 -mb-1">
+                <div className="inline-flex items-center rounded-md border border-neutral-700/40 overflow-hidden">
+                  <button type="button" onClick={()=>setBgTheme('light')} className={`px-3 py-1.5 text-xs ${bgTheme==='light'?'bg-neutral-700/40 text-neutral-100':'text-neutral-300 hover:bg-neutral-800'}`}>Light</button>
+                  <button type="button" onClick={()=>setBgTheme('dark')} className={`px-3 py-1.5 text-xs ${bgTheme==='dark'?'bg-neutral-700/40 text-neutral-100':'text-neutral-300 hover:bg-neutral-800'}`}>Dark</button>
+                </div>
+              </div>
               {(() => {
-                const cfg = content.backgroundFilter || {} as any;
-                const setCfg = (patch: any) => setContent(prev => ({ ...prev, backgroundFilter: { ...(prev.backgroundFilter||{}), ...patch } }));
+                const cfg = (bgTheme==='light' ? (content as any).backgroundFilterLight : (content as any).backgroundFilterDark) || (content.backgroundFilter || {}) as any;
+                const setCfg = (patch: any) => setContent(prev => (
+                  bgTheme==='light'
+                    ? { ...prev, backgroundFilterLight: { ...((prev as any).backgroundFilterLight||{}), ...patch } as any }
+                    : { ...prev, backgroundFilterDark:  { ...((prev as any).backgroundFilterDark ||{}), ...patch } as any }
+                ));
                 return (
                   <>
                     <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
@@ -679,7 +707,7 @@ const AdminContentPanel: React.FC = () => {
                           <input type="range" min={0} max={1} step={0.01} value={cfg.tintOpacity ?? 0} onChange={e=>setCfg({ tintOpacity: Number(e.target.value) })} className="w-full" />
                         </div>
                         <div className="flex items-end">
-                          <button type="button" onClick={()=> setContent(prev => ({ ...prev, backgroundFilter: undefined }))} className="px-3 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 w-full">Filter zurücksetzen</button>
+                          <button type="button" onClick={()=> setContent(prev => (bgTheme==='light' ? { ...prev, backgroundFilterLight: undefined as any } : { ...prev, backgroundFilterDark: undefined as any }))} className="px-3 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 w-full">Filter zurücksetzen ({bgTheme})</button>
                         </div>
                       </div>
                     </div>
@@ -689,9 +717,10 @@ const AdminContentPanel: React.FC = () => {
             </div>
 
             <div className="rounded-lg bg-neutral-900/60 border-[0.5px] border-neutral-700/30 p-3">
-              <div className="text-neutral-300 text-sm mb-2">Vorschau</div>
+              <div className="text-neutral-300 text-sm mb-2">Vorschau ({bgTheme})</div>
               {(() => {
-                const f = content.backgroundFilter || ({} as any);
+                const base = content.backgroundFilter || ({} as any);
+                const f = (bgTheme==='light' ? ((content as any).backgroundFilterLight || base) : ((content as any).backgroundFilterDark || base));
                 const filterStr = [
                   `brightness(${(f.brightness ?? 100)}%)`,
                   `contrast(${(f.contrast ?? 100)}%)`,
@@ -1177,7 +1206,7 @@ const AdminContentPanel: React.FC = () => {
                     </div>
                   </div>
                   <div className="p-3 space-y-2">
-                    {(galleriesByYear.get(y) || []).map(g => (
+                    {(galleriesByYear.get(y) || []).map((g, gi, arrByYear) => (
                       <div key={g.name} className="rounded-lg bg-neutral-900/60 border border-neutral-700/40">
                         <div
                           className="flex items-center justify-between px-3 py-2 border-b border-neutral-700/30 cursor-pointer"
@@ -1242,6 +1271,21 @@ const AdminContentPanel: React.FC = () => {
                             >
                               <span className="text-base leading-none">{adminOpen[`${y}:${g.name}`] ? '−' : '+'}</span>
                             </button>
+                            {/* Reorder within year */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); moveGallery(y, g.name, -1); }}
+                              disabled={gi===0}
+                              className="w-7 h-7 inline-flex items-center justify-center rounded-md border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40"
+                              title="Nach oben"
+                              aria-label="Nach oben"
+                            >↑</button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); moveGallery(y, g.name, 1); }}
+                              disabled={gi===arrByYear.length-1}
+                              className="w-7 h-7 inline-flex items-center justify-center rounded-md border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 disabled:opacity-40"
+                              title="Nach unten"
+                              aria-label="Nach unten"
+                            >↓</button>
                           </div>
                         </div>
                         {adminOpen[`${y}:${g.name}`] && (

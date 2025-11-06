@@ -296,6 +296,13 @@ export type SiteContent = {
     tintColor?: string;  // hex or rgb(a)
     tintOpacity?: number;// 0 - 1
   };
+  // Optional theme-specific background filters
+  backgroundFilterLight?: {
+    brightness?: number; contrast?: number; saturate?: number; grayscale?: number; sepia?: number; blur?: number; hue?: number; tintColor?: string; tintOpacity?: number;
+  };
+  backgroundFilterDark?: {
+    brightness?: number; contrast?: number; saturate?: number; grayscale?: number; sepia?: number; blur?: number; hue?: number; tintColor?: string; tintOpacity?: number;
+  };
   contact?: { email?: string; phone?: string; address?: string };
   gallery?: string[];
   // New: direct build URL to display on Home

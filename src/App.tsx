@@ -13,6 +13,7 @@ function App() {
   const [authRole, setAuthRole] = useState<'unauthenticated' | 'user' | 'admin'>('unauthenticated');
 
   useEffect(() => {
+    let currentContent: any = null;
     const check = async () => {
       try {
         const res = await me() as any;
@@ -30,6 +31,7 @@ function App() {
     const applyContent = async () => {
       try {
         const c = await contentGet();
+        currentContent = c;
         const ensureMainOverlay = () => {
           const mainId = 'bg-main-overlay';
           let main = document.getElementById(mainId) as HTMLDivElement | null;
@@ -48,7 +50,14 @@ function App() {
         };
 
         const bg = (c?.content?.backgroundUrl || '').trim();
-        const f = (c?.content as any)?.backgroundFilter || {};
+        const pickFilter = () => {
+          const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+          const base = (c?.content as any)?.backgroundFilter || {};
+          const light = (c?.content as any)?.backgroundFilterLight || null;
+          const dark  = (c?.content as any)?.backgroundFilterDark  || null;
+          return isLight ? (light || base) : (dark || base);
+        };
+        const f = pickFilter();
         if (bg) {
           const filterStr = [
             `brightness(${(f.brightness ?? 100)}%)`,
@@ -132,9 +141,52 @@ function App() {
       const isLight = document.documentElement.getAttribute('data-theme') === 'light';
       el.style.backgroundColor = isLight ? 'rgba(250,247,242,0.95)' : 'rgba(10,10,10,0.95)';
     };
-    const themeObserver = new MutationObserver(() => setMainOverlayColor());
+    const applyBgFiltersForTheme = () => {
+      try {
+        const c = currentContent;
+        if (!c) return;
+        const bg = (c?.content?.backgroundUrl || '').trim();
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        const base = (c?.content as any)?.backgroundFilter || {};
+        const light = (c?.content as any)?.backgroundFilterLight || null;
+        const dark  = (c?.content as any)?.backgroundFilterDark  || null;
+        const f = isLight ? (light || base) : (dark || base);
+        const filterStr = [
+          `brightness(${(f?.brightness ?? 100)}%)`,
+          `contrast(${(f?.contrast ?? 100)}%)`,
+          `saturate(${(f?.saturate ?? 100)}%)`,
+          `grayscale(${(f?.grayscale ?? 0)}%)`,
+          `sepia(${(f?.sepia ?? 0)}%)`,
+          `blur(${(f?.blur ?? 0)}px)`,
+          `hue-rotate(${(f?.hue ?? 0)}deg)`
+        ].join(' ');
+        const bgLayer = document.getElementById('bg-image-layer') as HTMLDivElement | null;
+        if (bg && bgLayer) {
+          (bgLayer.style as any).filter = filterStr;
+          const id = 'bg-tint-overlay';
+          let overlay = (bgLayer && bgLayer.querySelector(`#${id}`)) as HTMLDivElement | null;
+          const needsOverlay = !!f?.tintColor && (f?.tintOpacity ?? 0) > 0;
+          if (needsOverlay) {
+            if (!overlay) {
+              overlay = document.createElement('div');
+              overlay.id = id;
+              overlay.style.position = 'fixed';
+              overlay.style.inset = '0';
+              overlay.style.pointerEvents = 'none';
+              overlay.style.zIndex = '-1';
+              bgLayer?.appendChild(overlay);
+            }
+            overlay.style.backgroundColor = String(f?.tintColor);
+            overlay.style.opacity = String(f?.tintOpacity ?? 0);
+          } else if (overlay) {
+            overlay.remove();
+          }
+        }
+      } catch {}
+    };
+    const themeObserver = new MutationObserver(() => { setMainOverlayColor(); applyBgFiltersForTheme(); });
     try { themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); } catch {}
-    const onStorage = (e: StorageEvent) => { if (e.key === 'theme') setMainOverlayColor(); };
+    const onStorage = (e: StorageEvent) => { if (e.key === 'theme') { setMainOverlayColor(); applyBgFiltersForTheme(); } };
     window.addEventListener('storage', onStorage);
     window.addEventListener('content:updated', onContentUpdated as any);
     const onVisible = () => { if (!document.hidden) check(); };
