@@ -39,6 +39,16 @@ const Footer: React.FC = () => {
             <span>for Human Being Band by trinax</span>
           </div>
           <div className="flex items-center gap-4">
+            <a
+              href="/?view=impressum"
+              className={`${textMuted} ${textMutedHover} text-sm transition-colors`}
+              title="Impressum"
+            >Impressum</a>
+            <a
+              href="/?view=datenschutz"
+              className={`${textMuted} ${textMutedHover} text-sm transition-colors`}
+              title="Datenschutz"
+            >Datenschutz</a>
             <a 
               href="https://human-being-band.de" 
               className={`${textMuted} ${textMutedHover} transition-colors`}

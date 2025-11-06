@@ -7,9 +7,11 @@ import AdminPage from './components/AdminPage';
 import OverviewPage from './components/OverviewPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
 import { me, logout, contentGet } from './lib/api';
+import LegalImpressum from './components/LegalImpressum';
+import LegalPrivacy from './components/LegalPrivacy';
 
 function App() {
-  const [view, setView] = useState<'home' | 'login' | 'overview' | 'admin' | 'reset'>('home');
+  const [view, setView] = useState<'home' | 'login' | 'overview' | 'admin' | 'reset' | 'impressum' | 'datenschutz'>('home');
   const [authRole, setAuthRole] = useState<'unauthenticated' | 'user' | 'admin'>('unauthenticated');
 
   useEffect(() => {
@@ -197,6 +199,16 @@ function App() {
         const params = new URLSearchParams(window.location.search);
         const v = params.get('view');
         if (v === 'reset') { setView('reset'); return; }
+        if (v === 'impressum') {
+          setView('impressum');
+          try { window.history.replaceState({}, '', '/'); } catch {}
+          return;
+        }
+        if (v === 'datenschutz' || v === 'privacy') {
+          setView('datenschutz');
+          try { window.history.replaceState({}, '', '/'); } catch {}
+          return;
+        }
         // hash-based routing: #reset?email=...&token=...
         const h = window.location.hash || '';
         if (h.startsWith('#reset')) setView('reset');
@@ -241,6 +253,8 @@ function App() {
         )}
         {view === 'reset' && <ResetPasswordPage onDone={() => setView('login')} />}
         {view === 'overview' && <OverviewPage />}
+        {view === 'impressum' && <LegalImpressum />}
+        {view === 'datenschutz' && <LegalPrivacy />}
         {view === 'admin' && <AdminPage />}
       </main>
       <Footer />

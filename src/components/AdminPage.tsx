@@ -8,6 +8,17 @@ import { useAuth } from '../hooks/useAuth';
 const AdminPage: React.FC = () => {
   const { authenticated } = useAuth();
   const [tab, setTab] = React.useState<'content'|'events'|'scheduler'|'bookings'>('content');
+  const [theme, setTheme] = React.useState<'dark'|'light'>(() => {
+    try { return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'; } catch { return 'dark'; }
+  });
+  React.useEffect(() => {
+    const obs = new MutationObserver(() => setTheme(document.documentElement.getAttribute('data-theme')==='light'?'light':'dark'));
+    try { obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); } catch {}
+    const onStorage = (e: StorageEvent) => { if (e.key==='theme') setTheme(e.newValue==='light'?'light':'dark'); };
+    window.addEventListener('storage', onStorage);
+    return () => { try { obs.disconnect(); } catch {}; window.removeEventListener('storage', onStorage); };
+  }, []);
+
   return (
     <div className="relative flex-1 w-full">
       <div className="relative z-10 w-full max-w-[1200px] mx-auto px-6 self-start mt-2 md:mt-3">
@@ -26,7 +37,7 @@ const AdminPage: React.FC = () => {
                 >{t.label}</button>
               ))}
             </div>
-            <div className="w-full bg-neutral-900/70 rounded-xl border-[0.5px] border-neutral-700/20">
+            <div className={`w-full rounded-xl border ${theme==='light' ? 'bg-white/85 border-neutral-200' : 'bg-neutral-900/70 border-neutral-700/20'}`}>
               <div className="p-4 sm:p-6">
                 {tab==='content' && <AdminContentPanel />}
                 {tab==='events' && <AdminEventsPanel />}

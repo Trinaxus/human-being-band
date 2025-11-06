@@ -385,7 +385,7 @@ const HomePage: React.FC = () => {
               <div className={`${cardBase} ${cardTone} p-3`}>
                 {content.about?.text && (
                   <div
-                    className={`prose prose-invert max-w-none ${textBody} text-sm text-left`}
+                    className={`prose prose-invert max-w-none ${textBody} text-base text-left`}
                     dangerouslySetInnerHTML={{ __html: L(content.about?.text as any) }}
                   />
                 )}
@@ -396,8 +396,19 @@ const HomePage: React.FC = () => {
                     <div key={m.id||idx} className={`${cardBase} ${cardTone} p-3`}>
                       <div className="flex flex-col items-start text-left gap-2">
                         {m.image ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={m.image} alt={m.name||'Profil'} className="self-center w-28 h-28 rounded-full object-cover border border-neutral-700/30" />
+                          <div className="relative self-center w-28 h-28 group">
+                            {/* Base avatar */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={m.image} alt={m.name||'Profil'} className="w-28 h-28 rounded-full object-cover border border-neutral-700/30" />
+                            {/* Pop-out enlarged avatar */}
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={m.image}
+                              alt={m.name||'Profil groß'}
+                              className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-56 h-56 max-w-none aspect-square rounded-full object-cover ring-2 ring-[#77111c] shadow-xl opacity-0 scale-90 group-hover:opacity-100 group-hover:scale-100 transition duration-300 ease-out z-10"
+                              style={{ filter: 'saturate(1.05)' }}
+                            />
+                          </div>
                         ) : (
                           <div className="self-center w-28 h-28 rounded-full bg-neutral-800/40 border border-neutral-700/30" />
                         )}

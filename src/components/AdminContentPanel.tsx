@@ -66,7 +66,20 @@ const AdminContentPanel: React.FC = () => {
   const [aboutLang, setAboutLang] = useState<'de'|'en'>(() => {
     try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
   });
-  
+  // Observe theme for light/dark specific styles
+  const [theme, setTheme] = useState<'dark'|'light'>(() => {
+    try { return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'; } catch { return 'dark'; }
+  });
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      setTheme(isLight ? 'light' : 'dark');
+    });
+    try { observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); } catch {}
+    const onStorage = (e: StorageEvent) => { if (e.key === 'theme') setTheme(e.newValue === 'light' ? 'light' : 'dark'); };
+    window.addEventListener('storage', onStorage);
+    return () => { try { observer.disconnect(); } catch {}; window.removeEventListener('storage', onStorage); };
+  }, []);
   const readI18n = (v: string | { de?: string; en?: string } | undefined, l: 'de'|'en'): string => {
     if (!v) return '';
     if (typeof v === 'string') return v;
@@ -483,7 +496,7 @@ const AdminContentPanel: React.FC = () => {
               </div>
             </div>
             <div className="flex justify-end">
-              <button disabled={saving} onClick={save} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 disabled:opacity-60">{saving ? 'Speichert…' : 'Speichern'}</button>
+              <button disabled={saving} onClick={save} className={`px-4 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'} disabled:opacity-60`}>{saving ? 'Speichert…' : 'Speichern'}</button>
             </div>
 
             <div className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40">
@@ -1175,12 +1188,12 @@ const AdminContentPanel: React.FC = () => {
                   if (!name) { setError('Galeriename darf nicht leer sein.'); return; }
                   addGallery(y, name);
                 }}
-                className="px-3 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700"
+                className={`px-3 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'}`}
               >Galerie hinzufügen</button>
               <button
                 type="button"
                 onClick={importFromUploads}
-                className="px-3 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700"
+                className={`px-3 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'}`}
               >Aus Uploads einlesen</button>
             </div>
 
@@ -1191,7 +1204,7 @@ const AdminContentPanel: React.FC = () => {
 
             <div className="space-y-4">
               {years.map((y) => (
-                <div key={y} className="rounded-xl bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <div key={y} className={`rounded-xl border ${theme==='light' ? 'bg-white/85 border-neutral-200' : 'bg-neutral-800/60 border-neutral-700/30'}`}>
                   <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-700/30">
                     <div className="text-neutral-100 font-semibold">{y}</div>
                     <div className="flex items-center gap-2">
@@ -1201,7 +1214,7 @@ const AdminContentPanel: React.FC = () => {
                           if (!name) { setError('Galeriename darf nicht leer sein.'); return; }
                           addGallery(y, name);
                         }}
-                        className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 text-xs"
+                        className={`px-2 py-1 rounded border text-xs ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'}`}
                       >Galerie hinzufügen</button>
                     </div>
                   </div>
@@ -1210,7 +1223,7 @@ const AdminContentPanel: React.FC = () => {
                       const rowKey = `${y}:${gi}`;
                       const isOpen = !!adminOpen[rowKey];
                       return (
-                      <div key={rowKey} className="rounded-lg bg-neutral-900/60 border border-neutral-700/40">
+                      <div key={rowKey} className={`rounded-lg border ${theme==='light' ? 'bg-white/85 border-neutral-200' : 'bg-neutral-900/60 border-neutral-700/40'}`}>
                         <div
                           className="flex items-center justify-between px-3 py-2 border-b border-neutral-700/30 cursor-pointer"
                           onClick={(e) => {
