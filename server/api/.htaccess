@@ -24,3 +24,7 @@
 
 ## Let PHP handle OPTIONS (bootstrap.php returns 204 with proper CORS headers)
 RewriteEngine On
+
+# Public base URL used by API scripts to generate absolute upload URLs
+SetEnv BASE_URL https://human-being-band.de
+SetEnv UPLOAD_DIR /www/htdocs/w020e2c0/human-being-band.de/uploads

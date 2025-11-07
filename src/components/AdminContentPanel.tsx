@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { API_BASE } from '../lib/api';
-import { contentGet, contentSave, uploadFile, scanUploads, writeMetadata, bookingRequestsList, type SiteContent } from '../lib/api';
-import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle } from 'lucide-react';
+import { API_BASE, contentGet, contentSave, uploadFile, scanUploads, writeMetadata, bookingRequestsList, type SiteContent } from '../lib/api';
+import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle, Check, AlertTriangle } from 'lucide-react';
 
 const SectionTitle: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
   <div className="mb-3">
@@ -85,6 +84,41 @@ const AdminContentPanel: React.FC = () => {
     if (typeof v === 'string') return v;
     return (v[l] || '') as string;
   };
+
+
+  // Helper: robustly fetch metadata.json for a given gallery.
+  const fetchGalleryMeta = async (year: number, name: string, sampleUrl?: string) => {
+    const encName = encodeURIComponent(name || '');
+    const candidates: string[] = [];
+    // Determine server base (strip trailing /server/api from API_BASE)
+    let serverBase = '';
+    try { serverBase = (API_BASE || '').replace(/\/server\/api\/?$/,''); } catch {}
+    // 1) Try deriving from a known item URL (replace filename with metadata.json)
+    if (sampleUrl) {
+      try {
+        const u = new URL(sampleUrl, window.location.origin);
+        const parts = u.pathname.split('/');
+        if (parts.length >= 4) { parts[parts.length - 1] = 'metadata.json'; candidates.push(parts.join('/')); }
+      } catch {}
+    }
+    // 2) Server-side served path
+    candidates.push(`${serverBase}/server/uploads/${year}/${encName}/metadata.json`);
+    // 3) Public uploads path
+    candidates.push(`${serverBase}/uploads/${year}/${encName}/metadata.json`);
+    for (const p of candidates) {
+      try {
+        const resp = await fetch(p, { credentials: 'include' });
+        if (resp.ok) {
+          const data = await resp.json().catch(()=>null);
+          if (data && typeof data === 'object') return data as any;
+        }
+      } catch {}
+    }
+    return null;
+  };
+
+  // Prune all galleries to match metadata.json (keep items listed in metadata; drop others).
+  const [pruneBusy, setPruneBusy] = useState(false);
   const writeI18n = (v: string | { de?: string; en?: string } | undefined, l: 'de'|'en', next: string): { de?: string; en?: string } | string => {
     if (typeof v === 'string') {
       return l === 'de' ? { de: next, en: v } : { de: v, en: next };
@@ -190,6 +224,72 @@ const AdminContentPanel: React.FC = () => {
   // Admin: gallery expand/collapse state (default collapsed)
   const [adminOpen, setAdminOpen] = useState<Record<string, boolean>>({});
   const toggleAdminOpen = (y: number, name: string) => setAdminOpen(prev => ({ ...prev, [`${y}:${name}`]: !prev[`${y}:${name}`] }));
+  // Selection per gallery removed; Scan-Report works auf alle Galerien
+  // Scan report state
+  type ScanEntry = { year: number; name: string; metaCount: number; serverCount: number; diff: number; extraFiles: Array<{ filename: string; url: string; type: 'image'|'video'; selected?: boolean }>; missingInServer: Array<{ type: string; url: string }>; error?: string };
+  const [scanLoading, setScanLoading] = useState(false);
+  const [scanReport, setScanReport] = useState<ScanEntry[] | null>(null);
+  const clearScanReport = () => setScanReport(null);
+  const scanGalleries = async () => {
+    setScanLoading(true); setError(null); setOk(null);
+    try {
+      const list = (galleries||[]);
+      const out: ScanEntry[] = [];
+      for (const g of list) {
+        try {
+          const q = new URLSearchParams({ year: String(g.year), gallery: String(g.name) });
+          const url = `${API_BASE}/scan_gallery.php?${q.toString()}`;
+          const resp = await fetch(url, { credentials: 'include' });
+          let data: any = null;
+          try { data = await resp.json(); }
+          catch (_) {
+            let txt = '';
+            try { txt = await resp.text(); } catch {}
+            const snippet = txt ? txt.slice(0, 200) : '';
+            throw new Error(`HTTP ${resp.status} ${resp.statusText}${snippet ? `: ${snippet}` : ''}`);
+          }
+          if (!resp.ok || !data?.ok) throw new Error(data?.error||`HTTP ${resp.status} ${resp.statusText}`);
+          const extras = Array.isArray(data.extraFiles) ? data.extraFiles.map((e: any)=>({ filename: String(e.filename||''), url: String(e.url||''), type: (e.type==='video'?'video':'image') as 'image'|'video', selected: true })) : [];
+          out.push({ year: Number(data.year), name: String(data.gallery), metaCount: Number(data.metaCount||0), serverCount: Number(data.serverCount||0), diff: Number(data.diff||0), extraFiles: extras, missingInServer: Array.isArray(data.missingInServer)? data.missingInServer as any : [] });
+        } catch (e: any) {
+          out.push({ year: Number(g.year), name: g.name, metaCount: 0, serverCount: 0, diff: 0, extraFiles: [], missingInServer: [], error: e?.message||'Fehler' });
+        }
+      }
+      setScanReport(out);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Scan fehlgeschlagen');
+    } finally { setScanLoading(false); }
+  };
+  const deleteExtras = async (entry: ScanEntry) => {
+    const files = entry.extraFiles.filter(f=>f.selected).map(f=>f.filename||f.url).filter(Boolean);
+    if (files.length===0) { window.alert('Bitte Dateien auswählen.'); return; }
+    const ok = window.confirm(`Wirklich ${files.length} Datei(en) in ${entry.year} / ${entry.name} löschen? Diese Aktion kann nicht rückgängig gemacht werden.`);
+    if (!ok) return;
+    try {
+      const resp = await fetch(`${API_BASE}/delete_uploads.php`, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ year: entry.year, gallery: entry.name, files }) });
+      const data = await resp.json();
+      if (!resp.ok || !data?.ok) throw new Error(data?.error||'Löschen fehlgeschlagen');
+      const deleted: string[] = Array.isArray(data.deleted) ? data.deleted : [];
+      setOk(`Gelöscht: ${deleted.length}`);
+      // Update report view and local gallery items (remove deleted files from items too)
+      setScanReport(prev => (prev||[]).map(en => {
+        if (en.year!==entry.year || en.name!==entry.name) return en;
+        const rest = en.extraFiles.filter(f => !deleted.includes(f.filename));
+        const newServerCount = en.serverCount - deleted.length;
+        return { ...en, extraFiles: rest, serverCount: newServerCount, diff: newServerCount - en.metaCount };
+      }));
+      // Remove from current content items by URL match (best-effort)
+      const updated = (galleries||[]).map(g => {
+        if (g.year!==entry.year || g.name!==entry.name) return g;
+        const urlsDeleted = new Set<string>(entry.extraFiles.filter(f=>f.selected).map(f=>f.url));
+        const items = (g.items||[]).filter((it:any)=> !urlsDeleted.has(String(it?.url||'')));
+        return { ...g, items };
+      });
+      setGalleries(updated as any);
+    } catch (e:any) {
+      setError(e?.message||'Löschen fehlgeschlagen');
+    }
+  };
 
   // Instagram thumbnails for admin preview
   const [instaThumbs, setInstaThumbs] = useState<Record<string, string | null>>({});
@@ -237,6 +337,23 @@ const AdminContentPanel: React.FC = () => {
     try {
       const res = await scanUploads();
       const scanned = Array.isArray(res.galleries) ? res.galleries : [];
+      // Build per-gallery metadata whitelist (type@@url) for image/video
+      type Item = { type: 'image'|'video'|'youtube'|'instagram'; url: string };
+      const sig = (it: Item) => `${it.type}@@${it.url}`;
+      const metaWhitelist = new Map<string, Set<string>>(); // key: year:::name
+      await Promise.all(scanned.map(async (sg: any) => {
+        try {
+          const key = `${sg.year}:::${sg.name}`.toLowerCase();
+          const firstUrl = Array.isArray(sg.items) && sg.items.length ? sg.items[0]?.url : undefined;
+          const data = await fetchGalleryMeta(Number(sg.year), String(sg.name||''), firstUrl);
+          if (data) {
+            const arr: Item[] = Array.isArray((data as any)?.items) ? (data as any).items : [];
+            const set = new Set<string>();
+            arr.forEach(it => { if (it?.url && (it.type==='image' || it.type==='video')) set.add(sig(it)); });
+            metaWhitelist.set(key, set);
+          }
+        } catch {}
+      }));
       // Merge: union with existing by (year,name), preserve prev items and status.
       // DO NOT resurrect deleted galleries or items unless admin confirms.
       const keyOf = (y: number, n: string) => `${y}:::${n}`.toLowerCase();
@@ -245,7 +362,7 @@ const AdminContentPanel: React.FC = () => {
       const outMap = new Map<string, any>(prevMap);
       const newGalleries: any[] = [];
       const newItemsByKey: Record<string, any[]> = {};
-      const sig = (it: any) => `${it.type||''}@@${it.url||''}`;
+      const sigAny = (it: any) => `${it.type||''}@@${it.url||''}`;
       const ignoredSet = new Set<string>(getIgnore().map(g => `${g.year}:::${g.name}`.toLowerCase()));
       scanned.forEach((sg: any) => {
         const k = keyOf(sg.year, sg.name);
@@ -254,14 +371,28 @@ const AdminContentPanel: React.FC = () => {
         const scanItems = Array.isArray(sg.items) ? sg.items : [];
         if (!prev) {
           // New gallery found by scan; skip if ignored, otherwise propose
-          if (!ignoredSet.has(k)) newGalleries.push({ year: sg.year, name: sg.name, status, items: scanItems });
+          if (!ignoredSet.has(k)) {
+            // If metadata whitelist exists, only propose whitelisted files for image/video
+            const wl = metaWhitelist.get(k);
+            const filtered = wl && wl.size
+              ? scanItems.filter((it: any) => (it?.type==='image'||it?.type==='video') ? wl.has(sigAny(it)) : true)
+              : scanItems;
+            newGalleries.push({ year: sg.year, name: sg.name, status, items: filtered });
+          }
           return;
         }
         // Existing gallery: keep previous items, track new ones separately
         const prevItems = Array.isArray(prev.items) ? prev.items : [];
-        const seen = new Set<string>(prevItems.map(sig));
+        const seen = new Set<string>(prevItems.map(sigAny));
         const newOnes: any[] = [];
-        scanItems.forEach((it: any) => { const s = sig(it); if (!seen.has(s)) newOnes.push(it); });
+        scanItems.forEach((it: any) => {
+          const s = sigAny(it);
+          if (seen.has(s)) return;
+          // Apply whitelist for image/video if available
+          const wl = metaWhitelist.get(k);
+          if ((it?.type==='image' || it?.type==='video') && wl && wl.size && !wl.has(s)) return;
+          newOnes.push(it);
+        });
         if (newOnes.length) newItemsByKey[k] = newOnes;
         outMap.set(k, { year: sg.year, name: sg.name, status, items: prevItems });
       });
@@ -1195,7 +1326,92 @@ const AdminContentPanel: React.FC = () => {
                 onClick={importFromUploads}
                 className={`px-3 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'}`}
               >Aus Uploads einlesen</button>
+              
+              <button
+                type="button"
+                onClick={()=> scanGalleries()}
+                disabled={scanLoading}
+                className={`px-3 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'} disabled:opacity-60`}
+              >Scan-Report (alle)</button>
+              {scanReport && (
+                <button type="button" onClick={clearScanReport} className={`px-3 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'}`}>Report schließen</button>
+              )}
             </div>
+
+            {scanReport && (
+              <div className="mt-3 p-3 rounded-lg border bg-neutral-900/40 border-neutral-700/40">
+                <div className="text-neutral-100 font-semibold mb-2">Scan‑Report</div>
+                <div className="overflow-auto">
+                  <table className="min-w-full text-sm text-neutral-200">
+                    <thead className="text-neutral-400">
+                      <tr>
+                        <th className="text-left px-2 py-1">Galerie</th>
+                        <th className="text-left px-2 py-1">Soll (metadata)</th>
+                        <th className="text-left px-2 py-1">Ist (Ordner)</th>
+                        <th className="text-left px-2 py-1">Status</th>
+                        <th className="text-left px-2 py-1">Aktionen</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {scanReport.map((en, idx) => {
+                        const filesSoll = (en as any).metaFileCount ?? en.metaCount;
+                        const urlsOnly = (en as any).metaUrlsOnly === true;
+                        const diffFiles = (en as any).diffFiles ?? (en.serverCount - filesSoll);
+                        const okMatch = urlsOnly ? true : (en.serverCount === filesSoll);
+                        const tooMany = !urlsOnly && en.serverCount > filesSoll;
+                        const clsSoll = urlsOnly ? 'text-sky-300' : (okMatch ? 'text-green-400' : tooMany ? 'text-rose-400' : 'text-amber-400');
+                        const clsIst = urlsOnly ? 'text-sky-300' : (okMatch ? 'text-green-400' : tooMany ? 'text-rose-400' : 'text-amber-400');
+                        const clsDiff = urlsOnly ? 'text-sky-300' : (diffFiles===0 ? 'text-green-400' : diffFiles>0 ? 'text-rose-400' : 'text-amber-400');
+                        return (
+                          <tr key={`${en.year}:${en.name}:${idx}`} className="border-t border-neutral-700/40">
+                            <td className="px-2 py-1">{en.year} / {en.name} {en.error && <span className="text-rose-400">({en.error})</span>}</td>
+                            <td className={`px-2 py-1 ${clsSoll}`}>
+                              {urlsOnly ? (<span>URLs ({(en as any).metaLinkCount ?? 0})</span>) : filesSoll}
+                            </td>
+                            <td className={`px-2 py-1 ${clsIst}`}>
+                              {urlsOnly ? (<span>URLs</span>) : en.serverCount}
+                            </td>
+                            <td className={`px-2 py-1 ${clsDiff}`}>
+                              {urlsOnly ? (
+                                <span className="inline-flex items-center gap-1 text-sky-300">URLs</span>
+                              ) : okMatch ? (
+                                <span className="inline-flex items-center gap-1 text-green-400"><Check size={16}/> OK</span>
+                              ) : (
+                                <span className={`inline-flex items-center gap-1 ${diffFiles>0 ? 'text-rose-400' : 'text-amber-400'}`}><AlertTriangle size={16}/> {diffFiles>0 ? `+${diffFiles}` : `${diffFiles}`}</span>
+                              )}
+                            </td>
+                            <td className="px-2 py-1">
+                              {en.extraFiles.length>0 ? (
+                                <details>
+                                  <summary className="cursor-pointer text-neutral-300">{en.extraFiles.length} extra Datei(en) verwalten</summary>
+                                  <div className="mt-2 space-y-1 max-h-60 overflow-auto">
+                                    {en.extraFiles.map((f, i) => (
+                                      <label key={i} className="flex items-center gap-2 px-2 py-1 rounded hover:bg-neutral-800/60">
+                                        <input type="checkbox" checked={!!f.selected} onChange={(e)=>{
+                                          setScanReport(prev => (prev||[]).map((row, rIdx)=>{
+                                            if (rIdx!==idx) return row; const arr=row.extraFiles.slice(); arr[i] = { ...arr[i], selected: e.target.checked }; return { ...row, extraFiles: arr };
+                                          }));
+                                        }} />
+                                        <span className="text-xs text-neutral-300">{f.filename}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                  <div className="mt-2">
+                                    <button onClick={()=> deleteExtras(en)} className="px-3 py-1.5 rounded border border-neutral-700/40 text-neutral-200 hover:bg-neutral-800">Auswahl löschen</button>
+                                  </div>
+                                </details>
+                              ) : (
+                                <span className="text-neutral-500">{urlsOnly ? 'Nur URLs (keine Dateien im Ordner)' : 'Keine extra Dateien'}</span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Years and galleries */}
             {years.length === 0 && (
