@@ -53,6 +53,16 @@ Dieses Dokument erklärt in einfachen Worten, wie unsere Website aufgebaut ist, 
 - Uploads liegen unter `https://human-being-band.de/uploads/...`.
 - Der Serverteil schützt sensible Aktionen (nur Admin darf z. B. Dateien löschen).
 
+### Deployment & Hosting (einfach erklärt)
+- Aktuell gibt es eine Vercel‑Adresse als Platzhalter/Template für die App‑Vorschau.
+- Die Live‑Seite läuft beim Webhoster unter `human-being-band.de` (mit Datei‑Uploads und Server‑Funktionen).
+- Nach finaler Abnahme wird die Hauptdomain vollständig auf die neue App zeigen (Anpassung von Verlinkungen/`API_BASE`).
+
+### E‑Mail (Band‑Adressen)
+- Beim Webhoster werden Postfächer/Aliasse wie `booking@human-being-band.de` und `info@human-being-band.de` eingerichtet.
+- Kontakt/Booking‑Formulare senden über den Server (SMTP), damit Mails zuverlässig ankommen.
+- Für gute Zustellung werden DNS‑Einträge (SPF/DKIM/DMARC) gesetzt. Antworten gehen an die Band‑Mailbox.
+
 ## Was tun bei Problemen?
 - Galerie zeigt zu viele Bilder: Scan‑Report öffnen, „extra Dateien“ prüfen und löschen.
 - Galerie zeigt zu wenige Bilder: Prüfen, ob die gewünschten Dateien in `metadata.json` eingetragen sind.

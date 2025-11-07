@@ -115,6 +115,25 @@ Hinweise
 - Wichtige Dateien
   - `src/components/AdminContentPanel.tsx` (Admin/Scan‑Report/Uploads)
   - `server/api/scan_gallery.php`, `server/api/delete_uploads.php`
+
+## Deployment & Hosting
+- Aktueller Stand: Eine Vercel‑Instanz dient als Platzhalter/Template für die SPA.
+- Primäre Ziel‑Domain: `https://human-being-band.de` beim bestehenden Webhoster (mit PHP‑APIs und Uploads).
+- Umstellung: Finale Verlinkung/Go‑Live auf der Hauptdomain erfolgt nach Abnahme. Dazu gehört ggf. das Anpassen von `API_BASE`, Routing und Domain‑Verweisen sowie die Deaktivierung der Vercel‑Platzhalter‑URL als öffentliche Startseite.
+
+### E‑Mail & Kommunikation
+- Mailboxen/Aliasse beim Hoster anlegen:
+  - z. B. `booking@human-being-band.de`, `info@human-being-band.de`, optional `noreply@`.
+  - Aliasse auf zentrale Postfächer umleiten (je nach Teamorganisation).
+- Versand (SMTP):
+  - Formulare (Kontakt/Booking) verwenden Server‑SMTP des Hosters (authentifiziert). Keine Client‑seitigen Mails.
+  - Rate‑Limit und Logging im Server‑Endpoint empfehlen (Spam‑Schutz).
+- Zustellbarkeit:
+  - SPF/DKIM/DMARC in DNS pflegen (Hoster‑Guides nutzen), Absender‑Domain = Hauptdomain.
+  - „Reply‑To“ auf die Band‑Mailbox setzen.
+- Datenschutz:
+  - Kontakt/Booking‑Formulare mit Einwilligungstext verknüpfen (Verweis auf Datenschutzerklärung).
+  - Serverseitig nur erforderliche Daten speichern/versenden, Transport über HTTPS.
   - `tailwind.config.js`, `src/index.css`
 
 ---

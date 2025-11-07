@@ -89,7 +89,7 @@ const HomePage: React.FC = () => {
   };
 
   // Booking form component
-  const BookingForm: React.FC<{ note?: string; phone?: string }> = ({ note, phone }) => {
+  const BookingForm: React.FC<{ note?: string; phone?: string; recipientEmail?: string }> = ({ note, phone, recipientEmail }) => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [message, setMessage] = useState('');
@@ -123,8 +123,37 @@ const HomePage: React.FC = () => {
           <input className="px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" placeholder={lang==='en'?'Email*':'E‑Mail*'} value={email} onChange={e=>setEmail(e.target.value)} />
         </div>
         <textarea className="w-full px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100" rows={4} placeholder={lang==='en'?'Message':'Nachricht'} value={message} onChange={e=>setMessage(e.target.value)} />
-        {note && <div className="text-xs text-neutral-400">{note}</div>}
-        {phone && <div className="text-xs text-neutral-400">{lang==='en'?'Phone':'Telefon'}: <span className="text-neutral-300">{phone}</span></div>}
+        {note && (
+          <div className={`text-xs ${theme==='light' ? 'text-neutral-600' : 'text-neutral-300'}`}>{note}</div>
+        )}
+        {(phone || recipientEmail) && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            {phone && (
+              <span
+                className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                  theme==='light'
+                    ? 'bg-[rgba(119,17,28,0.10)] text-neutral-800 border-[rgba(119,17,28,0.25)] hover:bg-[rgba(119,17,28,0.15)]'
+                    : 'bg-[rgba(119,17,28,0.18)] text-neutral-100 border-[rgba(119,17,28,0.28)] hover:bg-[rgba(119,17,28,0.24)]'
+                }`}
+              >
+                {(lang==='en'?'Phone':'Telefon')+': '}
+                <span className="ml-1 font-medium">{phone}</span>
+              </span>
+            )}
+            {recipientEmail && (
+              <span
+                className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                  theme==='light'
+                    ? 'bg-[rgba(119,17,28,0.10)] text-neutral-800 border-[rgba(119,17,28,0.25)] hover:bg-[rgba(119,17,28,0.15)]'
+                    : 'bg-[rgba(119,17,28,0.18)] text-neutral-100 border-[rgba(119,17,28,0.28)] hover:bg-[rgba(119,17,28,0.24)]'
+                }`}
+              >
+                {(lang==='en'?'Email':'E‑Mail')+': '}
+                <span className="ml-1 font-medium">{recipientEmail}</span>
+              </span>
+            )}
+          </div>
+        )}
         <div className="flex justify-end">
           <button disabled={busy} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 disabled:opacity-60">{busy ? (lang==='en'?'Sending…':'Senden…') : (lang==='en'?'Send request':'Anfrage senden')}</button>
         </div>
@@ -370,7 +399,7 @@ const HomePage: React.FC = () => {
               <div className="mb-3 flex items-center justify-center">
                 <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{L(cfg.headline as any) || (lang==='en'?'Booking':'Booking')}</h3>
               </div>
-              <BookingForm note={L(cfg.note as any)} phone={cfg.phone} />
+              <BookingForm note={L(cfg.note as any)} phone={cfg.phone} recipientEmail={cfg.recipientEmail} />
             </div>
           </div>
         );
@@ -483,7 +512,8 @@ const HomePage: React.FC = () => {
               let id = '';
               if (url.hostname.includes('youtu.be')) id = url.pathname.replace('/', '');
               if (url.hostname.includes('youtube.com')) id = url.searchParams.get('v') || '';
-              return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
+              // Prefer maxres; fallback handled at <img onError>
+              return id ? `https://i.ytimg.com/vi/${id}/maxresdefault.jpg` : null;
             } catch { return null; }
           };
           const GalleryTile: React.FC<{ y: number; g: { name: string; items: any[] } }> = ({ y, g }) => {
@@ -493,22 +523,59 @@ const HomePage: React.FC = () => {
               if (it.type==='image') { preview = { kind:'image', url: it.url }; break; }
               if (it.type==='youtube') { preview = { kind:'youtube', url: getYTThumb(it.url) || it.url }; break; }
               if (it.type==='instagram') { preview = { kind:'instagram', url: instaThumbs[it.url] || null }; break; }
-              if (it.type==='video') { preview = { kind:'video', url: null }; }
+              if (it.type==='video') { preview = { kind:'video', url: it.url || null }; }
             }
             return (
-              <div className={`${cardBase} ${cardTone}`}>
+              <div className={`${cardBase} ${cardTone} overflow-hidden`}>
                 <button onClick={() => setOpenGals(prev => ({ ...prev, [key]: !prev[key] }))} className="w-full text-left">
-                  <div className="w-full h-44 sm:h-52 overflow-hidden">
-                    {preview.kind==='image' && preview.url && (<img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />)}
-                    {preview.kind==='youtube' && preview.url && (<img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />)}
-                    {preview.kind==='instagram' && preview.url && (<img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />)}
+                  <div className={`w-full aspect-square rounded-none overflow-hidden border ${theme==='light' ? 'bg-white/70 border-neutral-200' : 'border-neutral-700/30 bg-neutral-800/40'}`}>
+                    {preview.kind==='image' && preview.url && (
+                      <img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />
+                    )}
+                    {preview.kind==='youtube' && (
+                      (() => {
+                        // Re-derive ID to allow high-res fallback chain
+                        let id = '';
+                        try {
+                          const it = (g.items||[]).find((x:any)=>x.type==='youtube');
+                          if (it?.url) {
+                            const u = new URL(it.url, window.location.origin);
+                            if (u.hostname.includes('youtu.be')) id = u.pathname.replace('/', '');
+                            if (u.hostname.includes('youtube.com')) id = u.searchParams.get('v') || '';
+                          }
+                        } catch {}
+                        const srcMax = id ? `https://i.ytimg.com/vi/${id}/maxresdefault.jpg` : '';
+                        return srcMax ? (
+                          <img
+                            src={srcMax}
+                            alt={g.name}
+                            className="preview-img w-full h-full object-cover"
+                            style={{ transform: 'scale(1.12)' }}
+                            onError={(e)=>{
+                              const t = e.currentTarget; if (t.dataset.step==='sd') { t.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`; t.dataset.step='hq'; }
+                              else if (!t.dataset.step) { t.src = `https://i.ytimg.com/vi/${id}/sddefault.jpg`; t.dataset.step='sd'; }
+                            }}
+                          />
+                        ) : (
+                          <div className={`w-full h-full flex items-center justify-center text-sm ${theme==='light' ? 'bg-white/70 text-neutral-600' : 'text-neutral-400'}`}>Keine Vorschau</div>
+                        );
+                      })()
+                    )}
+                    {preview.kind==='instagram' && preview.url && (
+                      <img src={preview.url} alt={g.name} className="preview-img w-full h-full object-cover" />
+                    )}
+                    {preview.kind==='video' && preview.url && (
+                      <video src={preview.url} muted playsInline preload="metadata" className="w-full h-full object-cover" style={{ transform:'scale(1.08)' }} />
+                    )}
                     {(!preview.url) && (
                       <div className={`w-full h-full flex items-center justify-center text-sm ${theme==='light' ? 'bg-white/70 text-neutral-600' : 'text-neutral-400'}`}>Keine Vorschau</div>
                     )}
                   </div>
-                  <div className="p-2 flex items-center justify-between">
-                    <div className="text-neutral-100 font-medium truncate mr-2">{g.name}</div>
-                    <div className="text-neutral-400 text-sm">{(g.items||[]).length}</div>
+                  <div className="p-3">
+                    <div className="flex items-center justify-between">
+                      <div className="text-neutral-100 text-sm font-medium truncate mr-2">{g.name}</div>
+                      <div className="text-neutral-400 text-xs">{(g.items||[]).length}</div>
+                    </div>
                   </div>
                 </button>
               </div>
@@ -538,9 +605,8 @@ const HomePage: React.FC = () => {
             return (
               <div className={`${open ? 'col-span-2 sm:col-span-3 md:col-span-4' : ''} ${cardBase} ${cardTone} overflow-hidden`}>
                 <button onClick={onToggle} className="w-full text-left">
-                  <div className="p-3">
-                    {item.title && <div className="text-neutral-200 text-sm font-medium mb-2">{item.title}</div>}
-                    {open ? (
+                  {open ? (
+                    <div className="p-3">
                       <div className="flex items-center gap-3">
                         {item.coverUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
@@ -550,8 +616,10 @@ const HomePage: React.FC = () => {
                         )}
                         <div className="text-neutral-300 text-xs">{lang==='en'?'Hide player':'Player ausblenden'}</div>
                       </div>
-                    ) : (
-                      <div className={`w-full aspect-square rounded-lg overflow-hidden border flex items-center justify-center ${theme==='light' ? 'bg-white/70 border-neutral-200' : 'border-neutral-700/30 bg-neutral-800/40'}`}>
+                    </div>
+                  ) : (
+                    <>
+                      <div className={`w-full aspect-square rounded-none overflow-hidden flex items-center justify-center ${theme==='light' ? 'bg-white/70' : 'bg-neutral-800/40'}`}>
                         {item.coverUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={item.coverUrl} alt={item.title || 'Cover'} className="w-full h-full object-cover" />
@@ -559,8 +627,13 @@ const HomePage: React.FC = () => {
                           <div className="text-neutral-400 text-sm">Cover hinzufügen</div>
                         )}
                       </div>
-                    )}
-                  </div>
+                      <div className="p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="text-neutral-100 text-sm font-medium truncate mr-2">{item.title || (lang==='en'?'Music':'Musik')}</div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </button>
                 {open && (
                   <div className="px-3 pb-3">
@@ -691,31 +764,33 @@ const HomePage: React.FC = () => {
                                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                     {(g.items||[]).map((it, idx) => (
                                       <button key={idx} className={`rounded-lg overflow-hidden ${theme==='light' ? 'bg-white border-[#E7DED0]' : 'bg-neutral-900 border border-neutral-700/20'} text-left group`} onClick={() => openLightbox((g.items||[]) as LBItem[], idx)}>
-                                        {it.type==='image' ? (
-                                          <img src={it.url} alt={it.title||'Bild'} className="w-full h-64 sm:h-72 md:h-80 object-cover group-hover:opacity-95 transition" />
-                                        ) : it.type==='video' ? (
-                                          <div className="relative">
-                                            <video src={it.url} className="w-full h-64 sm:h-72 md:h-80 object-cover" />
-                                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-neutral-200">Öffnen</div>
-                                          </div>
-                                        ) : it.type==='youtube' ? (
-                                          (() => {
-                                            let id = '';
-                                            try {
-                                              const u = new URL(it.url, window.location.origin);
-                                              if (u.hostname.includes('youtu.be')) id = u.pathname.replace('/', '');
-                                              if (u.hostname.includes('youtube.com')) id = u.searchParams.get('v') || '';
-                                            } catch {}
-                                            const thumb = id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : '';
-                                            return thumb ? (
-                                              <img src={thumb} alt={it.title||'YouTube'} className="w-full h-64 sm:h-72 md:h-80 object-cover" />
-                                            ) : (
-                                              <div className="w-full h-64 sm:h-72 md:h-80 flex items-center justify-center text-neutral-300">YouTube öffnen</div>
-                                            );
-                                          })()
-                                        ) : (
-                                          <div className="w-full h-64 sm:h-72 md:h-80 flex items-center justify-center text-neutral-300">Instagram öffnen</div>
-                                        )}
+                                        <div className="w-full aspect-square relative overflow-hidden">
+                                          {it.type==='image' ? (
+                                            <img src={it.url} alt={it.title||'Bild'} className="w-full h-full object-cover group-hover:opacity-95 transition" />
+                                          ) : it.type==='video' ? (
+                                            <>
+                                              <video src={it.url} muted playsInline preload="metadata" className="w-full h-full object-cover" />
+                                              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-neutral-200">Öffnen</div>
+                                            </>
+                                          ) : it.type==='youtube' ? (
+                                            (() => {
+                                              let id = '';
+                                              try {
+                                                const u = new URL(it.url, window.location.origin);
+                                                if (u.hostname.includes('youtu.be')) id = u.pathname.replace('/', '');
+                                                if (u.hostname.includes('youtube.com')) id = u.searchParams.get('v') || '';
+                                              } catch {}
+                                              const thumb = id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : '';
+                                              return thumb ? (
+                                                <img src={thumb} alt={it.title||'YouTube'} className="w-full h-full object-cover" style={{ transform: 'scale(1.12)' }} />
+                                              ) : (
+                                                <div className="w-full h-full flex items-center justify-center text-neutral-300">YouTube öffnen</div>
+                                              );
+                                            })()
+                                          ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-neutral-300">Instagram öffnen</div>
+                                          )}
+                                        </div>
                                       </button>
                                     ))}
                                   </div>
