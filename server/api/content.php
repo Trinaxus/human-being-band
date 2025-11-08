@@ -51,6 +51,7 @@ $allowed = [
   'galleries',     // structured galleries
   'galleriesIgnore', // [{ year, name }] to suppress re-importing specific folders
   'sectionsOrder', // custom order of sections on Home
+  'adminOrder',    // custom order of admin cards (server-side)
   'newsEnabled',   // toggle for news/blog visibility
   'news',          // array of posts { id, title, html, date, published }
   'booking',       // booking config { enabled?, headline?, recipientEmail?, phone?, note? }

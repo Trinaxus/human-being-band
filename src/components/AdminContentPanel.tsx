@@ -540,6 +540,38 @@ const AdminContentPanel: React.FC = () => {
     legal: false,
   });
 
+  
+
+  // Admin cards order (server-side via content.adminOrder)
+  const defaultAdminOrder = ['sections','hero','bg','about','news','socials','contact','mediaEmbeds','gallery','booking','legal'] as const;
+  type AdminKey = typeof defaultAdminOrder[number];
+  const [adminEdit, setAdminEdit] = useState(false);
+  const getAdminOrder = (): AdminKey[] => {
+    try {
+      const saved = Array.isArray((content as any).adminOrder) ? ((content as any).adminOrder as string[]) : [];
+      if (saved.length) {
+        const base = defaultAdminOrder.slice() as AdminKey[];
+        const filtered = (saved.filter(k => (base as any).includes(k)) as AdminKey[]);
+        base.forEach(k => { if (!filtered.includes(k)) filtered.push(k); });
+        return filtered as AdminKey[];
+      }
+    } catch {}
+    return defaultAdminOrder.slice() as AdminKey[];
+  };
+  const orderOf = (key: AdminKey) => {
+    const arr = getAdminOrder();
+    const i = arr.indexOf(key);
+    return i >= 0 ? i : 999;
+  };
+  const moveAdmin = (key: AdminKey, dir: -1|1) => {
+    const arr = getAdminOrder().slice();
+    const i = arr.indexOf(key);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= arr.length) return;
+    const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    setContent(prev => ({ ...prev, adminOrder: arr as any }));
+  };
+
   const [legalLang, setLegalLang] = useState<'de'|'en'>(() => {
     try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
   });
@@ -553,12 +585,16 @@ const AdminContentPanel: React.FC = () => {
   if (loading) return <div className="text-neutral-400">Lade Inhalte…</div>;
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full flex flex-col gap-6">
       {error && <div className="p-3 rounded-lg bg-neutral-800/60 border border-neutral-700 text-[#DC2626] text-sm">{error}</div>}
       {ok && <div className="p-3 rounded-lg bg-neutral-800/60 border border-neutral-700 text-neutral-200 text-sm">{ok}</div>}
+      
+      
 
       {/* Abschnitte anordnen */}
-      <section>
+      <section
+        style={{ order: orderOf('sections') }}
+      >
         <ToggleButton label="Abschnitte anordnen" open={(open as any).sections === true} onClick={() => setOpen(prev => ({ ...prev, sections: !(prev as any).sections }))} />
         {(open as any).sections && (
           <div className="mt-3 space-y-2">
@@ -579,15 +615,22 @@ const AdminContentPanel: React.FC = () => {
               };
               return (
                 <div className="space-y-2">
+                  <div className="px-2 py-1 text-neutral-300 text-sm">Kategorien der Startseite</div>
                   {current.map((key, idx) => (
-                    <div key={key} className="flex items-center justify-between p-2 rounded-lg bg-neutral-800/60 border border-neutral-700/40">
-                      <div className="text-neutral-200 text-sm">{labels[key] || key}</div>
+                    <div
+                      key={key}
+                      className={`flex items-center justify-between p-2 rounded-lg border bg-neutral-800/60 border-neutral-700/40`}
+                    >
+                      <div className="text-neutral-200 text-sm flex items-center gap-2">{labels[key] || key}</div>
                       <div className="flex items-center gap-2">
                         <button onClick={() => move(idx, -1)} disabled={idx===0} className="w-7 h-7 inline-flex items-center justify-center rounded-md border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 disabled:opacity-40" title="Nach oben">↑</button>
                         <button onClick={() => move(idx, 1)} disabled={idx===current.length-1} className="w-7 h-7 inline-flex items-center justify-center rounded-md border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 disabled:opacity-40" title="Nach unten">↓</button>
                       </div>
                     </div>
                   ))}
+                  <div className="flex justify-end pt-1">
+                    <button onClick={save} disabled={saving} className={`px-3 py-1.5 rounded border ${saving ? 'opacity-60' : ''} ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'}`}>{saving ? 'Speichert…' : 'Speichern'}</button>
+                  </div>
                 </div>
               );
             })()}
@@ -595,81 +638,20 @@ const AdminContentPanel: React.FC = () => {
         )}
       </section>
 
-      {/* Rechtliches (Impressum, Datenschutz) */}
-      <section>
-        <ToggleButton label="Rechtliches (Impressum & Datenschutz)" open={(open as any).legal === true} onClick={() => setOpen(prev => ({ ...prev, legal: !(prev as any).legal }))} />
-        {(open as any).legal && (
-          <div className="mt-3 space-y-3">
-            {/* Language switch */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-neutral-400">Sprache:</span>
-              <div className="inline-flex rounded-md overflow-hidden border border-neutral-700/40">
-                <button onClick={()=>setLegalLang('de')} className={`px-3 py-1 text-xs ${legalLang==='de' ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>DE</button>
-                <button onClick={()=>setLegalLang('en')} className={`px-3 py-1 text-xs ${legalLang==='en' ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>EN</button>
-              </div>
-            </div>
-
-            {/* Impressum */}
-            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-neutral-200 text-sm font-semibold">Impressum ({legalLang.toUpperCase()})</h4>
-                <div className="inline-flex rounded-md overflow-hidden border border-neutral-700/40">
-                  {(['editor','html','preview'] as const).map(m => (
-                    <button key={m} onClick={()=> setLegalMode(prev=> ({ ...prev, impressum: { ...prev.impressum, [legalLang]: m } }))} className={`px-3 py-1 text-xs ${legalMode.impressum[legalLang]===m ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>{m}</button>
-                  ))}
-                </div>
-              </div>
-              {legalMode.impressum[legalLang] === 'editor' && (
-                <ContentEditableEditor
-                  value={readI18n((content as any).impressum, legalLang)}
-                  onChange={(html) => setContent(prev => ({ ...prev, impressum: writeI18n((prev as any).impressum, legalLang, html) as any }))}
-                  className="min-h-[200px] p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40 text-neutral-100"
-                />
-              )}
-              {legalMode.impressum[legalLang] === 'html' && (
-                <Textarea rows={10} placeholder="HTML" value={readI18n((content as any).impressum, legalLang)} onChange={e => setContent(prev => ({ ...prev, impressum: writeI18n((prev as any).impressum, legalLang, e.target.value) as any }))} />
-              )}
-              {legalMode.impressum[legalLang] === 'preview' && (
-                <div className="prose prose-invert max-w-none text-neutral-200 p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40" dangerouslySetInnerHTML={{ __html: readI18n((content as any).impressum, legalLang) }} />
-              )}
-            </div>
-
-            {/* Datenschutz */}
-            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="text-neutral-200 text-sm font-semibold">Datenschutz ({legalLang.toUpperCase()})</h4>
-                <div className="inline-flex rounded-md overflow-hidden border border-neutral-700/40">
-                  {(['editor','html','preview'] as const).map(m => (
-                    <button key={m} onClick={()=> setLegalMode(prev=> ({ ...prev, privacy: { ...prev.privacy, [legalLang]: m } }))} className={`px-3 py-1 text-xs ${legalMode.privacy[legalLang]===m ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>{m}</button>
-                  ))}
-                </div>
-              </div>
-              {legalMode.privacy[legalLang] === 'editor' && (
-                <ContentEditableEditor
-                  value={readI18n((content as any).privacy, legalLang)}
-                  onChange={(html) => setContent(prev => ({ ...prev, privacy: writeI18n((prev as any).privacy, legalLang, html) as any }))}
-                  className="min-h[200px] p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40 text-neutral-100"
-                />
-              )}
-              {legalMode.privacy[legalLang] === 'html' && (
-                <Textarea rows={10} placeholder="HTML" value={readI18n((content as any).privacy, legalLang)} onChange={e => setContent(prev => ({ ...prev, privacy: writeI18n((prev as any).privacy, legalLang, e.target.value) as any }))} />
-              )}
-              {legalMode.privacy[legalLang] === 'preview' && (
-                <div className="prose prose-invert max-w-none text-neutral-200 p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40" dangerouslySetInnerHTML={{ __html: readI18n((content as any).privacy, legalLang) }} />
-              )}
-            </div>
-
-            <div className="flex justify-end">
-              <button disabled={saving} onClick={save} className={`px-4 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'} disabled:opacity-60`}>{saving ? 'Speichert…' : 'Speichern'}</button>
-            </div>
-          </div>
-        )}
-      </section>
+      
 
 
       {/* Booking (Band anfragen) */}
-      <section>
+      <section
+        style={{ order: orderOf('booking') }}
+      >
         <ToggleButton label="Booking" open={(open as any).booking === true} onClick={() => setOpen(prev => ({ ...prev, booking: !(prev as any).booking }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('booking', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('booking', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
         {(open as any).booking && (
           <div className="mt-3 space-y-3">
             <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -759,8 +741,16 @@ const AdminContentPanel: React.FC = () => {
       
 
       {/* Hero */}
-      <section>
+      <section
+        style={{ order: orderOf('hero') }}
+      >
         <ToggleButton label="Hero" open={open.hero} onClick={() => setOpen(prev => ({ ...prev, hero: !prev.hero }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('hero', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('hero', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
         {open.hero && (
         <>
         <div className="mb-4">
@@ -866,8 +856,16 @@ const AdminContentPanel: React.FC = () => {
       </section>
 
       {/* Hintergrundbild */}
-      <section>
+      <section
+        style={{ order: orderOf('bg') }}
+      >
         <ToggleButton label="Hintergrundbild" open={(open as any).bg === true} onClick={() => setOpen(prev => ({ ...prev, bg: !(prev as any).bg }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('bg', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('bg', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
         {(open as any).bg && (
           <div className="mt-3 space-y-3">
             <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
@@ -975,8 +973,16 @@ const AdminContentPanel: React.FC = () => {
       </section>
 
       {/* News / Blog */}
-      <section>
+      <section
+        style={{ order: orderOf('news') }}
+      >
         <ToggleButton label="News" open={open.news} onClick={() => setOpen(prev => ({ ...prev, news: !prev.news }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('news', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('news', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
         {open.news && (
           <div className="mt-3 space-y-3">
             <div className="flex items-center justify-between p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
@@ -1097,8 +1103,16 @@ const AdminContentPanel: React.FC = () => {
       </section>
 
       {/* Über uns */}
-      <section>
+      <section
+        style={{ order: orderOf('about') }}
+      >
         <ToggleButton label="Über uns" open={open.about} onClick={() => setOpen(prev => ({ ...prev, about: !prev.about }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('about', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('about', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
         {open.about && (
           <div className="mt-3 grid grid-cols-1 gap-3">
             {/* Language switcher like News */}
@@ -1205,8 +1219,16 @@ const AdminContentPanel: React.FC = () => {
       </section>
 
       {/* Social */}
-      <section>
+      <section
+        style={{ order: orderOf('socials') }}
+      >
         <ToggleButton label="Social" open={open.socials} onClick={() => setOpen(prev => ({ ...prev, socials: !prev.socials }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('socials', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('socials', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
         {open.socials && (
           <div className="mt-3 space-y-3">
             <div className="text-[13px] text-[#909296]">Trage hier eure Social-Links ein. Wähle den Kanal und füge die URL hinzu.</div>
@@ -1268,8 +1290,16 @@ const AdminContentPanel: React.FC = () => {
 
 
       {/* Kontakt */}
-      <section>
+      <section
+        style={{ order: orderOf('contact') }}
+      >
         <ToggleButton label="Kontakt" open={open.contact} onClick={() => setOpen(prev => ({ ...prev, contact: !prev.contact }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('contact', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('contact', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
         {open.contact && (
           <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
             <Input placeholder="E-Mail" value={content.contact?.email || ''} onChange={e => setContent({ ...content, contact: { ...(content.contact||{}), email: e.target.value } })} />
@@ -1280,8 +1310,16 @@ const AdminContentPanel: React.FC = () => {
       </section>
 
       {/* Media/Embeds (Spotify) */}
-      <section>
+      <section
+        style={{ order: orderOf('mediaEmbeds') }}
+      >
         <ToggleButton label="Media/Embeds (Spotify)" open={open.mediaEmbeds} onClick={() => setOpen(prev => ({ ...prev, mediaEmbeds: !prev.mediaEmbeds }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('mediaEmbeds', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('mediaEmbeds', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
         {open.mediaEmbeds && (
           <div className="mt-3 space-y-3">
             {(() => {
@@ -1383,8 +1421,16 @@ const AdminContentPanel: React.FC = () => {
       </section>
 
       {/* Galerie Verwaltung (Jahr -> Galerie -> Items) */}
-      <section>
+      <section
+        style={{ order: orderOf('gallery') }}
+      >
         <ToggleButton label="Galerien" open={open.gallery} onClick={() => setOpen(prev => ({ ...prev, gallery: !prev.gallery }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('gallery', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('gallery', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
         {open.gallery && (
           <div className="mt-3 space-y-3">
             {/* Add/Import controls */}
@@ -1701,9 +1747,91 @@ const AdminContentPanel: React.FC = () => {
         )}
       </section>
 
-      
-      {/* Save button at the very end */}
-      <div className="flex justify-end">
+      {/* Rechtliches (Impressum, Datenschutz) */}
+      <section
+        style={{ order: orderOf('legal') }}
+      >
+        <ToggleButton label="Rechtliches (Impressum & Datenschutz)" open={(open as any).legal === true} onClick={() => setOpen(prev => ({ ...prev, legal: !(prev as any).legal }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('legal', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('legal', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
+        {(open as any).legal && (
+          <div className="mt-3 space-y-3">
+            {/* Language switch */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-neutral-400">Sprache:</span>
+              <div className="inline-flex rounded-md overflow-hidden border border-neutral-700/40">
+                <button onClick={()=>setLegalLang('de')} className={`px-3 py-1 text-xs ${legalLang==='de' ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>DE</button>
+                <button onClick={()=>setLegalLang('en')} className={`px-3 py-1 text-xs ${legalLang==='en' ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>EN</button>
+              </div>
+            </div>
+
+            {/* Impressum */}
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-neutral-200 text-sm font-semibold">Impressum ({legalLang.toUpperCase()})</h4>
+                <div className="inline-flex rounded-md overflow-hidden border border-neutral-700/40">
+                  {(['editor','html','preview'] as const).map(m => (
+                    <button key={m} onClick={()=> setLegalMode(prev=> ({ ...prev, impressum: { ...prev.impressum, [legalLang]: m } }))} className={`px-3 py-1 text-xs ${legalMode.impressum[legalLang]===m ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>{m}</button>
+                  ))}
+                </div>
+              </div>
+              {legalMode.impressum[legalLang] === 'editor' && (
+                <ContentEditableEditor
+                  value={readI18n((content as any).impressum, legalLang)}
+                  onChange={(html) => setContent(prev => ({ ...prev, impressum: writeI18n((prev as any).impressum, legalLang, html) as any }))}
+                  className="min-h-[200px] p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40 text-neutral-100"
+                />
+              )}
+              {legalMode.impressum[legalLang] === 'html' && (
+                <Textarea rows={10} placeholder="HTML" value={readI18n((content as any).impressum, legalLang)} onChange={e => setContent(prev => ({ ...prev, impressum: writeI18n((prev as any).impressum, legalLang, e.target.value) as any }))} />
+              )}
+              {legalMode.impressum[legalLang] === 'preview' && (
+                <div className="prose prose-invert max-w-none text-neutral-200 p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40" dangerouslySetInnerHTML={{ __html: readI18n((content as any).impressum, legalLang) }} />
+              )}
+            </div>
+
+            {/* Datenschutz */}
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-neutral-200 text-sm font-semibold">Datenschutz ({legalLang.toUpperCase()})</h4>
+                <div className="inline-flex rounded-md overflow-hidden border border-neutral-700/40">
+                  {(['editor','html','preview'] as const).map(m => (
+                    <button key={m} onClick={()=> setLegalMode(prev=> ({ ...prev, privacy: { ...prev.privacy, [legalLang]: m } }))} className={`px-3 py-1 text-xs ${legalMode.privacy[legalLang]===m ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>{m}</button>
+                  ))}
+                </div>
+              </div>
+              {legalMode.privacy[legalLang] === 'editor' && (
+                <ContentEditableEditor
+                  value={readI18n((content as any).privacy, legalLang)}
+                  onChange={(html) => setContent(prev => ({ ...prev, privacy: writeI18n((prev as any).privacy, legalLang, html) as any }))}
+                  className="min-h-[200px] p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40 text-neutral-100"
+                />
+              )}
+              {legalMode.privacy[legalLang] === 'html' && (
+                <Textarea rows={10} placeholder="HTML" value={readI18n((content as any).privacy, legalLang)} onChange={e => setContent(prev => ({ ...prev, privacy: writeI18n((prev as any).privacy, legalLang, e.target.value) as any }))} />
+              )}
+              {legalMode.privacy[legalLang] === 'preview' && (
+                <div className="prose prose-invert max-w-none text-neutral-200 p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40" dangerouslySetInnerHTML={{ __html: readI18n((content as any).privacy, legalLang) }} />
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button disabled={saving} onClick={save} className={`px-4 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'} disabled:opacity-60`}>{saving ? 'Speichert…' : 'Speichern'}</button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Bottom action bar: Admin‑Karten Edit (left) + global Speichern (right) */}
+      <div className="mt-6 flex items-center justify-between">
+        <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-neutral-700/40 bg-neutral-900/60 text-neutral-200 text-sm">
+          <input type="checkbox" checked={adminEdit} onChange={e=>setAdminEdit(e.target.checked)} />
+          Admin‑Karten: Edit
+        </label>
         <button disabled={saving} onClick={save} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 disabled:opacity-60">{saving ? 'Speichert…' : 'Speichern'}</button>
       </div>
     </div>

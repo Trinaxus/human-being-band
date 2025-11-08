@@ -321,6 +321,7 @@ export type SiteContent = {
   // Galleries to ignore on scan (do not auto/propose re-add)
   galleriesIgnore?: Array<{ year: number; name: string }>;
   sectionsOrder?: string[];
+  adminOrder?: string[]; // order of admin cards in admin UI
   newsEnabled?: boolean;
   news?: Array<{
     id: string;
