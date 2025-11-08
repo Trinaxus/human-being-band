@@ -1,4 +1,5 @@
 import React from 'react';
+import { contentGet, type SiteContent } from '../lib/api';
 
 const LegalPrivacy: React.FC = () => {
   const [theme, setTheme] = React.useState<'dark'|'light'>(() => {
@@ -9,6 +10,19 @@ const LegalPrivacy: React.FC = () => {
     try { obs.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] }); } catch {}
     return () => { try { obs.disconnect(); } catch {} };
   }, []);
+  const [lang, setLang] = React.useState<'de'|'en'>(() => {
+    try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
+  });
+  const [content, setContent] = React.useState<SiteContent>({});
+  React.useEffect(() => {
+    (async () => { try { const res = await contentGet(); setContent(res.content || {}); } catch {} })();
+  }, []);
+  const L = React.useCallback((v: any): string => {
+    if (v == null) return '';
+    if (typeof v === 'string') return v;
+    return (lang === 'en' ? (v?.en || v?.de || '') : (v?.de || v?.en || '')) as string;
+  }, [lang]);
+
   const cardBase = 'rounded-xl border';
   const cardTone = theme === 'light' ? 'bg-white/85 border-neutral-200' : 'bg-neutral-900/70 border-neutral-700/20';
   const textHeading = theme === 'light' ? 'text-neutral-900' : 'text-neutral-100';
@@ -19,22 +33,8 @@ const LegalPrivacy: React.FC = () => {
       <div className={`${cardBase} ${cardTone} p-4 sm:p-6`}>
         <h1 className={`font-display text-2xl md:text-3xl font-extrabold uppercase tracking-wider mb-3 ${textHeading}`}>Datenschutz</h1>
         <div className={`space-y-3 ${textBody} text-sm`}>
-          <p>Platzhalter‑Datenschutzerklärung. Inhalte werden später verfeinert.</p>
-          <div>
-            <div className="font-semibold">Verantwortliche Stelle</div>
-            <div>Human Being Band<br/>Musterstraße 1<br/>12345 Musterstadt</div>
-          </div>
-          <div>
-            <div className="font-semibold">Datenverarbeitung</div>
-            <div>Wir verarbeiten personenbezogene Daten nur im notwendigen Umfang.</div>
-          </div>
-          <div>
-            <div className="font-semibold">Ihre Rechte</div>
-            <ul className="list-disc pl-5">
-              <li>Auskunft, Berichtigung, Löschung</li>
-              <li>Einschränkung der Verarbeitung, Datenübertragbarkeit</li>
-              <li>Widerspruchsrecht</li>
-            </ul>
+          <div className="prose max-w-none">
+            <div className={theme==='light' ? 'prose-neutral' : 'prose-invert'} dangerouslySetInnerHTML={{ __html: L((content as any).privacy) }} />
           </div>
         </div>
       </div>

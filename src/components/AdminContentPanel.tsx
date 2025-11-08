@@ -537,6 +537,15 @@ const AdminContentPanel: React.FC = () => {
     socials: false,
     news: false,
     mediaEmbeds: false,
+    legal: false,
+  });
+
+  const [legalLang, setLegalLang] = useState<'de'|'en'>(() => {
+    try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
+  });
+  const [legalMode, setLegalMode] = useState<{ impressum: Record<'de'|'en','editor'|'html'|'preview'>; privacy: Record<'de'|'en','editor'|'html'|'preview'>}>({
+    impressum: { de: 'editor', en: 'editor' },
+    privacy: { de: 'editor', en: 'editor' },
   });
 
   
@@ -582,6 +591,77 @@ const AdminContentPanel: React.FC = () => {
                 </div>
               );
             })()}
+          </div>
+        )}
+      </section>
+
+      {/* Rechtliches (Impressum, Datenschutz) */}
+      <section>
+        <ToggleButton label="Rechtliches (Impressum & Datenschutz)" open={(open as any).legal === true} onClick={() => setOpen(prev => ({ ...prev, legal: !(prev as any).legal }))} />
+        {(open as any).legal && (
+          <div className="mt-3 space-y-3">
+            {/* Language switch */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-neutral-400">Sprache:</span>
+              <div className="inline-flex rounded-md overflow-hidden border border-neutral-700/40">
+                <button onClick={()=>setLegalLang('de')} className={`px-3 py-1 text-xs ${legalLang==='de' ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>DE</button>
+                <button onClick={()=>setLegalLang('en')} className={`px-3 py-1 text-xs ${legalLang==='en' ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>EN</button>
+              </div>
+            </div>
+
+            {/* Impressum */}
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-neutral-200 text-sm font-semibold">Impressum ({legalLang.toUpperCase()})</h4>
+                <div className="inline-flex rounded-md overflow-hidden border border-neutral-700/40">
+                  {(['editor','html','preview'] as const).map(m => (
+                    <button key={m} onClick={()=> setLegalMode(prev=> ({ ...prev, impressum: { ...prev.impressum, [legalLang]: m } }))} className={`px-3 py-1 text-xs ${legalMode.impressum[legalLang]===m ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>{m}</button>
+                  ))}
+                </div>
+              </div>
+              {legalMode.impressum[legalLang] === 'editor' && (
+                <ContentEditableEditor
+                  value={readI18n((content as any).impressum, legalLang)}
+                  onChange={(html) => setContent(prev => ({ ...prev, impressum: writeI18n((prev as any).impressum, legalLang, html) as any }))}
+                  className="min-h-[200px] p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40 text-neutral-100"
+                />
+              )}
+              {legalMode.impressum[legalLang] === 'html' && (
+                <Textarea rows={10} placeholder="HTML" value={readI18n((content as any).impressum, legalLang)} onChange={e => setContent(prev => ({ ...prev, impressum: writeI18n((prev as any).impressum, legalLang, e.target.value) as any }))} />
+              )}
+              {legalMode.impressum[legalLang] === 'preview' && (
+                <div className="prose prose-invert max-w-none text-neutral-200 p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40" dangerouslySetInnerHTML={{ __html: readI18n((content as any).impressum, legalLang) }} />
+              )}
+            </div>
+
+            {/* Datenschutz */}
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="text-neutral-200 text-sm font-semibold">Datenschutz ({legalLang.toUpperCase()})</h4>
+                <div className="inline-flex rounded-md overflow-hidden border border-neutral-700/40">
+                  {(['editor','html','preview'] as const).map(m => (
+                    <button key={m} onClick={()=> setLegalMode(prev=> ({ ...prev, privacy: { ...prev.privacy, [legalLang]: m } }))} className={`px-3 py-1 text-xs ${legalMode.privacy[legalLang]===m ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>{m}</button>
+                  ))}
+                </div>
+              </div>
+              {legalMode.privacy[legalLang] === 'editor' && (
+                <ContentEditableEditor
+                  value={readI18n((content as any).privacy, legalLang)}
+                  onChange={(html) => setContent(prev => ({ ...prev, privacy: writeI18n((prev as any).privacy, legalLang, html) as any }))}
+                  className="min-h[200px] p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40 text-neutral-100"
+                />
+              )}
+              {legalMode.privacy[legalLang] === 'html' && (
+                <Textarea rows={10} placeholder="HTML" value={readI18n((content as any).privacy, legalLang)} onChange={e => setContent(prev => ({ ...prev, privacy: writeI18n((prev as any).privacy, legalLang, e.target.value) as any }))} />
+              )}
+              {legalMode.privacy[legalLang] === 'preview' && (
+                <div className="prose prose-invert max-w-none text-neutral-200 p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40" dangerouslySetInnerHTML={{ __html: readI18n((content as any).privacy, legalLang) }} />
+              )}
+            </div>
+
+            <div className="flex justify-end">
+              <button disabled={saving} onClick={save} className={`px-4 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'} disabled:opacity-60`}>{saving ? 'Speichert…' : 'Speichern'}</button>
+            </div>
           </div>
         )}
       </section>

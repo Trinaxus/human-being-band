@@ -334,6 +334,9 @@ export type SiteContent = {
     text?: string | { de?: string; en?: string };
     members?: Array<{ id: string; name: string; role?: string; bio?: string | { de?: string; en?: string }; image?: string; order?: number }>;
   };
+  // Legal pages (HTML or plain text)
+  impressum?: string | { de?: string; en?: string };
+  privacy?: string | { de?: string; en?: string };
   // Admin-managed media embeds (starting with Spotify)
   mediaEmbeds?: Array<{
     id: string;

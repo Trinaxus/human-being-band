@@ -54,6 +54,9 @@ $allowed = [
   'newsEnabled',   // toggle for news/blog visibility
   'news',          // array of posts { id, title, html, date, published }
   'booking',       // booking config { enabled?, headline?, recipientEmail?, phone?, note? }
+  // Legal pages (values may be string or { de?: string, en?: string })
+  'impressum',     // imprint HTML/text
+  'privacy',       // privacy policy (Datenschutz) HTML/text
   'events'         // scheduler events [{ id, date, time?, title, location?, link?, description?, published? }]
 ];
 // Start from existing content and overlay only provided keys

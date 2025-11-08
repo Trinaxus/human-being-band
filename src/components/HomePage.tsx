@@ -864,6 +864,8 @@ const HomePage: React.FC = () => {
         )}
       </section>
 
+      {/* Footer links are provided by global Footer component */}
+
       {/* Lightbox overlay */}
       {lbOpen && lbList[lbIndex] && (
         <div className={`fixed inset-0 z-[9999] flex items-center justify-center p-4 ${theme==='light' ? 'bg-white/40' : 'bg-black/50'} backdrop-blur-md`} onClick={closeLightbox}>
@@ -1027,6 +1029,7 @@ const HomePage: React.FC = () => {
           </div>
         </div>
       )}
+
     </div>
   );
 };
