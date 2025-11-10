@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/uploads/:path*", "destination": "https://api.human-being-band.de/uploads/:path*" }
+  ]
+}

@@ -13,6 +13,7 @@
   SetEnvIfNoCase Origin "^https://localhost:5173$" ORIGIN_OK=1
   SetEnvIfNoCase Origin "^http://127.0.0.1:5173$" ORIGIN_OK=1
   SetEnvIfNoCase Origin "^https://human-being-band.de$" ORIGIN_OK=1
+  SetEnvIfNoCase Origin "^https://www.human-being-band.de$" ORIGIN_OK=1
   SetEnvIfNoCase Origin "^https://human-being-band.de\.w020e2c0\.kasserver\.com$" ORIGIN_OK=1
 
 
@@ -26,7 +27,7 @@
 RewriteEngine On
 
 # Public base URL used by API scripts to generate absolute upload URLs
-SetEnv BASE_URL https://human-being-band.de
+SetEnv BASE_URL https://api.human-being-band.de
 SetEnv UPLOAD_DIR /www/htdocs/w020e2c0/human-being-band.de/uploads
 
 # SMTP settings for booking_request.php (do NOT commit secrets)
