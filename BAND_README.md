@@ -75,3 +75,22 @@ Dieses Dokument erklärt in einfachen Worten, wie unsere Website aufgebaut ist, 
 
 ---
 Kurz: Wir haben eine robuste, moderne Band‑Website mit Admin‑Bereich gebaut, die Inhalte sauber verwaltet und optisch hochwertig darstellt – mit Werkzeugen, die im Alltag Zeit sparen und Fehler vermeiden.
+
+## SEO & Auffindbarkeit – was wurde vorbereitet?
+
+- Startseite (`index.html`)
+  - Aussagekräftiger Seitentitel: „Human Being Band – Liveband für Events & Konzerte“.
+  - Suchmaschinenfreundliche Meta‑Description (Beschreibung der Band & Einsatzbereiche).
+  - Canonical‑URL auf `https://human-being-band.de/`.
+  - Open‑Graph‑ und Twitter‑Meta‑Tags für schöne Vorschauen bei Social Media.
+- Rechtstexte (`public/impressum.html`, `public/datenschutz.html`)
+  - Jeweils eigene Meta‑Description und Canonical‑URL gesetzt.
+- Crawling & Indexierung
+  - `public/robots.txt` angelegt, erlaubt Crawling und verweist auf die Sitemap.
+  - `public/sitemap.xml` angelegt mit Einträgen für Startseite, Impressum und Datenschutz.
+- Strukturierte Daten
+  - JSON‑LD (`schema.org/MusicGroup`) in der `index.html`, damit Suchmaschinen die Band als eigenständige Einheit verstehen (Name, Beschreibung, Bild, Region).
+- Inhalte im Admin
+  - Texte für Hero‑Bereich, Konzerte/Festivals, Stadtfeste/Parkbühnen, Firmenfeiern, „Warum wir“ und Kontakt sind so ausgelegt, dass Suchmaschinen die Einsatzbereiche der Band erkennen.
+
+Hinweis: Für die endgültige Sichtbarkeit ist wichtig, dass die Texte im Admin gepflegt werden und die Domain in der Google Search Console hinterlegt ist (inkl. Einreichen der Sitemap).

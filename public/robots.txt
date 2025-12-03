@@ -1,0 +1,4 @@
+User-agent: *
+Disallow:
+
+Sitemap: https://human-being-band.de/sitemap.xml
