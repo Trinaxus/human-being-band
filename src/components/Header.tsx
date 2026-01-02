@@ -22,10 +22,10 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
       return (t === 'light' || t === 'dark') ? t : 'dark';
     } catch { return 'dark'; }
   });
-  const [fontSize, setFontSize] = React.useState<'normal' | 'lg' | 'xl'>(() => {
+  const [fontSize, setFontSize] = React.useState<'normal' | 'lg' | 'xl' | 'xxl'>(() => {
     try {
       const f = window.localStorage.getItem('fontSize');
-      return (f === 'lg' || f === 'xl') ? f : 'normal';
+      return (f === 'lg' || f === 'xl' || f === 'xxl') ? f : 'normal';
     } catch {
       return 'normal';
     }
@@ -113,7 +113,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
 
   return (
     <>
-    <header className="fixed inset-x-0 top-0 z-40 bg-neutral-900/85 border-b-[0.5px] border-neutral-800 backdrop-blur-sm shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)]">
+    <header className="hb-no-scale fixed inset-x-0 top-0 z-40 bg-neutral-900/85 border-b-[0.5px] border-neutral-800 backdrop-blur-sm shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)]">
       <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {/* Mobile: compact top bar */}
         <div className="flex items-center justify-between sm:hidden">
@@ -177,19 +177,39 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                   <div className="h-px my-1 bg-neutral-700" />
                   <div className="px-3 pb-2 space-y-1">
                     <div className="text-xs text-neutral-400 uppercase tracking-wide">Schriftgröße</div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-1">
                       <button
+                        type="button"
                         onClick={() => setFontSize('normal')}
-                        className={`flex-1 px-2 py-1 rounded border text-xs ${fontSize==='normal' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
-                      >Standard</button>
+                        className={`flex-1 px-2 py-1 rounded-md border text-xs flex items-center justify-center gap-1 ${fontSize==='normal' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        title="Standardgröße"
+                      >
+                        <span className="text-sm">A</span>
+                      </button>
                       <button
+                        type="button"
                         onClick={() => setFontSize('lg')}
-                        className={`flex-1 px-2 py-1 rounded border text-xs ${fontSize==='lg' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
-                      >Groß</button>
+                        className={`flex-1 px-2 py-1 rounded-md border text-xs flex items-center justify-center gap-1 ${fontSize==='lg' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        title="Größer"
+                      >
+                        <span className="text-base">A</span>
+                      </button>
                       <button
+                        type="button"
                         onClick={() => setFontSize('xl')}
-                        className={`flex-1 px-2 py-1 rounded border text-xs ${fontSize==='xl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
-                      >Sehr groß</button>
+                        className={`flex-1 px-2 py-1 rounded-md border text-xs flex items-center justify-center gap-1 ${fontSize==='xl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        title="Am größten"
+                      >
+                        <span className="text-lg">A</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFontSize('xxl')}
+                        className={`flex-1 px-2 py-1 rounded-md border text-xs flex items-center justify-center gap-1 ${fontSize==='xxl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        title="Maximal groß"
+                      >
+                        <span className="text-xl">A</span>
+                      </button>
                     </div>
                   </div>
                   {authRole === 'admin' && (
@@ -253,17 +273,37 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                     <div className="text-[10px] text-neutral-400 uppercase tracking-wide px-1">Schriftgröße</div>
                     <div className="flex gap-1 px-1">
                       <button
+                        type="button"
                         onClick={() => setFontSize('normal')}
-                        className={`flex-1 px-2 py-1 rounded border text-[10px] ${fontSize==='normal' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
-                      >Std.</button>
+                        className={`flex-1 px-2 py-1 rounded-md border text-[10px] flex items-center justify-center ${fontSize==='normal' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        title="Standardgröße"
+                      >
+                        <span className="text-xs">A</span>
+                      </button>
                       <button
+                        type="button"
                         onClick={() => setFontSize('lg')}
-                        className={`flex-1 px-2 py-1 rounded border text-[10px] ${fontSize==='lg' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
-                      >Groß</button>
+                        className={`flex-1 px-2 py-1 rounded-md border text-[10px] flex items-center justify-center ${fontSize==='lg' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        title="Größer"
+                      >
+                        <span className="text-sm">A</span>
+                      </button>
                       <button
+                        type="button"
                         onClick={() => setFontSize('xl')}
-                        className={`flex-1 px-2 py-1 rounded border text-[10px] ${fontSize==='xl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
-                      >XL</button>
+                        className={`flex-1 px-2 py-1 rounded-md border text-[10px] flex items-center justify-center ${fontSize==='xl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        title="Am größten"
+                      >
+                        <span className="text-base">A</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFontSize('xxl')}
+                        className={`flex-1 px-2 py-1 rounded-md border text-[10px] flex items-center justify-center ${fontSize==='xxl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        title="Maximal groß"
+                      >
+                        <span className="text-lg">A</span>
+                      </button>
                     </div>
                   </div>
                   {authRole === 'admin' && (

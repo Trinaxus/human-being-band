@@ -2,24 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global font-size scaling factor controlled via <html data-font-size>.
-   Die tatsächliche Skalierung wird nur auf den Body-Content angewendet. */
+/* Globaler Schrift-Skalierungsfaktor (nur als Variable, kein Layout-Einfluss) */
 html {
 	--hb-font-scale: 1;
 }
 
 html[data-font-size="lg"] {
-	--hb-font-scale: 1.1;
+	--hb-font-scale: 1.12;
 }
 
 html[data-font-size="xl"] {
-	--hb-font-scale: 1.22;
+	--hb-font-scale: 1.25;
 }
 
-/* Nur der Haupt-Content skaliert, Header/Navigation bleiben unverändert */
-main.hb-main {
-	transform-origin: top center;
-	transform: scale(var(--hb-font-scale));
+html[data-font-size="xxl"] {
+	--hb-font-scale: 1.4;
+}
+
+/* Body-Content, der mitskalieren soll */
+.hb-body {
+	font-size: calc(1rem * var(--hb-font-scale));
+}
+
+.hb-body .text-xs {
+	font-size: calc(0.75rem * var(--hb-font-scale));
+}
+
+.hb-body .text-sm {
+	font-size: calc(0.875rem * var(--hb-font-scale));
+}
+
+.hb-body .text-base {
+	font-size: calc(1rem * var(--hb-font-scale));
+}
+
+.hb-body .text-lg {
+	font-size: calc(1.125rem * var(--hb-font-scale));
+}
+
+/* Header/Footer explizit nicht mitskalieren (rein defensiv) */
+.hb-no-scale {
+	font-size: 1rem;
 }
 
 @keyframes fadeIn {

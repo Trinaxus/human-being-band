@@ -54,8 +54,8 @@ const Footer: React.FC = () => {
   }, [lang]);
 
   const wrapCls = theme==='light'
-    ? 'relative bg-white/85 backdrop-blur-sm py-6 border-t border-neutral-200'
-    : 'relative bg-neutral-900/85 backdrop-blur-sm py-6 border-t-[0.5px] border-neutral-800';
+    ? 'hb-no-scale relative bg-white/85 backdrop-blur-sm py-6 border-t border-neutral-200'
+    : 'hb-no-scale relative bg-neutral-900/85 backdrop-blur-sm py-6 border-t-[0.5px] border-neutral-800';
   const textMuted = theme==='light' ? 'text-neutral-600' : 'text-neutral-400';
   const textMutedHover = theme==='light' ? 'hover:text-neutral-800' : 'hover:text-neutral-200';
 
@@ -92,7 +92,7 @@ const Footer: React.FC = () => {
             >
               <Github size={20} />
             </a>
-            <span className={`${textMuted} text-sm`}>2025</span>
+            <span className={`${textMuted} text-sm`}>2026</span>
           </div>
         </div>
       </div>
