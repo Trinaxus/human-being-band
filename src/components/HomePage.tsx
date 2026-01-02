@@ -443,7 +443,11 @@ const HomePage: React.FC = () => {
                         )}
                         <div className="text-neutral-100 font-medium">{m.name||''}</div>
                         {m.role && <div className="text-neutral-400 text-sm">{m.role}</div>}
-                        {m.bio && <div className="text-neutral-300 text-xs whitespace-pre-line">{L(m.bio as any)}</div>}
+                        {m.bio && (
+                          <div className="text-neutral-300 text-sm leading-relaxed tracking-[0.01em] whitespace-pre-line">
+                            {L(m.bio as any)}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
