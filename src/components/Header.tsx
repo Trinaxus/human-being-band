@@ -164,13 +164,36 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
             {/* Settings gear dropdown */}
             {/* Settings gear dropdown */}
             <div id="header-settings" className="relative">
-              <button onClick={() => setSettingsOpen(v=>!v)} className="px-3 py-2 text-sm rounded-lg border-[0.5px] border-neutral-600/50 bg-neutral-700/50 text-neutral-300 hover:bg-neutral-600/40 hover:text-white transition-colors" title="Einstellungen" aria-haspopup>
+              <button
+                onClick={() => setSettingsOpen(v=>!v)}
+                className={`px-3 py-2 text-sm rounded-lg border-[0.5px] transition-colors
+                  ${theme==='light'
+                    ? 'border-neutral-400/60 bg-white/70 text-neutral-800 hover:bg-neutral-200/70 hover:text-neutral-900'
+                    : 'border-neutral-600/50 bg-neutral-700/50 text-neutral-300 hover:bg-neutral-600/40 hover:text-white'
+                  }
+                `}
+                title="Einstellungen"
+                aria-haspopup
+              >
                 <SettingsIcon className="w-4 h-4" />
               </button>
               {settingsOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-lg border border-neutral-700 bg-neutral-800 shadow-xl p-1 z-50">
+                <div className={`absolute right-0 mt-2 w-56 rounded-lg border shadow-xl p-1 z-50
+                  ${theme==='light'
+                    ? 'border-neutral-300 bg-white/95'
+                    : 'border-neutral-700 bg-neutral-800'
+                  }
+                `}>
                   {/* Theme toggle */}
-                  <button onClick={() => { setTheme(prev => prev==='light'?'dark':'light'); }} className="w-full text-left px-3 py-2 rounded-md text-neutral-200 hover:bg-neutral-700">
+                  <button
+                    onClick={() => { setTheme(prev => prev==='light'?'dark':'light'); }}
+                    className={`w-full text-left px-3 py-2 rounded-md transition-colors
+                      ${theme==='light'
+                        ? 'text-neutral-800 hover:bg-neutral-100'
+                        : 'text-neutral-200 hover:bg-neutral-700'
+                      }
+                    `}
+                  >
                     <span className="inline-flex items-center gap-2">{theme==='light'? <Moon className="w-4 h-4"/> : <Sun className="w-4 h-4"/>} {theme==='light' ? 'Dunkel' : 'Hell'}
                     </span>
                   </button>
@@ -181,7 +204,11 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       <button
                         type="button"
                         onClick={() => setFontSize('normal')}
-                        className={`flex-1 px-2 py-1 rounded-md border text-xs flex items-center justify-center gap-1 ${fontSize==='normal' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center gap-1 ${
+                          fontSize==='normal'
+                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
+                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
+                        }`}
                         title="Standardgröße"
                       >
                         <span className="text-sm">A</span>
@@ -189,7 +216,11 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       <button
                         type="button"
                         onClick={() => setFontSize('lg')}
-                        className={`flex-1 px-2 py-1 rounded-md border text-xs flex items-center justify-center gap-1 ${fontSize==='lg' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center gap-1 ${
+                          fontSize==='lg'
+                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
+                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
+                        }`}
                         title="Größer"
                       >
                         <span className="text-base">A</span>
@@ -197,7 +228,11 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       <button
                         type="button"
                         onClick={() => setFontSize('xl')}
-                        className={`flex-1 px-2 py-1 rounded-md border text-xs flex items-center justify-center gap-1 ${fontSize==='xl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center gap-1 ${
+                          fontSize==='xl'
+                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
+                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
+                        }`}
                         title="Am größten"
                       >
                         <span className="text-lg">A</span>
@@ -205,7 +240,11 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       <button
                         type="button"
                         onClick={() => setFontSize('xxl')}
-                        className={`flex-1 px-2 py-1 rounded-md border text-xs flex items-center justify-center gap-1 ${fontSize==='xxl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center gap-1 ${
+                          fontSize==='xxl'
+                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
+                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
+                        }`}
                         title="Maximal groß"
                       >
                         <span className="text-xl">A</span>
@@ -213,12 +252,40 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                     </div>
                   </div>
                   {authRole === 'admin' && (
-                    <button onClick={() => { onAdminClick?.(); setSettingsOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-neutral-200 hover:bg-neutral-700">Admin</button>
+                    <button
+                      onClick={() => { onAdminClick?.(); setSettingsOpen(false); }}
+                      className={`w-full text-left px-3 py-2 rounded-md transition-colors
+                        ${theme==='light'
+                          ? 'text-neutral-800 hover:bg-neutral-100'
+                          : 'text-neutral-200 hover:bg-neutral-700'
+                        }
+                      `}
+                    >Admin</button>
                   )}
                   {authRole === 'unauthenticated' ? (
-                    <button onClick={() => { handleLogin(); setSettingsOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-neutral-200 hover:bg-neutral-700"><span className="inline-flex items-center gap-2"><LogIn className="w-4 h-4"/> Anmelden</span></button>
+                    <button
+                      onClick={() => { handleLogin(); setSettingsOpen(false); }}
+                      className={`w-full text-left px-3 py-2 rounded-md transition-colors
+                        ${theme==='light'
+                          ? 'text-neutral-800 hover:bg-neutral-100'
+                          : 'text-neutral-200 hover:bg-neutral-700'
+                        }
+                      `}
+                    >
+                      <span className="inline-flex items-center gap-2"><LogIn className="w-4 h-4"/> Anmelden</span>
+                    </button>
                   ) : (
-                    <button onClick={() => { handleLogout(); setSettingsOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-neutral-200 hover:bg-neutral-700"><span className="inline-flex items-center gap-2"><LogOut className="w-4 h-4"/> Abmelden</span></button>
+                    <button
+                      onClick={() => { handleLogout(); setSettingsOpen(false); }}
+                      className={`w-full text-left px-3 py-2 rounded-md transition-colors
+                        ${theme==='light'
+                          ? 'text-neutral-800 hover:bg-neutral-100'
+                          : 'text-neutral-200 hover:bg-neutral-700'
+                        }
+                      `}
+                    >
+                      <span className="inline-flex items-center gap-2"><LogOut className="w-4 h-4"/> Abmelden</span>
+                    </button>
                   )}
                   <div className="h-px my-1 bg-neutral-700" />
                   <div className="flex items-center gap-2 px-3 pb-2">
@@ -275,7 +342,11 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       <button
                         type="button"
                         onClick={() => setFontSize('normal')}
-                        className={`flex-1 px-2 py-1 rounded-md border text-[10px] flex items-center justify-center ${fontSize==='normal' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center ${
+                          fontSize==='normal'
+                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
+                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
+                        }`}
                         title="Standardgröße"
                       >
                         <span className="text-xs">A</span>
@@ -283,7 +354,11 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       <button
                         type="button"
                         onClick={() => setFontSize('lg')}
-                        className={`flex-1 px-2 py-1 rounded-md border text-[10px] flex items-center justify-center ${fontSize==='lg' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center ${
+                          fontSize==='lg'
+                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
+                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
+                        }`}
                         title="Größer"
                       >
                         <span className="text-sm">A</span>
@@ -291,7 +366,11 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       <button
                         type="button"
                         onClick={() => setFontSize('xl')}
-                        className={`flex-1 px-2 py-1 rounded-md border text-[10px] flex items-center justify-center ${fontSize==='xl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center ${
+                          fontSize==='xl'
+                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
+                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
+                        }`}
                         title="Am größten"
                       >
                         <span className="text-base">A</span>
@@ -299,7 +378,11 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       <button
                         type="button"
                         onClick={() => setFontSize('xxl')}
-                        className={`flex-1 px-2 py-1 rounded-md border text-[10px] flex items-center justify-center ${fontSize==='xxl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center ${
+                          fontSize==='xxl'
+                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
+                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
+                        }`}
                         title="Maximal groß"
                       >
                         <span className="text-lg">A</span>
