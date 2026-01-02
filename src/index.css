@@ -2,6 +2,26 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Global font-size scaling factor controlled via <html data-font-size>.
+   Die tatsächliche Skalierung wird nur auf den Body-Content angewendet. */
+html {
+	--hb-font-scale: 1;
+}
+
+html[data-font-size="lg"] {
+	--hb-font-scale: 1.1;
+}
+
+html[data-font-size="xl"] {
+	--hb-font-scale: 1.22;
+}
+
+/* Nur der Haupt-Content skaliert, Header/Navigation bleiben unverändert */
+main.hb-main {
+	transform-origin: top center;
+	transform: scale(var(--hb-font-scale));
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(-10px); }
   to { opacity: 1; transform: translateY(0); }

@@ -240,7 +240,7 @@ function App() {
         onAdminClick={() => setView('admin')}
         onOverviewClick={() => setView('overview')}
       />
-      <main className="flex-1 flex items-start md:items-center justify-center px-0 sm:px-4 py-6 w-full">
+      <main className="hb-main flex-1 flex items-start md:items-center justify-center px-0 sm:px-4 py-6 w-full">
         {view === 'home' && <HomePage />}
         {view === 'login' && (
           <LoginPage onLoggedIn={async () => {

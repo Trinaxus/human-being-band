@@ -22,6 +22,14 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
       return (t === 'light' || t === 'dark') ? t : 'dark';
     } catch { return 'dark'; }
   });
+  const [fontSize, setFontSize] = React.useState<'normal' | 'lg' | 'xl'>(() => {
+    try {
+      const f = window.localStorage.getItem('fontSize');
+      return (f === 'lg' || f === 'xl') ? f : 'normal';
+    } catch {
+      return 'normal';
+    }
+  });
 
   // Persist language
   React.useEffect(() => {
@@ -41,6 +49,19 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
       window.localStorage.setItem('theme', theme);
     } catch {}
   }, [theme]);
+
+  // Apply font size to <html>
+  React.useEffect(() => {
+    try {
+      const el = document.documentElement;
+      if (fontSize === 'normal') {
+        el.removeAttribute('data-font-size');
+      } else {
+        el.setAttribute('data-font-size', fontSize);
+      }
+      window.localStorage.setItem('fontSize', fontSize);
+    } catch {}
+  }, [fontSize]);
 
   // Close settings on outside click
   React.useEffect(() => {
@@ -153,6 +174,24 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                     <span className="inline-flex items-center gap-2">{theme==='light'? <Moon className="w-4 h-4"/> : <Sun className="w-4 h-4"/>} {theme==='light' ? 'Dunkel' : 'Hell'}
                     </span>
                   </button>
+                  <div className="h-px my-1 bg-neutral-700" />
+                  <div className="px-3 pb-2 space-y-1">
+                    <div className="text-xs text-neutral-400 uppercase tracking-wide">Schriftgröße</div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setFontSize('normal')}
+                        className={`flex-1 px-2 py-1 rounded border text-xs ${fontSize==='normal' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                      >Standard</button>
+                      <button
+                        onClick={() => setFontSize('lg')}
+                        className={`flex-1 px-2 py-1 rounded border text-xs ${fontSize==='lg' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                      >Groß</button>
+                      <button
+                        onClick={() => setFontSize('xl')}
+                        className={`flex-1 px-2 py-1 rounded border text-xs ${fontSize==='xl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                      >Sehr groß</button>
+                    </div>
+                  </div>
                   {authRole === 'admin' && (
                     <button onClick={() => { onAdminClick?.(); setSettingsOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-neutral-200 hover:bg-neutral-700">Admin</button>
                   )}
@@ -209,6 +248,24 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                   <button onClick={() => { setTheme(prev => prev==='light'?'dark':'light'); }} className="w-full text-left px-3 py-2 rounded-md text-neutral-200 hover:bg-neutral-700">
                     <span className="inline-flex items-center gap-2">{theme==='light'? <Moon className="w-4 h-4"/> : <Sun className="w-4 h-4"/>} {theme==='light' ? 'Dunkel' : 'Hell'}</span>
                   </button>
+                  <div className="h-px my-1 bg-neutral-700" />
+                  <div className="px-1 pb-1 space-y-1">
+                    <div className="text-[10px] text-neutral-400 uppercase tracking-wide px-1">Schriftgröße</div>
+                    <div className="flex gap-1 px-1">
+                      <button
+                        onClick={() => setFontSize('normal')}
+                        className={`flex-1 px-2 py-1 rounded border text-[10px] ${fontSize==='normal' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                      >Std.</button>
+                      <button
+                        onClick={() => setFontSize('lg')}
+                        className={`flex-1 px-2 py-1 rounded border text-[10px] ${fontSize==='lg' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                      >Groß</button>
+                      <button
+                        onClick={() => setFontSize('xl')}
+                        className={`flex-1 px-2 py-1 rounded border text-[10px] ${fontSize==='xl' ? 'border-neutral-300 text-neutral-100 bg-neutral-700' : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'}`}
+                      >XL</button>
+                    </div>
+                  </div>
                   {authRole === 'admin' && (
                     <button onClick={() => { onAdminClick?.(); setMobileOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-neutral-200 hover:bg-neutral-700">Admin</button>
                   )}
