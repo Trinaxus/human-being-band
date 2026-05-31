@@ -33,6 +33,107 @@ const ToggleButton: React.FC<{ label: string; open: boolean; onClick: () => void
   </button>
 );
 
+const HeaderLogoPicker: React.FC<{
+  label: string;
+  value: string;
+  onChange: (url: string) => void;
+  previewBg: string;
+  galleries: Array<{ year: number; name: string; items?: Array<{ type: string; url: string }> }>;
+}> = ({ label, value, onChange, previewBg, galleries }) => {
+  const [selectedYear, setSelectedYear] = React.useState<number | ''>('');
+  const [selectedGallery, setSelectedGallery] = React.useState<{ year: number; name: string } | null>(null);
+
+  const years = React.useMemo(() => [...new Set(galleries.map(g => g.year))].sort((a, b) => b - a), [galleries]);
+  const filteredGalleries = React.useMemo(() =>
+    selectedYear !== '' ? galleries.filter(g => g.year === selectedYear) : galleries,
+    [galleries, selectedYear]
+  );
+  const galleryImages = React.useMemo(() => {
+    if (!selectedGallery) return [];
+    const g = galleries.find(g => g.year === selectedGallery.year && g.name === selectedGallery.name);
+    return (g?.items || []).filter(it => it.type === 'image');
+  }, [galleries, selectedGallery]);
+
+  return (
+    <div>
+      <label className="block text-xs text-neutral-400 mb-1">{label}</label>
+      <Input
+        placeholder="https://…/logo.png"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+      />
+      {galleries.length > 0 && (
+        <div className="mt-2 space-y-2">
+          {/* Year filter */}
+          <select
+            className="w-full px-2 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-300 text-sm"
+            value={selectedYear === '' ? '' : String(selectedYear)}
+            onChange={e => {
+              const y = e.target.value ? Number(e.target.value) : '';
+              setSelectedYear(y);
+              setSelectedGallery(null);
+            }}
+          >
+            <option value="">Alle Jahre</option>
+            {years.map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+
+          {/* Gallery selector */}
+          <select
+            className="w-full px-2 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-300 text-sm"
+            value={selectedGallery ? `${selectedGallery.year}::${selectedGallery.name}` : ''}
+            onChange={e => {
+              const val = e.target.value;
+              if (!val) { setSelectedGallery(null); return; }
+              const [y, name] = val.split('::');
+              setSelectedGallery({ year: Number(y), name });
+            }}
+          >
+            <option value="">Galerie wählen…</option>
+            {filteredGalleries.map(g => (
+              <option key={`${g.year}::${g.name}`} value={`${g.year}::${g.name}`}>{g.year} — {g.name}</option>
+            ))}
+          </select>
+
+          {/* Image thumbnails grid */}
+          {selectedGallery && galleryImages.length > 0 && (
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 mt-2">
+              {galleryImages.map((img, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => onChange(img.url)}
+                  className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                    value === img.url ? 'border-[#4ECBD9] ring-2 ring-[#4ECBD9]/30' : 'border-neutral-700 hover:border-neutral-500'
+                  }`}
+                  title={img.url.split('/').pop() || ''}
+                >
+                  <img src={img.url} alt="" className="w-full h-full object-cover" />
+                  {value === img.url && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                      <span className="text-white text-xs font-bold">✓</span>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+          {selectedGallery && galleryImages.length === 0 && (
+            <div className="text-xs text-neutral-500">Keine Bilder in dieser Galerie.</div>
+          )}
+        </div>
+      )}
+      {value && (
+        <div className={`mt-2 p-2 rounded-lg border border-neutral-700/30 ${previewBg}`}>
+          <img src={value} alt={`${label} Preview`} className="h-10 w-auto object-contain" />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AdminContentPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -525,6 +626,7 @@ const AdminContentPanel: React.FC = () => {
 
   const [open, setOpen] = useState({
     hero: false,
+    header: false,
     contact: false,
     gallery: false,
     map: false,
@@ -540,7 +642,7 @@ const AdminContentPanel: React.FC = () => {
   
 
   // Admin cards order (server-side via content.adminOrder)
-  const defaultAdminOrder = ['sections','hero','bg','cards','about','news','socials','contact','mediaEmbeds','gallery','booking','legal'] as const;
+  const defaultAdminOrder = ['sections','hero','header','bg','cards','about','news','socials','contact','mediaEmbeds','gallery','booking','legal'] as const;
   type AdminKey = typeof defaultAdminOrder[number];
   const [adminEdit, setAdminEdit] = useState(false);
   const getAdminOrder = (): AdminKey[] => {
@@ -576,21 +678,51 @@ const AdminContentPanel: React.FC = () => {
     impressum: { de: 'editor', en: 'editor' },
     privacy: { de: 'editor', en: 'editor' },
   });
+  const [adminTab, setAdminTab] = useState<'content' | 'design'>('content');
 
   
 
   if (loading) return <div className="text-neutral-400">Lade Inhalte…</div>;
 
+  const sectionStyle = (key: AdminKey, tab: 'content' | 'design') => ({
+    display: (adminTab === tab ? 'block' : 'none') as 'block' | 'none',
+    order: orderOf(key),
+  });
+
   return (
     <div className="w-full flex flex-col gap-6">
       {error && <div className="p-3 rounded-lg bg-neutral-800/60 border border-neutral-700 text-[#DC2626] text-sm">{error}</div>}
       {ok && <div className="p-3 rounded-lg bg-neutral-800/60 border border-neutral-700 text-neutral-200 text-sm">{ok}</div>}
-      
-      
+
+      {/* Admin Tabs */}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => setAdminTab('content')}
+          className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition-all border ${
+            adminTab === 'content'
+              ? 'bg-white text-neutral-900 border-neutral-200 shadow-sm'
+              : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:bg-neutral-700'
+          }`}
+        >
+          Inhalte & Texte
+        </button>
+        <button
+          type="button"
+          onClick={() => setAdminTab('design')}
+          className={`flex-1 px-4 py-3 rounded-xl text-sm font-semibold transition-all border ${
+            adminTab === 'design'
+              ? 'bg-white text-neutral-900 border-neutral-200 shadow-sm'
+              : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:bg-neutral-700'
+          }`}
+        >
+          Design & Layout
+        </button>
+      </div>
 
       {/* Abschnitte anordnen */}
       <section
-        style={{ order: orderOf('sections') }}
+        style={sectionStyle('sections', 'design')}
       >
         <ToggleButton label="Abschnitte anordnen" open={(open as any).sections === true} onClick={() => setOpen(prev => ({ ...prev, sections: !(prev as any).sections }))} />
         {(open as any).sections && (
@@ -640,7 +772,7 @@ const AdminContentPanel: React.FC = () => {
 
       {/* Booking (Band anfragen) */}
       <section
-        style={{ order: orderOf('booking') }}
+        style={sectionStyle('booking', 'content')}
       >
         <ToggleButton label="Booking" open={(open as any).booking === true} onClick={() => setOpen(prev => ({ ...prev, booking: !(prev as any).booking }))} />
         {adminEdit && (
@@ -739,7 +871,7 @@ const AdminContentPanel: React.FC = () => {
 
       {/* Hero */}
       <section
-        style={{ order: orderOf('hero') }}
+        style={sectionStyle('hero', 'design')}
       >
         <ToggleButton label="Hero" open={open.hero} onClick={() => setOpen(prev => ({ ...prev, hero: !prev.hero }))} />
         {adminEdit && (
@@ -852,9 +984,101 @@ const AdminContentPanel: React.FC = () => {
         )}
       </section>
 
+      {/* Header & Logo */}
+      <section
+        style={sectionStyle('header', 'design')}
+      >
+        <ToggleButton label="Header & Logo" open={(open as any).header === true} onClick={() => setOpen(prev => ({ ...prev, header: !(prev as any).header }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('header', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('header', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
+        {(open as any).header && (
+          <div className="mt-3 space-y-3">
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 space-y-4">
+              {/* Dark mode logo */}
+              <HeaderLogoPicker
+                label="Logo (Dunkler Modus)"
+                value={content.headerLogo?.dark || ''}
+                onChange={url => setContent(prev => ({ ...prev, headerLogo: { ...prev.headerLogo, dark: url } }))}
+                previewBg="bg-neutral-900/40"
+                galleries={galleries}
+              />
+
+              {/* Light mode logo */}
+              <HeaderLogoPicker
+                label="Logo (Heller Modus)"
+                value={content.headerLogo?.light || ''}
+                onChange={url => setContent(prev => ({ ...prev, headerLogo: { ...prev.headerLogo, light: url } }))}
+                previewBg="bg-white/10"
+                galleries={galleries}
+              />
+
+              {/* Logo size & effects */}
+              <div className="space-y-3 pt-2 border-t border-neutral-700/30">
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500">Größe & Effekte</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-2 rounded-lg bg-neutral-900/40 border border-neutral-700/20">
+                    <label className="block text-xs text-neutral-400 mb-1">Desktop Höhe ({content.headerLogo?.height ?? 48}px)</label>
+                    <input type="range" min={24} max={120} step={1} value={content.headerLogo?.height ?? 48}
+                      onChange={e => setContent(prev => ({ ...prev, headerLogo: { ...prev.headerLogo, height: Number(e.target.value) } }))}
+                      className="w-full accent-blue-500" />
+                  </div>
+                  <div className="p-2 rounded-lg bg-neutral-900/40 border border-neutral-700/20">
+                    <label className="block text-xs text-neutral-400 mb-1">Mobile Höhe ({content.headerLogo?.mobileHeight ?? 36}px)</label>
+                    <input type="range" min={24} max={80} step={1} value={content.headerLogo?.mobileHeight ?? 36}
+                      onChange={e => setContent(prev => ({ ...prev, headerLogo: { ...prev.headerLogo, mobileHeight: Number(e.target.value) } }))}
+                      className="w-full accent-blue-500" />
+                  </div>
+                  <div className="p-2 rounded-lg bg-neutral-900/40 border border-neutral-700/20">
+                    <label className="block text-xs text-neutral-400 mb-1">Hover Vergrößerung ({(content.headerLogo?.hoverScale ?? 1).toFixed(2)}x)</label>
+                    <input type="range" min={100} max={130} step={5} value={Math.round((content.headerLogo?.hoverScale ?? 1) * 100)}
+                      onChange={e => setContent(prev => ({ ...prev, headerLogo: { ...prev.headerLogo, hoverScale: Number(e.target.value) / 100 } }))}
+                      className="w-full accent-blue-500" />
+                  </div>
+                  <div className="p-2 rounded-lg bg-neutral-900/40 border border-neutral-700/20">
+                    <label className="block text-xs text-neutral-400 mb-1">Hover Helligkeit ({content.headerLogo?.hoverBrightness ?? 100}%)</label>
+                    <input type="range" min={50} max={150} step={5} value={content.headerLogo?.hoverBrightness ?? 100}
+                      onChange={e => setContent(prev => ({ ...prev, headerLogo: { ...prev.headerLogo, hoverBrightness: Number(e.target.value) } }))}
+                      className="w-full accent-blue-500" />
+                  </div>
+                  <div className="p-2 rounded-lg bg-neutral-900/40 border border-neutral-700/20">
+                    <label className="block text-xs text-neutral-400 mb-1">Hover Opacity ({content.headerLogo?.hoverOpacity ?? 100}%)</label>
+                    <input type="range" min={50} max={100} step={5} value={Math.round((content.headerLogo?.hoverOpacity ?? 1) * 100)}
+                      onChange={e => setContent(prev => ({ ...prev, headerLogo: { ...prev.headerLogo, hoverOpacity: Number(e.target.value) / 100 } }))}
+                      className="w-full accent-blue-500" />
+                  </div>
+                </div>
+                <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 mt-1">Header Höhe</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="p-2 rounded-lg bg-neutral-900/40 border border-neutral-700/20">
+                    <label className="block text-xs text-neutral-400 mb-1">Desktop Abstand ({content.headerLogo?.headerDesktopPadding ?? 10}px)</label>
+                    <input type="range" min={0} max={40} step={2} value={content.headerLogo?.headerDesktopPadding ?? 10}
+                      onChange={e => setContent(prev => ({ ...prev, headerLogo: { ...prev.headerLogo, headerDesktopPadding: Number(e.target.value) } }))}
+                      className="w-full accent-blue-500" />
+                  </div>
+                  <div className="p-2 rounded-lg bg-neutral-900/40 border border-neutral-700/20">
+                    <label className="block text-xs text-neutral-400 mb-1">Mobile Abstand ({content.headerLogo?.headerMobilePadding ?? 6}px)</label>
+                    <input type="range" min={0} max={30} step={2} value={content.headerLogo?.headerMobilePadding ?? 6}
+                      onChange={e => setContent(prev => ({ ...prev, headerLogo: { ...prev.headerLogo, headerMobilePadding: Number(e.target.value) } }))}
+                      className="w-full accent-blue-500" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="text-[12px] text-neutral-400">
+                Wenn kein Logo gesetzt ist, wird das Standard-Logo verwendet. Für den hellen Modus sollte ein dunkles Logo (z. B. schwarz) hinterlegt werden.
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
       {/* Hintergrundbild */}
       <section
-        style={{ order: orderOf('bg') }}
+        style={sectionStyle('bg', 'design')}
       >
         <ToggleButton label="Hintergrundbild" open={(open as any).bg === true} onClick={() => setOpen(prev => ({ ...prev, bg: !(prev as any).bg }))} />
         {adminEdit && (
@@ -971,7 +1195,7 @@ const AdminContentPanel: React.FC = () => {
 
       {/* Karten-Design */}
       <section
-        style={{ order: orderOf('cards') }}
+        style={sectionStyle('cards', 'design')}
       >
         <ToggleButton label="Karten-Design" open={(open as any).cards === true} onClick={() => setOpen(prev => ({ ...prev, cards: !(prev as any).cards }))} />
         {adminEdit && (
@@ -998,7 +1222,7 @@ const AdminContentPanel: React.FC = () => {
 
       {/* News / Blog */}
       <section
-        style={{ order: orderOf('news') }}
+        style={sectionStyle('news', 'content')}
       >
         <ToggleButton label="News" open={open.news} onClick={() => setOpen(prev => ({ ...prev, news: !prev.news }))} />
         {adminEdit && (
@@ -1166,7 +1390,7 @@ const AdminContentPanel: React.FC = () => {
 
       {/* Über uns */}
       <section
-        style={{ order: orderOf('about') }}
+        style={sectionStyle('about', 'content')}
       >
         <ToggleButton label="Über uns" open={open.about} onClick={() => setOpen(prev => ({ ...prev, about: !prev.about }))} />
         {adminEdit && (
@@ -1282,7 +1506,7 @@ const AdminContentPanel: React.FC = () => {
 
       {/* Social */}
       <section
-        style={{ order: orderOf('socials') }}
+        style={sectionStyle('socials', 'content')}
       >
         <ToggleButton label="Social" open={open.socials} onClick={() => setOpen(prev => ({ ...prev, socials: !prev.socials }))} />
         {adminEdit && (
@@ -1353,7 +1577,7 @@ const AdminContentPanel: React.FC = () => {
 
       {/* Kontakt */}
       <section
-        style={{ order: orderOf('contact') }}
+        style={sectionStyle('contact', 'content')}
       >
         <ToggleButton label="Kontakt" open={open.contact} onClick={() => setOpen(prev => ({ ...prev, contact: !prev.contact }))} />
         {adminEdit && (
@@ -1373,7 +1597,7 @@ const AdminContentPanel: React.FC = () => {
 
       {/* Media/Embeds (Spotify) */}
       <section
-        style={{ order: orderOf('mediaEmbeds') }}
+        style={sectionStyle('mediaEmbeds', 'content')}
       >
         <ToggleButton label="Media/Embeds (Spotify)" open={open.mediaEmbeds} onClick={() => setOpen(prev => ({ ...prev, mediaEmbeds: !prev.mediaEmbeds }))} />
         {adminEdit && (
@@ -1484,7 +1708,7 @@ const AdminContentPanel: React.FC = () => {
 
       {/* Galerie Verwaltung (Jahr -> Galerie -> Items) */}
       <section
-        style={{ order: orderOf('gallery') }}
+        style={sectionStyle('gallery', 'content')}
       >
         <ToggleButton label="Galerien" open={open.gallery} onClick={() => setOpen(prev => ({ ...prev, gallery: !prev.gallery }))} />
         {adminEdit && (
@@ -1811,7 +2035,7 @@ const AdminContentPanel: React.FC = () => {
 
       {/* Rechtliches (Impressum, Datenschutz) */}
       <section
-        style={{ order: orderOf('legal') }}
+        style={sectionStyle('legal', 'content')}
       >
         <ToggleButton label="Rechtliches (Impressum & Datenschutz)" open={(open as any).legal === true} onClick={() => setOpen(prev => ({ ...prev, legal: !(prev as any).legal }))} />
         {adminEdit && (

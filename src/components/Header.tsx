@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, X, LogIn, LogOut, Settings as SettingsIcon, Sun, Moon } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, Settings, Sun, Moon, Shield } from 'lucide-react';
 
 type HeaderProps = {
   authRole?: 'unauthenticated' | 'user' | 'admin';
@@ -10,7 +10,15 @@ type HeaderProps = {
   onOverviewClick?: () => void;
 };
 
-const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeClick, onLoginClick, onLogoutClick, onAdminClick, onOverviewClick }) => {
+const navLinks = [
+  { id: 'news', label: 'News' },
+  { id: 'about', label: 'About' },
+  { id: 'music', label: 'Music', href: 'https://youtube.com' },
+  { id: 'media', label: 'Media' },
+  { id: 'booking', label: 'Booking' },
+];
+
+const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeClick, onLoginClick, onLogoutClick, onAdminClick }) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [lang, setLang] = React.useState<'de'|'en'>(() => {
@@ -30,6 +38,29 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
       return 'normal';
     }
   });
+  const [headerLogo, setHeaderLogo] = React.useState<{
+    dark?: string; light?: string;
+    height?: number; mobileHeight?: number;
+    headerDesktopPadding?: number; headerMobilePadding?: number;
+    hoverScale?: number; hoverBrightness?: number; hoverOpacity?: number;
+  }>({});
+  const [logoHover, setLogoHover] = React.useState(false);
+
+  // Load custom header logo from server content
+  React.useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const base = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
+        const res = await fetch(`${base}/content.php`, { credentials: 'include' });
+        const data = await res.json();
+        if (!cancelled && data?.ok && data.content?.headerLogo) {
+          setHeaderLogo(data.content.headerLogo);
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // Persist language
   React.useEffect(() => {
@@ -88,344 +119,352 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
   // No authentication or host/remote state in the minimal skeleton.
 
   // Default button behaviors if no handlers are provided
+  const isLight = theme === 'light';
   const handleHome = () => {
     try { onHomeClick?.(); } catch {}
-    try {
-      setMobileOpen(false);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch {}
+    try { setMobileOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); } catch {}
   };
   const handleLogin = () => {
     if (onLoginClick) return onLoginClick();
-    try {
-      const el = document.getElementById('login-form');
-      el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch {}
+    try { document.getElementById('login-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
   };
   const handleLogout = () => {
     if (onLogoutClick) return onLogoutClick();
-    try {
-      window.localStorage?.clear?.();
-      window.sessionStorage?.clear?.();
-    } catch {}
+    try { window.localStorage?.clear?.(); window.sessionStorage?.clear?.(); } catch {}
     try { window.location.replace('/'); } catch {}
   };
 
+  const linkClass = (active = false) =>
+    `px-3 py-1.5 text-base md:text-lg rounded-md uppercase font-display tracking-wider transition-colors ${
+      isLight
+        ? active ? 'text-neutral-900 bg-neutral-200/60' : 'text-neutral-900 hover:bg-neutral-200/60'
+        : active ? 'text-white bg-neutral-700/40' : 'text-white hover:bg-neutral-700/40'
+    }`;
+
+  const logoSrc = isLight
+    ? (headerLogo.light || headerLogo.dark || '/human-being-logo-weiß.png')
+    : (headerLogo.dark || headerLogo.light || '/human-being-logo-weiß.png');
+
   return (
     <>
-    <header className="hb-no-scale fixed inset-x-0 top-0 z-40 bg-neutral-900/85 border-b-[0.5px] border-neutral-800 backdrop-blur-sm shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)]">
-      <div className="max-w-[1200px] mx-auto px-4 sm:px-6 py-4 sm:py-6">
-        {/* Mobile: compact top bar */}
-        <div className="flex items-center justify-between sm:hidden">
-          <span className="w-9 h-9" />
-          <button onClick={handleHome} className="inline-flex items-center" title="Home">
-            <img src="/human-being-logo-weiß.png" alt="Human Being Band" className="header-logo h-7 w-auto block" />
-            <span className="sr-only">HUMAN BEING BAND</span>
-          </button>
-          <button
-            onClick={() => setMobileOpen(true)}
-            onTouchStart={() => setMobileOpen(true)}
-            aria-label="Menü öffnen"
-            className="w-9 h-9 inline-flex items-center justify-center rounded-lg border border-neutral-700 text-neutral-300 hover:bg-neutral-700/50"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+      <header className="hb-no-scale fixed inset-x-0 top-0 z-40 bg-neutral-900/85 border-b-[0.5px] border-neutral-800 backdrop-blur-sm shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)]">
+        <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
+          {/* Mobile top bar */}
+          <div className="flex items-center justify-between sm:hidden" style={{ paddingTop: `${headerLogo.headerMobilePadding ?? 6}px`, paddingBottom: `${headerLogo.headerMobilePadding ?? 6}px` }}>
+            <span className="w-9 h-9" />
+            <button onClick={handleHome} className="inline-flex items-center" title="Home" onMouseEnter={() => setLogoHover(true)} onMouseLeave={() => setLogoHover(false)}>
+              <img
+                src={logoSrc}
+                alt="Human Being Band"
+                className="w-auto block transition-all duration-300"
+                style={{
+                  height: headerLogo.mobileHeight ?? 36,
+                  transform: logoHover ? `scale(${headerLogo.hoverScale ?? 1})` : 'scale(1)',
+                  filter: logoHover ? `brightness(${headerLogo.hoverBrightness ?? 100}%)` : 'brightness(100%)',
+                  opacity: logoHover ? (headerLogo.hoverOpacity ?? 1) : 1,
+                }}
+              />
+              <span className="sr-only">HUMAN BEING BAND</span>
+            </button>
+            <button
+              onClick={() => setMobileOpen(true)}
+              aria-label={lang==='de'?'Menü öffnen':'Open menu'}
+              className="w-9 h-9 inline-flex items-center justify-center rounded-xl border border-neutral-700/60 text-neutral-300 hover:bg-neutral-800/60 transition-colors"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Desktop header */}
+          <div className="hidden sm:flex items-center justify-between" style={{ paddingTop: `${headerLogo.headerDesktopPadding ?? 10}px`, paddingBottom: `${headerLogo.headerDesktopPadding ?? 10}px` }}>
+            <button onClick={handleHome} className="inline-flex items-center" title="Home" onMouseEnter={() => setLogoHover(true)} onMouseLeave={() => setLogoHover(false)}>
+              <img
+                src={logoSrc}
+                alt="Human Being Band"
+                className="w-auto block transition-all duration-300"
+                style={{
+                  height: headerLogo.height ?? 48,
+                  transform: logoHover ? `scale(${headerLogo.hoverScale ?? 1})` : 'scale(1)',
+                  filter: logoHover ? `brightness(${headerLogo.hoverBrightness ?? 100}%)` : 'brightness(100%)',
+                  opacity: logoHover ? (headerLogo.hoverOpacity ?? 1) : 1,
+                }}
+              />
+              <span className="sr-only">HUMAN BEING BAND</span>
+            </button>
+
+            <div className="flex items-center gap-3">
+              <nav className="flex items-center gap-1">
+                {navLinks.map(link =>
+                  link.href ? (
+                    <a key={link.id} href={link.href} target="_blank" rel="noreferrer" className={linkClass()}>
+                      {link.label}
+                    </a>
+                  ) : (
+                    <button key={link.id} onClick={() => { try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {} }} className={linkClass()}>
+                      {link.label}
+                    </button>
+                  )
+                )}
+              </nav>
+
+              {/* Settings dropdown */}
+              <div id="header-settings" className="relative ml-2">
+                <button
+                  onClick={() => setSettingsOpen(v => !v)}
+                  className={`w-9 h-9 inline-flex items-center justify-center rounded-xl border-[0.5px] transition-all ${
+                    isLight
+                      ? 'border-neutral-300 bg-white/80 text-neutral-700 hover:bg-neutral-100'
+                      : 'border-neutral-700 bg-neutral-800/60 text-neutral-300 hover:bg-neutral-700/60'
+                  } ${settingsOpen ? (isLight ? 'bg-neutral-100 ring-2 ring-neutral-300' : 'bg-neutral-700/60 ring-2 ring-neutral-600') : ''}`}
+                  title={lang==='de'?'Einstellungen':'Settings'}
+                  aria-haspopup
+                >
+                  <Settings className="w-[18px] h-[18px]" />
+                </button>
+
+                {settingsOpen && (
+                  <div className={`absolute right-0 mt-3 w-64 rounded-2xl border shadow-2xl p-2 z-50 backdrop-blur-md ${
+                    isLight
+                      ? 'border-neutral-200/80 bg-white/95'
+                      : 'border-neutral-700/80 bg-neutral-800/95'
+                  }`}>
+                    {/* Appearance section */}
+                    <div className="px-2 pt-1 pb-2">
+                      <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 mb-2 px-1">{lang==='de'?'Erscheinungsbild':'Appearance'}</div>
+                      <button
+                        onClick={() => setTheme(isLight ? 'dark' : 'light')}
+                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                          isLight ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-200 hover:bg-neutral-700/40'
+                        }`}
+                      >
+                        <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full ${isLight ? 'bg-neutral-100 text-neutral-800' : 'bg-neutral-700/50 text-amber-400'}`}>
+                          {isLight ? <Moon className="w-[18px] h-[18px]"/> : <Sun className="w-[18px] h-[18px]"/>}
+                        </span>
+                        <span className="flex-1 text-left">{isLight ? (lang==='de'?'Dunkelmodus':'Dark mode') : (lang==='de'?'Hellmodus':'Light mode')}</span>
+                      </button>
+                    </div>
+
+                    <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
+
+                    {/* Font size section */}
+                    <div className="px-2 py-2">
+                      <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 mb-2 px-1">{lang==='de'?'Schriftgröße':'Font size'}</div>
+                      <div className="flex gap-1.5">
+                        {(['normal','lg','xl','xxl'] as const).map((s, i) => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setFontSize(s)}
+                            className={`flex flex-1 flex-col items-center justify-center rounded-xl py-2 transition-all ${
+                              fontSize === s
+                                ? (isLight ? 'bg-neutral-100 text-neutral-900 border border-neutral-400 shadow-md' : 'bg-white text-neutral-900 shadow-md')
+                                : (isLight ? 'bg-neutral-100 text-neutral-500 hover:bg-neutral-200' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700')
+                            }`}
+                            title={s === 'normal' ? (lang==='de'?'Standard':'Normal') : s === 'lg' ? (lang==='de'?'Groß':'Large') : s === 'xl' ? (lang==='de'?'Sehr groß':'Extra large') : (lang==='de'?'Maximal':'Maximum')}
+                          >
+                            <span className={s==='normal'?'text-xs':s==='lg'?'text-sm':s==='xl'?'text-base':'text-lg font-medium'}>A</span>
+                            <span className="mt-0.5 text-[9px] font-medium uppercase tracking-wide opacity-60">{['S','M','L','XL'][i]}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
+
+                    {/* Language */}
+                    <div className="px-2 py-2">
+                      <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 mb-2 px-1">{lang==='de'?'Sprache':'Language'}</div>
+                      <div className="flex gap-1.5">
+                        {(['de','en'] as const).map((code) => (
+                          <button
+                            key={code}
+                            onClick={() => setLang(code)}
+                            className={`flex-1 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${
+                              lang === code
+                                ? (isLight ? 'bg-white text-neutral-900 border border-neutral-400 shadow-sm' : 'bg-white text-neutral-900 shadow-sm')
+                                : (isLight ? 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200' : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700')
+                            }`}
+                          >
+                            {code === 'de' ? 'Deutsch' : 'English'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
+
+                    {/* Auth */}
+                    <div className="px-2 pt-2 pb-1">
+                      {authRole === 'admin' ? (
+                        <div className="grid gap-1">
+                          <button onClick={() => { onAdminClick?.(); setSettingsOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${isLight ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-200 hover:bg-neutral-700/40'}`}>
+                            <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full ${isLight ? 'bg-neutral-100 text-emerald-600' : 'bg-neutral-700/50 text-emerald-400'}`}><Shield className="w-[18px] h-[18px]"/></span>
+                            <span className="flex-1 text-left">Admin</span>
+                          </button>
+                          <button onClick={() => { handleLogout(); setSettingsOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${isLight ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-200 hover:bg-neutral-700/40'}`}>
+                            <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full ${isLight ? 'bg-neutral-100 text-rose-500' : 'bg-neutral-700/50 text-rose-400'}`}><LogOut className="w-[18px] h-[18px]"/></span>
+                            <span className="flex-1 text-left">{lang==='de'?'Abmelden':'Log out'}</span>
+                          </button>
+                        </div>
+                      ) : authRole === 'unauthenticated' ? (
+                        <button onClick={() => { handleLogin(); setSettingsOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${isLight ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-200 hover:bg-neutral-700/40'}`}>
+                          <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full ${isLight ? 'bg-neutral-100 text-sky-500' : 'bg-neutral-700/50 text-sky-400'}`}><LogIn className="w-[18px] h-[18px]"/></span>
+                          <span className="flex-1 text-left">{lang==='de'?'Anmelden':'Log in'}</span>
+                        </button>
+                      ) : (
+                        <button onClick={() => { handleLogout(); setSettingsOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${isLight ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-200 hover:bg-neutral-700/40'}`}>
+                          <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full ${isLight ? 'bg-neutral-100 text-rose-500' : 'bg-neutral-700/50 text-rose-400'}`}><LogOut className="w-[18px] h-[18px]"/></span>
+                          <span className="flex-1 text-left">{lang==='de'?'Abmelden':'Log out'}</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Mobile: time bar removed */}
+      {/* Mobile overlay menu */}
+      {mobileOpen && (
+        <div className="sm:hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm" onClick={() => setMobileOpen(false)}>
+          <div
+            className={`absolute top-0 left-0 right-0 max-h-[90vh] overflow-y-auto rounded-b-3xl p-5 pt-4 shadow-2xl border-b ${
+              isLight ? 'bg-white/95 border-neutral-200' : 'bg-neutral-900/95 border-neutral-800'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header row */}
+            <div className="flex items-center justify-between mb-5">
+              <h2 className={`text-sm font-semibold uppercase tracking-widest ${isLight ? 'text-neutral-500' : 'text-neutral-500'}`}>{lang==='de'?'Menü':'Menu'}</h2>
+              <button
+                onClick={() => setMobileOpen(false)}
+                aria-label={lang==='de'?'Schließen':'Close'}
+                className={`w-9 h-9 inline-flex items-center justify-center rounded-xl transition-colors ${
+                  isLight ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200' : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                }`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-        {/* Desktop: full header */}
-        <div className="hidden sm:flex items-center justify-between">
-          {/* Logo (left) */}
-          <button onClick={handleHome} className="inline-flex items-center" title="Home">
-            <img src="/human-being-logo-weiß.png" alt="Human Being Band" className="header-logo h-9 w-auto block" />
-            <span className="sr-only">HUMAN BEING BAND</span>
-          </button>
-
-          {/* Right cluster: nav then settings */}
-          <div className="flex items-center gap-4">
-            <nav className="flex items-center gap-4">
-              {[
-                { id: 'news', label: 'News' },
-                { id: 'about', label: 'About' },
-                { id: 'music', label: 'Music', href: 'https://youtube.com' },
-                { id: 'media', label: 'Media' },
-                { id: 'booking', label: 'Booking' },
-              ].map(link => (
+            {/* Nav links */}
+            <div className="grid grid-cols-2 gap-2 mb-5">
+              {navLinks.map(link =>
                 link.href ? (
                   <a
                     key={link.id}
                     href={link.href}
                     target="_blank"
                     rel="noreferrer"
-                    className={`px-3 py-1.5 text-base md:text-lg rounded-md uppercase font-display tracking-wider ${theme==='light' ? 'text-neutral-900 hover:text-neutral-900 hover:bg-neutral-200/60' : 'text-white hover:text-white hover:bg-neutral-700/40'}`}
+                    onClick={() => setMobileOpen(false)}
+                    className={`px-4 py-3 rounded-xl text-left uppercase font-display tracking-wider text-sm font-medium transition-colors ${
+                      isLight
+                        ? 'bg-neutral-100 text-neutral-800 border border-neutral-200'
+                        : 'bg-neutral-800/60 text-white border border-neutral-700/50'
+                    }`}
                   >{link.label}</a>
                 ) : (
                   <button
                     key={link.id}
-                    onClick={() => {
-                      try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
-                    }}
-                    className={`px-3 py-1.5 text-base md:text-lg rounded-md uppercase font-display tracking-wider ${theme==='light' ? 'text-neutral-900 hover:text-neutral-900 hover:bg-neutral-200/60' : 'text-white hover:text-white hover:bg-neutral-700/40'}`}
+                    onClick={() => { try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {} setMobileOpen(false); }}
+                    className={`px-4 py-3 rounded-xl text-left uppercase font-display tracking-wider text-sm font-medium transition-colors ${
+                      isLight
+                        ? 'bg-neutral-100 text-neutral-800 border border-neutral-200'
+                        : 'bg-neutral-800/60 text-white border border-neutral-700/50'
+                    }`}
                   >{link.label}</button>
                 )
-              ))}
-            </nav>
-
-            {/* Settings gear dropdown */}
-            {/* Settings gear dropdown */}
-            <div id="header-settings" className="relative">
-              <button
-                onClick={() => setSettingsOpen(v=>!v)}
-                className={`px-3 py-2 text-sm rounded-lg border-[0.5px] transition-colors
-                  ${theme==='light'
-                    ? 'border-neutral-400/60 bg-white/70 text-neutral-800 hover:bg-neutral-200/70 hover:text-neutral-900'
-                    : 'border-neutral-600/50 bg-neutral-700/50 text-neutral-300 hover:bg-neutral-600/40 hover:text-white'
-                  }
-                `}
-                title="Einstellungen"
-                aria-haspopup
-              >
-                <SettingsIcon className="w-4 h-4" />
-              </button>
-              {settingsOpen && (
-                <div className={`absolute right-0 mt-2 w-56 rounded-lg border shadow-xl p-1 z-50
-                  ${theme==='light'
-                    ? 'border-neutral-300 bg-white/95'
-                    : 'border-neutral-700 bg-neutral-800'
-                  }
-                `}>
-                  {/* Theme toggle */}
-                  <button
-                    onClick={() => { setTheme(prev => prev==='light'?'dark':'light'); }}
-                    className={`w-full text-left px-3 py-2 rounded-md transition-colors
-                      ${theme==='light'
-                        ? 'text-neutral-800 hover:bg-neutral-100'
-                        : 'text-neutral-200 hover:bg-neutral-700'
-                      }
-                    `}
-                  >
-                    <span className="inline-flex items-center gap-2">{theme==='light'? <Moon className="w-4 h-4"/> : <Sun className="w-4 h-4"/>} {theme==='light' ? 'Dunkel' : 'Hell'}
-                    </span>
-                  </button>
-                  <div className="h-px my-1 bg-neutral-700" />
-                  <div className="px-3 pb-2 space-y-1">
-                    <div className="text-xs text-neutral-400 uppercase tracking-wide">Schriftgröße</div>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setFontSize('normal')}
-                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center gap-1 ${
-                          fontSize==='normal'
-                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
-                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
-                        }`}
-                        title="Standardgröße"
-                      >
-                        <span className="text-sm">A</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFontSize('lg')}
-                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center gap-1 ${
-                          fontSize==='lg'
-                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
-                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
-                        }`}
-                        title="Größer"
-                      >
-                        <span className="text-base">A</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFontSize('xl')}
-                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center gap-1 ${
-                          fontSize==='xl'
-                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
-                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
-                        }`}
-                        title="Am größten"
-                      >
-                        <span className="text-lg">A</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFontSize('xxl')}
-                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center gap-1 ${
-                          fontSize==='xxl'
-                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
-                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
-                        }`}
-                        title="Maximal groß"
-                      >
-                        <span className="text-xl">A</span>
-                      </button>
-                    </div>
-                  </div>
-                  {authRole === 'admin' && (
-                    <button
-                      onClick={() => { onAdminClick?.(); setSettingsOpen(false); }}
-                      className={`w-full text-left px-3 py-2 rounded-md transition-colors
-                        ${theme==='light'
-                          ? 'text-neutral-800 hover:bg-neutral-100'
-                          : 'text-neutral-200 hover:bg-neutral-700'
-                        }
-                      `}
-                    >Admin</button>
-                  )}
-                  {authRole === 'unauthenticated' ? (
-                    <button
-                      onClick={() => { handleLogin(); setSettingsOpen(false); }}
-                      className={`w-full text-left px-3 py-2 rounded-md transition-colors
-                        ${theme==='light'
-                          ? 'text-neutral-800 hover:bg-neutral-100'
-                          : 'text-neutral-200 hover:bg-neutral-700'
-                        }
-                      `}
-                    >
-                      <span className="inline-flex items-center gap-2"><LogIn className="w-4 h-4"/> Anmelden</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => { handleLogout(); setSettingsOpen(false); }}
-                      className={`w-full text-left px-3 py-2 rounded-md transition-colors
-                        ${theme==='light'
-                          ? 'text-neutral-800 hover:bg-neutral-100'
-                          : 'text-neutral-200 hover:bg-neutral-700'
-                        }
-                      `}
-                    >
-                      <span className="inline-flex items-center gap-2"><LogOut className="w-4 h-4"/> Abmelden</span>
-                    </button>
-                  )}
-                  <div className="h-px my-1 bg-neutral-700" />
-                  <div className="flex items-center gap-2 px-3 pb-2">
-                    <button onClick={() => setLang('de')} className={`px-2 py-1 rounded border ${lang==='de'?'border-neutral-300 text-neutral-100':'border-neutral-700 text-neutral-300'} bg-neutral-800 hover:bg-neutral-700`}>DE</button>
-                    <button onClick={() => setLang('en')} className={`px-2 py-1 rounded border ${lang==='en'?'border-neutral-300 text-neutral-100':'border-neutral-700 text-neutral-300'} bg-neutral-800 hover:bg-neutral-700`}>EN</button>
-                  </div>
-                </div>
               )}
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Mobile overlay menu */}
-      {mobileOpen && (
-        <div className="sm:hidden fixed inset-0 z-50 bg-black/60" onClick={() => setMobileOpen(false)}>
-          <div
-            className="absolute top-0 left-0 right-0 bg-neutral-800 border-b border-neutral-700 rounded-b-xl p-4 pt-3 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-semibold text-neutral-200">Menü</h2>
+            {/* Settings sections */}
+            <div className={`rounded-2xl border p-3 space-y-4 ${isLight ? 'bg-neutral-50 border-neutral-200' : 'bg-neutral-800/40 border-neutral-700/50'}`}>
+              {/* Theme */}
               <button
-                onClick={() => setMobileOpen(false)}
-                aria-label="Menü schließen"
-                className="w-9 h-9 inline-flex items-center justify-center rounded-lg border border-neutral-700 text-neutral-300 hover:bg-neutral-700/50"
+                onClick={() => setTheme(isLight ? 'dark' : 'light')}
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${
+                  isLight ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-200 hover:bg-neutral-700/40'
+                }`}
               >
-                <X className="w-5 h-5" />
+                <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full ${isLight ? 'bg-neutral-200 text-neutral-800' : 'bg-neutral-700/60 text-amber-400'}`}>
+                  {isLight ? <Moon className="w-5 h-5"/> : <Sun className="w-5 h-5"/>}
+                </span>
+                <span className="flex-1 text-left">{isLight ? (lang==='de'?'Dunkelmodus':'Dark mode') : (lang==='de'?'Hellmodus':'Light mode')}</span>
               </button>
-            </div>
 
-            {/* Mobile buttons */}
-            <div className="mt-2 grid gap-2">
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'news', label: 'News' },
-                  { id: 'about', label: 'About' },
-                  { id: 'music', label: 'Music', href: 'https://youtube.com' },
-                  { id: 'media', label: 'Media' },
-                  { id: 'booking', label: 'Booking' },
-                ].map(link => (
-                  link.href ? (
-                    <a
-                      key={link.id}
-                      href={link.href}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() => setMobileOpen(false)}
-                      className="w-full px-3 py-2 rounded-lg bg-neutral-700/30 border border-neutral-600/40 text-white text-left uppercase font-display tracking-wider text-base"
-                    >{link.label}</a>
-                  ) : (
-                    <button key={link.id} onClick={() => { try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {} setMobileOpen(false); }} className="w-full px-3 py-2 rounded-lg bg-neutral-700/30 border border-neutral-600/40 text-white text-left uppercase font-display tracking-wider text-base">{link.label}</button>
-                  )
-                ))}
-              </div>
-              <div className="rounded-lg bg-neutral-800/60 border border-neutral-700 p-2">
-                <div className="grid gap-1">
-                  {/* Theme toggle */}
-                  <button onClick={() => { setTheme(prev => prev==='light'?'dark':'light'); }} className="w-full text-left px-3 py-2 rounded-md text-neutral-200 hover:bg-neutral-700">
-                    <span className="inline-flex items-center gap-2">{theme==='light'? <Moon className="w-4 h-4"/> : <Sun className="w-4 h-4"/>} {theme==='light' ? 'Dunkel' : 'Hell'}</span>
-                  </button>
-                  <div className="h-px my-1 bg-neutral-700" />
-                  <div className="px-1 pb-1 space-y-1">
-                    <div className="text-[10px] text-neutral-400 uppercase tracking-wide px-1">Schriftgröße</div>
-                    <div className="flex gap-1 px-1">
-                      <button
-                        type="button"
-                        onClick={() => setFontSize('normal')}
-                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center ${
-                          fontSize==='normal'
-                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
-                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
-                        }`}
-                        title="Standardgröße"
-                      >
-                        <span className="text-xs">A</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFontSize('lg')}
-                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center ${
-                          fontSize==='lg'
-                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
-                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
-                        }`}
-                        title="Größer"
-                      >
-                        <span className="text-sm">A</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFontSize('xl')}
-                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center ${
-                          fontSize==='xl'
-                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
-                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
-                        }`}
-                        title="Am größten"
-                      >
-                        <span className="text-base">A</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFontSize('xxl')}
-                        className={`flex-1 px-2 py-1 rounded border text-sm flex items-center justify-center ${
-                          fontSize==='xxl'
-                            ? 'border-neutral-300 text-neutral-100 bg-neutral-800'
-                            : 'border-neutral-700 text-neutral-300 bg-neutral-800 hover:bg-neutral-700'
-                        }`}
-                        title="Maximal groß"
-                      >
-                        <span className="text-lg">A</span>
-                      </button>
-                    </div>
-                  </div>
-                  {authRole === 'admin' && (
-                    <button onClick={() => { onAdminClick?.(); setMobileOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-neutral-200 hover:bg-neutral-700">Admin</button>
-                  )}
-                  {authRole === 'unauthenticated' ? (
-                    <button onClick={() => { handleLogin(); setMobileOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-neutral-200 hover:bg-neutral-700"><span className="inline-flex items-center gap-2"><LogIn className="w-4 h-4"/> Anmelden</span></button>
-                  ) : (
-                    <button onClick={() => { handleLogout(); setMobileOpen(false); }} className="w-full text-left px-3 py-2 rounded-md text-neutral-200 hover:bg-neutral-700"><span className="inline-flex items-center gap-2"><LogOut className="w-4 h-4"/> Abmelden</span></button>
-                  )}
-                  <div className="h-px my-1 bg-neutral-700" />
-                  <div className="flex items-center gap-2 px-1 pb-1">
-                    <button onClick={() => setLang('de')} className={`px-2 py-1 rounded border ${lang==='de'?'border-neutral-300 text-neutral-100':'border-neutral-700 text-neutral-300'} bg-neutral-800 hover:bg-neutral-700 w-full`}>DE</button>
-                    <button onClick={() => setLang('en')} className={`px-2 py-1 rounded border ${lang==='en'?'border-neutral-300 text-neutral-100':'border-neutral-700 text-neutral-300'} bg-neutral-800 hover:bg-neutral-700 w-full`}>EN</button>
-                  </div>
+              <div className={`mx-3 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
+
+              {/* Font size */}
+              <div className="px-1">
+                <div className={`text-[10px] font-semibold uppercase tracking-widest mb-2 px-1 ${isLight ? 'text-neutral-500' : 'text-neutral-500'}`}>{lang==='de'?'Schriftgröße':'Font size'}</div>
+                <div className="flex gap-2">
+                  {(['normal','lg','xl','xxl'] as const).map((s, i) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setFontSize(s)}
+                      className={`flex flex-1 flex-col items-center justify-center rounded-xl py-3 transition-all ${
+                        fontSize === s
+                          ? (isLight ? 'bg-neutral-100 text-neutral-900 border border-neutral-400 shadow-md' : 'bg-white text-neutral-900 shadow-md')
+                          : (isLight ? 'bg-neutral-100 text-neutral-500' : 'bg-neutral-800 text-neutral-400')
+                      }`}
+                    >
+                      <span className={s==='normal'?'text-sm':s==='lg'?'text-base':s==='xl'?'text-lg':'text-xl font-medium'}>A</span>
+                      <span className="mt-1 text-[10px] font-medium uppercase tracking-wide opacity-60">{['S','M','L','XL'][i]}</span>
+                    </button>
+                  ))}
                 </div>
+              </div>
+
+              <div className={`mx-3 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
+
+              {/* Language */}
+              <div className="px-1">
+                <div className={`text-[10px] font-semibold uppercase tracking-widest mb-2 px-1 ${isLight ? 'text-neutral-500' : 'text-neutral-500'}`}>{lang==='de'?'Sprache':'Language'}</div>
+                <div className="flex gap-2">
+                  {(['de','en'] as const).map((code) => (
+                    <button
+                      key={code}
+                      onClick={() => setLang(code)}
+                      className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                        lang === code
+                          ? (isLight ? 'bg-white text-neutral-900 border border-neutral-400' : 'bg-white text-neutral-900')
+                          : (isLight ? 'bg-neutral-100 text-neutral-500' : 'bg-neutral-800 text-neutral-400')
+                      }`}
+                    >
+                      {code === 'de' ? 'Deutsch' : 'English'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={`mx-3 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
+
+              {/* Auth */}
+              <div className="px-1 pb-1">
+                {authRole === 'admin' ? (
+                  <div className="grid gap-2">
+                    <button onClick={() => { onAdminClick?.(); setMobileOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${isLight ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-200 hover:bg-neutral-700/40'}`}>
+                      <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full ${isLight ? 'bg-neutral-200 text-emerald-600' : 'bg-neutral-700/60 text-emerald-400'}`}><Shield className="w-5 h-5"/></span>
+                      <span className="flex-1 text-left">Admin</span>
+                    </button>
+                    <button onClick={() => { handleLogout(); setMobileOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${isLight ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-200 hover:bg-neutral-700/40'}`}>
+                      <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full ${isLight ? 'bg-neutral-200 text-rose-500' : 'bg-neutral-700/60 text-rose-400'}`}><LogOut className="w-5 h-5"/></span>
+                      <span className="flex-1 text-left">{lang==='de'?'Abmelden':'Log out'}</span>
+                    </button>
+                  </div>
+                ) : authRole === 'unauthenticated' ? (
+                  <button onClick={() => { handleLogin(); setMobileOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${isLight ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-200 hover:bg-neutral-700/40'}`}>
+                    <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full ${isLight ? 'bg-neutral-200 text-sky-500' : 'bg-neutral-700/60 text-sky-400'}`}><LogIn className="w-5 h-5"/></span>
+                    <span className="flex-1 text-left">{lang==='de'?'Anmelden':'Log in'}</span>
+                  </button>
+                ) : (
+                  <button onClick={() => { handleLogout(); setMobileOpen(false); }} className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium transition-colors ${isLight ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-200 hover:bg-neutral-700/40'}`}>
+                    <span className={`inline-flex h-10 w-10 items-center justify-center rounded-full ${isLight ? 'bg-neutral-200 text-rose-500' : 'bg-neutral-700/60 text-rose-400'}`}><LogOut className="w-5 h-5"/></span>
+                    <span className="flex-1 text-left">{lang==='de'?'Abmelden':'Log out'}</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>

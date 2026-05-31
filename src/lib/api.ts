@@ -374,6 +374,18 @@ export type SiteContent = {
   // Card appearance settings (homepage main cards)
   cardOpacity?: number; // 0-100 (default 40)
   cardBlur?: number;    // 0-20 px (default 0)
+  // Header logo (per theme)
+  headerLogo?: {
+    dark?: string;
+    light?: string;
+    height?: number;        // desktop logo height in px (default 48)
+    mobileHeight?: number;  // mobile logo height in px (default 36)
+    headerDesktopPadding?: number; // desktop header vertical padding in px (default 10)
+    headerMobilePadding?: number;  // mobile header vertical padding in px (default 6)
+    hoverScale?: number;    // hover scale 1.0-1.3 (default 1.0)
+    hoverBrightness?: number; // hover brightness % 50-150 (default 100)
+    hoverOpacity?: number;  // hover opacity 0.5-1.0 (default 1.0)
+  };
   updated_at?: string;
 };
 

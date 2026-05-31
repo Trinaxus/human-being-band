@@ -388,7 +388,7 @@ const HomePage: React.FC = () => {
                     <article key={p.id} className={`p-3 ${cardBase} ${cardTone}`} style={cardStyle}>
                       {(p.title) && <h3 className="text-neutral-100 text-lg font-semibold mb-1">{L(p.title as any)}</h3>}
                       {p.date && <div className="text-neutral-400 text-xs mb-2">{new Date(p.date).toLocaleDateString('de-DE')}</div>}
-                      <div className="content-rendered max-w-none text-neutral-200" dangerouslySetInnerHTML={{ __html: L(p.html as any) }} />
+                      <div className="content-rendered max-w-none text-neutral-200 text-base" dangerouslySetInnerHTML={{ __html: L(p.html as any) }} />
                     </article>
                   ))}
                 </div>
@@ -859,14 +859,11 @@ const HomePage: React.FC = () => {
   return (
     <>
       <style>{`
-        .content-rendered { font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+        .content-rendered { line-height: 1.6; white-space: pre-wrap; }
         .content-rendered p { margin: 0 0 0.5em 0; min-height: 0.5em; }
-        .content-rendered h1:not([style*="font-size"]) { font-size: 1.75em; font-weight: 700; margin: 0 0 0.3em 0; }
-        .content-rendered h1 { font-weight: 700; margin: 0 0 0.3em 0; }
-        .content-rendered h2:not([style*="font-size"]) { font-size: 1.5em; font-weight: 600; margin: 0 0 0.3em 0; }
-        .content-rendered h2 { font-weight: 600; margin: 0 0 0.3em 0; }
-        .content-rendered h3:not([style*="font-size"]) { font-size: 1.25em; font-weight: 600; margin: 0 0 0.3em 0; }
-        .content-rendered h3 { font-weight: 600; margin: 0 0 0.3em 0; }
+        .content-rendered h1 { font-size: 2em; font-weight: 700; margin: 0 0 0.3em 0; }
+        .content-rendered h2 { font-size: 1.75em; font-weight: 600; margin: 0 0 0.3em 0; }
+        .content-rendered h3 { font-size: 1.5em; font-weight: 600; margin: 0 0 0.3em 0; }
         .content-rendered ul { list-style-type: disc; padding-left: 1.5em; margin: 0 0 0.5em 0; }
         .content-rendered ol { list-style-type: decimal; padding-left: 1.5em; margin: 0 0 0.5em 0; }
         .content-rendered li { margin: 0.15em 0; }
