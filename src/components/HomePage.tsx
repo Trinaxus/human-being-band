@@ -859,7 +859,7 @@ const HomePage: React.FC = () => {
   return (
     <>
       <style>{`
-        .content-rendered { line-height: 1.6; white-space: pre-wrap; }
+        .content-rendered { line-height: 1.6; }
         .content-rendered p { margin: 0 0 0.5em 0; min-height: 0.5em; }
         .content-rendered h1 { font-size: 2em; font-weight: 700; margin: 0 0 0.3em 0; }
         .content-rendered h2 { font-size: 1.75em; font-weight: 600; margin: 0 0 0.3em 0; }
@@ -871,6 +871,7 @@ const HomePage: React.FC = () => {
         .content-rendered a.button-link { display: inline-block; padding: 8px 16px; border-radius: 6px; text-decoration: none; color: #fff !important; }
         .content-rendered span[style*="text-transform: uppercase"] { text-transform: uppercase; }
         .content-rendered img { max-width: 100%; height: auto; display: block; }
+        @media (max-width: 640px) { .content-rendered img { width: 100% !important; } }
         .content-rendered div[data-youtube-video] { position: relative; }
         .content-rendered iframe { max-width: 100%; border-radius: 6px; }
         .content-rendered div[data-card] { margin: 0.5em 0; }
