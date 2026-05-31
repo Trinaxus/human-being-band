@@ -1,0 +1,86 @@
+{linkDialogOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onMouseDown={(e) => { if (e.target === e.currentTarget) setLinkDialogOpen(false); }}>
+          <div className={`w-full max-w-md rounded-xl border shadow-2xl ${theme==='light' ? 'bg-white border-neutral-200' : 'bg-neutral-900 border-neutral-700/40'}`}>
+            <div className={`p-4 border-b ${theme==='light' ? 'border-neutral-200' : 'border-neutral-700/40'} flex items-center justify-between`}>
+              <h2 className={`text-lg font-semibold ${theme==='light' ? 'text-neutral-900' : 'text-neutral-100'}`}>Link einfügen</h2>
+              <button onClick={() => setLinkDialogOpen(false)} className={`p-1 rounded-lg ${theme==='light' ? 'hover:bg-neutral-100 text-neutral-600' : 'hover:bg-neutral-800 text-neutral-400'}`}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${theme==='light' ? 'text-neutral-700' : 'text-neutral-300'}`}>URL</label>
+                <Input
+                  theme={theme}
+                  placeholder="https://..."
+                  value={linkDialog.url}
+                  onChange={e => setLinkDialog(prev => ({ ...prev, url: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className={`block text-sm font-medium mb-2 ${theme==='light' ? 'text-neutral-700' : 'text-neutral-300'}`}>Link-Text</label>
+                <Input
+                  theme={theme}
+                  placeholder="Text anzeigen"
+                  value={linkDialog.text}
+                  onChange={e => setLinkDialog(prev => ({ ...prev, text: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className={`flex items-center gap-2 text-sm ${theme==='light' ? 'text-neutral-700' : 'text-neutral-300'}`}>
+                  <input
+                    type="checkbox"
+                    checked={linkDialog.isButton}
+                    onChange={e => setLinkDialog(prev => ({ ...prev, isButton: e.target.checked }))}
+                    className="rounded border-neutral-300"
+                  />
+                  Als Button darstellen
+                </label>
+              </div>
+              {linkDialog.isButton && (
+                <div>
+                  <label className={`block text-sm font-medium mb-2 ${theme==='light' ? 'text-neutral-700' : 'text-neutral-300'}`}>Button-Farbe</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={linkDialog.buttonColor}
+                      onChange={e => setLinkDialog(prev => ({ ...prev, buttonColor: e.target.value }))}
+                      className={`h-8 w-12 rounded border ${theme==='light' ? 'border-neutral-300 bg-white' : 'border-neutral-700 bg-neutral-900'}`}
+                    />
+                    <Input
+                      theme={theme}
+                      placeholder="#000000"
+                      value={linkDialog.buttonColor}
+                      onChange={e => setLinkDialog(prev => ({ ...prev, buttonColor: e.target.value }))}
+                      className="flex-1"
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setLinkDialogOpen(false)}
+                  className={`px-4 py-2 rounded-lg border text-sm ${theme==='light' ? 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-100' : 'border-neutral-700 bg-neutral-800 text-neutral-300 hover:bg-neutral-700'}`}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pendingLinkInsert.current) {
+                      pendingLinkInsert.current(linkDialog.url, linkDialog.text, linkDialog.isButton, linkDialog.isButton ? linkDialog.buttonColor : undefined);
+                    }
+                    setLinkDialogOpen(false);
+                    setLinkDialog({ url: '', text: '', isButton: false, buttonColor: '#000000' });
+                  }}
+                  disabled={!linkDialog.url || !linkDialog.text}
+                  className={`px-4 py-2 rounded-lg border text-sm ${theme==='light' ? 'border-blue-500 bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50' : 'border-blue-600 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50'}`}
+                >
+                  Einfügen
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}

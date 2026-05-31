@@ -371,6 +371,9 @@ export type SiteContent = {
     description?: string;
     published?: boolean; // default true
   }>;
+  // Card appearance settings (homepage main cards)
+  cardOpacity?: number; // 0-100 (default 40)
+  cardBlur?: number;    // 0-20 px (default 0)
   updated_at?: string;
 };
 

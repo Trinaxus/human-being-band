@@ -49,9 +49,15 @@ const HomePage: React.FC = () => {
     window.addEventListener('storage', onStorage);
     return () => { try { observer.disconnect(); } catch {}; window.removeEventListener('storage', onStorage); };
   }, []);
-  const cardBase = 'rounded-xl border';
-  const cardTone = theme === 'light' ? 'bg-white/85 border-neutral-200' : 'bg-neutral-900/70 border-neutral-700/20';
-  const cardToneAlt = theme === 'light' ? 'bg-white/85 border-neutral-200' : 'bg-neutral-900/70 border-neutral-700/20';
+  const cardBase = 'border';
+  const cardOpacityVal = (content.cardOpacity ?? 40) / 100;
+  const cardBlurVal = content.cardBlur ?? 0;
+  const cardTone = theme === 'light' ? 'border-neutral-200/60' : 'border-neutral-700/20';
+  const cardToneAlt = theme === 'light' ? 'border-neutral-200/60' : 'border-neutral-700/20';
+  const cardStyle: React.CSSProperties = {
+    backgroundColor: theme === 'light' ? `rgba(255,255,255,${cardOpacityVal})` : `rgba(23,23,23,${cardOpacityVal})`,
+    ...(cardBlurVal > 0 ? { backdropFilter: `blur(${cardBlurVal}px)`, WebkitBackdropFilter: `blur(${cardBlurVal}px)` } : {}),
+  };
   const textHeading = theme === 'light' ? 'text-neutral-900' : 'text-neutral-100';
   const textMuted = theme === 'light' ? 'text-neutral-700' : 'text-neutral-300';
   const textBody = theme === 'light' ? 'text-neutral-800' : 'text-neutral-300';
@@ -115,7 +121,7 @@ const HomePage: React.FC = () => {
     };
 
     return (
-      <form onSubmit={onSubmit} className={`${cardBase} ${cardTone} p-4 space-y-3 max-w-[1200px] mx-auto`}>
+      <form onSubmit={onSubmit} className={`${cardBase} ${cardTone} p-4 space-y-3 max-w-[1200px] mx-auto`} style={cardStyle}>
         {okMsg && <div className="p-2 rounded bg-emerald-600/15 border border-emerald-500/30 text-emerald-200 text-sm">{okMsg}</div>}
         {errMsg && <div className="p-2 rounded bg-rose-600/15 border border-rose-500/30 text-rose-200 text-sm">{errMsg}</div>}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -379,10 +385,10 @@ const HomePage: React.FC = () => {
                 </div>
                 <div className="space-y-4">
                   {content.news.filter(p => p.published !== false).sort((a,b)=> (b.date||'').localeCompare(a.date||'')).map(p => (
-                    <article key={p.id} className={`p-3 ${cardBase} ${cardTone}`}>
+                    <article key={p.id} className={`p-3 ${cardBase} ${cardTone}`} style={cardStyle}>
                       {(p.title) && <h3 className="text-neutral-100 text-lg font-semibold mb-1">{L(p.title as any)}</h3>}
                       {p.date && <div className="text-neutral-400 text-xs mb-2">{new Date(p.date).toLocaleDateString('de-DE')}</div>}
-                      <div className="prose prose-invert max-w-none text-neutral-200" dangerouslySetInnerHTML={{ __html: L(p.html as any) }} />
+                      <div className="content-rendered max-w-none text-neutral-200" dangerouslySetInnerHTML={{ __html: L(p.html as any) }} />
                     </article>
                   ))}
                 </div>
@@ -411,10 +417,10 @@ const HomePage: React.FC = () => {
               <div className="mb-2 flex items-center justify-center">
                 <h3 className={`font-display ${textHeading} text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center`}>{L(content.about?.title as any) || (lang==='en' ? 'About' : 'Über uns')}</h3>
               </div>
-              <div className={`${cardBase} ${cardTone} p-3`}>
+              <div className={`${cardBase} ${cardTone} p-3`} style={cardStyle}>
                 {content.about?.text && (
                   <div
-                    className={`prose prose-invert max-w-none ${textBody} text-base text-left`}
+                    className={`content-rendered max-w-none ${textBody} text-base text-left`}
                     dangerouslySetInnerHTML={{ __html: L(content.about?.text as any) }}
                   />
                 )}
@@ -422,7 +428,7 @@ const HomePage: React.FC = () => {
               {(content.about?.members||[]).length>0 && (
                 <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                   {(content.about?.members||[]).slice().sort((a,b)=> (a.order??0)-(b.order??0)).map((m, idx) => (
-                    <div key={m.id||idx} className={`${cardBase} ${cardTone} p-3`}>
+                    <div key={m.id||idx} className={`${cardBase} ${cardTone} p-3`} style={cardStyle}>
                       <div className="flex flex-col items-start text-left gap-2">
                         {m.image ? (
                           <div className="relative self-center w-28 h-28 group">
@@ -462,13 +468,13 @@ const HomePage: React.FC = () => {
             <div className="p-2 sm:p-3">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {content.contact?.email && (
-                  <div className={`p-3 ${cardBase} ${cardToneAlt} text-neutral-200 text-sm`}>{content.contact.email}</div>
+                  <div className={`p-3 ${cardBase} ${cardToneAlt} text-neutral-200 text-sm`} style={cardStyle}>{content.contact.email}</div>
                 )}
                 {content.contact?.phone && (
-                  <div className={`p-3 ${cardBase} ${cardToneAlt} text-neutral-200 text-sm`}>{content.contact.phone}</div>
+                  <div className={`p-3 ${cardBase} ${cardToneAlt} text-neutral-200 text-sm`} style={cardStyle}>{content.contact.phone}</div>
                 )}
                 {content.contact?.address && (
-                  <div className={`p-3 ${cardBase} ${cardToneAlt} text-neutral-200 text-sm`}>{content.contact.address}</div>
+                  <div className={`p-3 ${cardBase} ${cardToneAlt} text-neutral-200 text-sm`} style={cardStyle}>{content.contact.address}</div>
                 )}
               </div>
             </div>
@@ -530,7 +536,7 @@ const HomePage: React.FC = () => {
               if (it.type==='video') { preview = { kind:'video', url: it.url || null }; }
             }
             return (
-              <div className={`${cardBase} ${cardTone} overflow-hidden`}>
+              <div className={`${cardBase} ${cardTone} overflow-hidden`} style={cardStyle}>
                 <button onClick={() => setOpenGals(prev => ({ ...prev, [key]: !prev[key] }))} className="w-full text-left">
                   <div className={`w-full aspect-square rounded-none overflow-hidden border ${theme==='light' ? 'bg-white/70 border-neutral-200' : 'border-neutral-700/30 bg-neutral-800/40'}`}>
                     {preview.kind==='image' && preview.url && (
@@ -607,7 +613,7 @@ const HomePage: React.FC = () => {
             const largeTypes = ['track','album','playlist'];
             const height = largeTypes.includes(p.type) ? 352 : 152;
             return (
-              <div className={`${open ? 'col-span-2 sm:col-span-3 md:col-span-4' : ''} ${cardBase} ${cardTone} overflow-hidden`}>
+              <div className={`${open ? 'col-span-2 sm:col-span-3 md:col-span-4' : ''} ${cardBase} ${cardTone} overflow-hidden`} style={cardStyle}>
                 <button onClick={onToggle} className="w-full text-left">
                   {open ? (
                     <div className="p-3">
@@ -764,7 +770,7 @@ const HomePage: React.FC = () => {
                             <GalleryTile y={g.year} g={{ name: g.name, items: g.items }} />
                             {openGals[key] && (
                               <div className="col-span-2 sm:col-span-3 md:col-span-4">
-                                <div className={`${cardBase} ${cardTone} p-3`}>
+                                <div className={`${cardBase} ${cardTone} p-3`} style={cardStyle}>
                                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                     {(g.items||[]).map((it, idx) => (
                                       <button key={idx} className={`rounded-lg overflow-hidden ${theme==='light' ? 'bg-white border-[#E7DED0]' : 'bg-neutral-900 border border-neutral-700/20'} text-left group`} onClick={() => openLightbox((g.items||[]) as LBItem[], idx)}>
@@ -851,6 +857,27 @@ const HomePage: React.FC = () => {
 
 
   return (
+    <>
+      <style>{`
+        .content-rendered { font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+        .content-rendered p { margin: 0 0 0.5em 0; min-height: 0.5em; }
+        .content-rendered h1:not([style*="font-size"]) { font-size: 1.75em; font-weight: 700; margin: 0 0 0.3em 0; }
+        .content-rendered h1 { font-weight: 700; margin: 0 0 0.3em 0; }
+        .content-rendered h2:not([style*="font-size"]) { font-size: 1.5em; font-weight: 600; margin: 0 0 0.3em 0; }
+        .content-rendered h2 { font-weight: 600; margin: 0 0 0.3em 0; }
+        .content-rendered h3:not([style*="font-size"]) { font-size: 1.25em; font-weight: 600; margin: 0 0 0.3em 0; }
+        .content-rendered h3 { font-weight: 600; margin: 0 0 0.3em 0; }
+        .content-rendered ul { list-style-type: disc; padding-left: 1.5em; margin: 0 0 0.5em 0; }
+        .content-rendered ol { list-style-type: decimal; padding-left: 1.5em; margin: 0 0 0.5em 0; }
+        .content-rendered li { margin: 0.15em 0; }
+        .content-rendered a { color: #3b82f6; text-decoration: underline; }
+        .content-rendered a.button-link { display: inline-block; padding: 8px 16px; border-radius: 6px; text-decoration: none; color: #fff !important; }
+        .content-rendered span[style*="text-transform: uppercase"] { text-transform: uppercase; }
+        .content-rendered img { max-width: 100%; height: auto; display: block; }
+        .content-rendered div[data-youtube-video] { position: relative; }
+        .content-rendered iframe { max-width: 100%; border-radius: 6px; }
+        .content-rendered div[data-card] { margin: 0.5em 0; }
+      `}</style>
     <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 self-start mt-2 md:mt-3">
       <section className="relative p-3 sm:p-5 space-y-8">
         {error && <div className="p-3 rounded-lg bg-neutral-800/60 border border-neutral-700 text-[#F471B5] text-sm">{error}</div>}
@@ -1035,6 +1062,7 @@ const HomePage: React.FC = () => {
       )}
 
     </div>
+    </>
   );
 };
 

@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { API_BASE, contentGet, contentSave, uploadFile, scanUploads, writeMetadata, bookingRequestsList, type SiteContent } from '../lib/api';
-import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle, Check, AlertTriangle } from 'lucide-react';
+import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle, Check, AlertTriangle, X } from 'lucide-react';
+import { RichTextEditor } from './RichTextEditor';
 
 const SectionTitle: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
   <div className="mb-3">
@@ -32,38 +33,22 @@ const ToggleButton: React.FC<{ label: string; open: boolean; onClick: () => void
   </button>
 );
 
-const ContentEditableEditor: React.FC<{ value: string; onChange: (html: string) => void; className?: string }> = ({ value, onChange, className }) => {
-  const ref = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    if (el.innerHTML !== value) {
-      el.innerHTML = value || '';
-    }
-  }, [value]);
-  return (
-    <div
-      ref={ref}
-      className={className}
-      contentEditable
-      suppressContentEditableWarning
-      onInput={(e) => onChange((e.currentTarget as HTMLDivElement).innerHTML)}
-    />
-  );
-};
-
 const AdminContentPanel: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [content, setContent] = useState<SiteContent>({});
-  const [localNewsHtmlMode, setLocalNewsHtmlMode] = useState<Record<string, boolean>>({});
+  const [newsMode, setNewsMode] = useState<Record<string, 'editor'|'html'|'preview'>>({});
+  const [newsPostOpen, setNewsPostOpen] = useState<Record<string, boolean>>({});
   const [newsLang, setNewsLang] = useState<'de'|'en'>(() => {
     try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
   });
   const [aboutLang, setAboutLang] = useState<'de'|'en'>(() => {
     try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
+  });
+  const [previewTheme, setPreviewTheme] = useState<'light'|'dark'>(() => {
+    try { return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'; } catch { return 'dark'; }
   });
   // Observe theme for light/dark specific styles
   const [theme, setTheme] = useState<'dark'|'light'>(() => {
@@ -153,6 +138,17 @@ const AdminContentPanel: React.FC = () => {
       map.set(g.year, arr);
     }
     return map;
+  }, [galleries]);
+  const allGalleryImages = useMemo(() => {
+    const urls: string[] = [];
+    for (const g of galleries) {
+      for (const it of (g.items||[])) {
+        if (it?.url && (it.type==='image' || (!it.type && String(it.url).match(/\.(jpg|jpeg|png|gif|webp|svg)/i)))) {
+          urls.push(it.url);
+        }
+      }
+    }
+    return urls;
   }, [galleries]);
 
   const upsertContent = (patch: Partial<SiteContent>) => setContent(prev => ({ ...prev, ...patch }));
@@ -538,12 +534,13 @@ const AdminContentPanel: React.FC = () => {
     news: false,
     mediaEmbeds: false,
     legal: false,
+    cards: false,
   });
 
   
 
   // Admin cards order (server-side via content.adminOrder)
-  const defaultAdminOrder = ['sections','hero','bg','about','news','socials','contact','mediaEmbeds','gallery','booking','legal'] as const;
+  const defaultAdminOrder = ['sections','hero','bg','cards','about','news','socials','contact','mediaEmbeds','gallery','booking','legal'] as const;
   type AdminKey = typeof defaultAdminOrder[number];
   const [adminEdit, setAdminEdit] = useState(false);
   const getAdminOrder = (): AdminKey[] => {
@@ -972,6 +969,33 @@ const AdminContentPanel: React.FC = () => {
         )}
       </section>
 
+      {/* Karten-Design */}
+      <section
+        style={{ order: orderOf('cards') }}
+      >
+        <ToggleButton label="Karten-Design" open={(open as any).cards === true} onClick={() => setOpen(prev => ({ ...prev, cards: !(prev as any).cards }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('cards', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('cards', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
+        {(open as any).cards && (
+          <div className="mt-3 space-y-3">
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">Transparenz ({content.cardOpacity ?? 40}%)</label>
+                <input type="range" min={0} max={100} step={5} value={content.cardOpacity ?? 40} onChange={e => setContent(prev => ({ ...prev, cardOpacity: Number(e.target.value) }))} className="w-full accent-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">Hintergrund-Blur ({content.cardBlur ?? 0}px)</label>
+                <input type="range" min={0} max={20} step={1} value={content.cardBlur ?? 0} onChange={e => setContent(prev => ({ ...prev, cardBlur: Number(e.target.value) }))} className="w-full accent-blue-500" />
+              </div>
+            </div>
+          </div>
+        )}
+      </section>
+
       {/* News / Blog */}
       <section
         style={{ order: orderOf('news') }}
@@ -1011,7 +1035,9 @@ const AdminContentPanel: React.FC = () => {
               {(content.news||[]).length === 0 && (
                 <div className="text-[#909296] text-sm">Keine Beiträge vorhanden.</div>
               )}
-              {(content.news||[]).map((p, idx) => (
+              {(content.news||[]).map((p, idx) => {
+                const isOpen = !!newsPostOpen[p.id];
+                return (
                 <div key={p.id} className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 space-y-3">
                   <div className="flex items-center gap-2">
                     {newsLang==='de' ? (
@@ -1019,24 +1045,39 @@ const AdminContentPanel: React.FC = () => {
                     ) : (
                       <Input placeholder="Title (EN)" value={readI18n(p.title as any, 'en')} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, title: writeI18n(x.title as any, 'en', e.target.value) } : x) }))} />
                     )}
-                    <input type="date" value={(p.date||'').slice(0,10)} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, date: e.target.value } : x) }))} className="px-2 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 text-sm" />
-                    <label className="flex items-center gap-2 text-neutral-200 text-sm">
+                    <input type="date" value={(p.date||'').slice(0,10)} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, date: e.target.value } : x) }))} className="px-2 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 text-sm shrink-0" />
+                    <label className="flex items-center gap-2 text-neutral-200 text-sm shrink-0">
                       <input type="checkbox" checked={p.published !== false} onChange={e => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, published: e.target.checked } : x) }))} />
                       Veröffentlicht
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => setLocalNewsHtmlMode(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
-                      className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800"
-                      title="HTML bearbeiten / Editor umschalten"
-                    >{localNewsHtmlMode[p.id] ? 'Editor' : 'HTML'}</button>
-                    <button type="button" onClick={() => setContent(prev => ({ ...prev, news: (prev.news||[]).filter((_,i)=> i!==idx) }))} className="ml-auto px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Entfernen</button>
+                    <div className="ml-auto flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setNewsPostOpen(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg text-sm font-bold transition-colors ${isOpen ? 'bg-blue-600 text-white hover:bg-blue-500' : 'bg-neutral-700 text-neutral-200 hover:bg-neutral-600'}`}
+                        title={isOpen ? 'Zuklappen' : 'Aufklappen'}
+                      >{isOpen ? '−' : '+'}</button>
+                      <button type="button" onClick={() => { if (window.confirm('Beitrag wirklich entfernen?')) { setContent(prev => ({ ...prev, news: (prev.news||[]).filter((_,i)=> i!==idx) })); } }} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 text-xs">Entfernen</button>
+                    </div>
                   </div>
-                  {localNewsHtmlMode[p.id] ? (
+                  {isOpen && (
+                  <>
+                  <div className="flex items-center gap-2">
+                    {(['editor','html','preview'] as const).map(mode => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setNewsMode(prev => ({ ...prev, [p.id]: mode }))}
+                        className={`px-2 py-1 rounded border-[0.5px] text-xs ${newsMode[p.id]==='preview' && mode==='preview'?'bg-green-900/40 border-green-700/40 text-green-200':newsMode[p.id]===mode?'bg-blue-900/40 border-blue-700/40 text-blue-200':'border-neutral-700/40 text-neutral-300 hover:bg-neutral-800'}`}
+                      >{mode==='editor'?'Editor':mode==='html'?'HTML':'Vorschau'}</button>
+                    ))}
+                  </div>
+                  {newsMode[p.id] === 'html' ? (
                     <div className="grid grid-cols-1 gap-3">
                       {newsLang==='de' ? (
                         <div>
-                          <label className="block text-xs text-neutral-400 mb-1">HTML (DE)</label>
+                          <Badge>HTML</Badge>
+                          <label className="block text-xs text-neutral-400 mb-1 mt-1">HTML (DE)</label>
                           <textarea
                             className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
                             value={readI18n(p.html as any, 'de')}
@@ -1046,7 +1087,8 @@ const AdminContentPanel: React.FC = () => {
                         </div>
                       ) : (
                         <div>
-                          <label className="block text-xs text-neutral-400 mb-1">HTML (EN)</label>
+                          <Badge>HTML</Badge>
+                          <label className="block text-xs text-neutral-400 mb-1 mt-1">HTML (EN)</label>
                           <textarea
                             className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
                             value={readI18n(p.html as any, 'en')}
@@ -1056,47 +1098,67 @@ const AdminContentPanel: React.FC = () => {
                         </div>
                       )}
                     </div>
+                  ) : newsMode[p.id] === 'preview' ? (
+                    <div className="grid grid-cols-1 gap-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge>Vorschau</Badge>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewTheme(prev => prev === 'light' ? 'dark' : 'light')}
+                          className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 text-xs"
+                        >{previewTheme === 'light' ? 'Dark' : 'Light'} Preview</button>
+                      </div>
+                      <div className={`p-3 rounded-lg border ${previewTheme==='light'?'bg-white border-neutral-200':'bg-neutral-900/60 border-neutral-700/40'}`}>
+                        <style>{`
+                          .preview-content { font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
+                          .preview-content p { margin: 0 0 0.5em 0; min-height: 0.5em; }
+                          .preview-content h1 { font-size: 1.75em; font-weight: 700; margin: 0 0 0.3em 0; }
+                          .preview-content h2 { font-size: 1.5em; font-weight: 600; margin: 0 0 0.3em 0; }
+                          .preview-content h3 { font-size: 1.25em; font-weight: 600; margin: 0 0 0.3em 0; }
+                          .preview-content ul { list-style-type: disc; padding-left: 1.5em; margin: 0 0 0.5em 0; }
+                          .preview-content ol { list-style-type: decimal; padding-left: 1.5em; margin: 0 0 0.5em 0; }
+                          .preview-content li { margin: 0.15em 0; }
+                          .preview-content a { color: #3b82f6; text-decoration: underline; }
+                          .preview-content a.button-link { display: inline-block; padding: 8px 16px; border-radius: 6px; text-decoration: none; color: #fff !important; }
+                          .preview-content span[style*="text-transform: uppercase"] { text-transform: uppercase; }
+                          .preview-content img { max-width: 100%; height: auto; display: block; }
+                          .preview-content div[data-youtube-video] { position: relative; }
+                          .preview-content iframe { max-width: 100%; border-radius: 6px; }
+                          .preview-content div[data-card] { margin: 0.5em 0; }
+                        `}</style>
+                        <div className={`preview-content max-w-none text-sm ${previewTheme==='light'?'text-neutral-800':'text-neutral-200'}`} dangerouslySetInnerHTML={{ __html: readI18n(p.html as any, newsLang) }} />
+                      </div>
+                    </div>
                   ) : (
                     <div className="grid grid-cols-1 gap-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge>Editor</Badge>
+                      </div>
                       {newsLang==='de' ? (
-                        <div>
-                          <div className="flex items-center gap-2 px-2 py-1 rounded bg-neutral-800/60 border border-neutral-700/40 text-neutral-200 text-sm mb-1">
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('bold')}>B</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('italic')}>I</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('underline')}>U</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => { const url = prompt('Link-URL'); if (url) document.execCommand('createLink', false, url); }}>Link</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('unlink', false)}>Link entfernen</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => { const c = prompt('Farbe (z.B. #ff0088 oder red)'); if (c) document.execCommand('foreColor', false, c); }}>Farbe</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('removeFormat', false)}>Format löschen</button>
-                          </div>
-                          <ContentEditableEditor
-                            value={readI18n(p.html as any, 'de')}
-                            onChange={(html) => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'de', html) } : x) }))}
-                            className="min-h-[140px] p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 prose-invert"
-                          />
-                        </div>
+                        <RichTextEditor
+                          value={readI18n(p.html as any, 'de')}
+                          onChange={(html) => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'de', html) } : x) }))}
+                          onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
+                          galleryImages={allGalleryImages}
+                        />
                       ) : (
-                        <div>
-                          <div className="flex items-center gap-2 px-2 py-1 rounded bg-neutral-800/60 border border-neutral-700/40 text-neutral-200 text-sm mb-1">
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('bold')}>B</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('italic')}>I</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('underline')}>U</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => { const url = prompt('Link-URL'); if (url) document.execCommand('createLink', false, url); }}>Link</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('unlink', false)}>Link entfernen</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => { const c = prompt('Farbe (z.B. #ff0088 oder red)'); if (c) document.execCommand('foreColor', false, c); }}>Farbe</button>
-                            <button type="button" className="px-2 py-1 hover:bg-neutral-700/40 rounded" onClick={() => document.execCommand('removeFormat', false)}>Format löschen</button>
-                          </div>
-                          <ContentEditableEditor
-                            value={readI18n(p.html as any, 'en')}
-                            onChange={(html) => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'en', html) } : x) }))}
-                            className="min-h-[140px] p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 prose-invert"
-                          />
-                        </div>
+                        <RichTextEditor
+                          value={readI18n(p.html as any, 'en')}
+                          onChange={(html) => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'en', html) } : x) }))}
+                          onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
+                          galleryImages={allGalleryImages}
+                        />
                       )}
                     </div>
                   )}
+                  <div className="flex justify-end pt-2">
+                    <button disabled={saving} onClick={save} className={`px-4 py-2 rounded-lg border font-medium ${saving ? 'opacity-60' : ''} ${theme==='light' ? 'bg-blue-600 text-white border-blue-500 hover:bg-blue-500' : 'bg-blue-600 text-white border-blue-500 hover:bg-blue-500'}`}>{saving ? 'Speichert…' : 'Beitrag speichern'}</button>
+                  </div>
+                  </>
+                  )}
                 </div>
-              ))}
+              );
+            })}
             </div>
           </div>
         )}
@@ -1780,10 +1842,9 @@ const AdminContentPanel: React.FC = () => {
                 </div>
               </div>
               {legalMode.impressum[legalLang] === 'editor' && (
-                <ContentEditableEditor
+                <RichTextEditor
                   value={readI18n((content as any).impressum, legalLang)}
                   onChange={(html) => setContent(prev => ({ ...prev, impressum: writeI18n((prev as any).impressum, legalLang, html) as any }))}
-                  className="min-h-[200px] p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40 text-neutral-100"
                 />
               )}
               {legalMode.impressum[legalLang] === 'html' && (
@@ -1805,10 +1866,9 @@ const AdminContentPanel: React.FC = () => {
                 </div>
               </div>
               {legalMode.privacy[legalLang] === 'editor' && (
-                <ContentEditableEditor
+                <RichTextEditor
                   value={readI18n((content as any).privacy, legalLang)}
                   onChange={(html) => setContent(prev => ({ ...prev, privacy: writeI18n((prev as any).privacy, legalLang, html) as any }))}
-                  className="min-h-[200px] p-3 rounded-lg bg-neutral-900 border-[0.5px] border-neutral-700/40 text-neutral-100"
                 />
               )}
               {legalMode.privacy[legalLang] === 'html' && (

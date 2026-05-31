@@ -148,16 +148,27 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
               {[
                 { id: 'news', label: 'News' },
                 { id: 'about', label: 'About' },
+                { id: 'music', label: 'Music', href: 'https://youtube.com' },
                 { id: 'media', label: 'Media' },
                 { id: 'booking', label: 'Booking' },
               ].map(link => (
-                <button
-                  key={link.id}
-                  onClick={() => {
-                    try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
-                  }}
-                  className={`px-3 py-1.5 text-base md:text-lg rounded-md uppercase font-display tracking-wider ${theme==='light' ? 'text-neutral-900 hover:text-neutral-900 hover:bg-neutral-200/60' : 'text-white hover:text-white hover:bg-neutral-700/40'}`}
-                >{link.label}</button>
+                link.href ? (
+                  <a
+                    key={link.id}
+                    href={link.href}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`px-3 py-1.5 text-base md:text-lg rounded-md uppercase font-display tracking-wider ${theme==='light' ? 'text-neutral-900 hover:text-neutral-900 hover:bg-neutral-200/60' : 'text-white hover:text-white hover:bg-neutral-700/40'}`}
+                  >{link.label}</a>
+                ) : (
+                  <button
+                    key={link.id}
+                    onClick={() => {
+                      try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+                    }}
+                    className={`px-3 py-1.5 text-base md:text-lg rounded-md uppercase font-display tracking-wider ${theme==='light' ? 'text-neutral-900 hover:text-neutral-900 hover:bg-neutral-200/60' : 'text-white hover:text-white hover:bg-neutral-700/40'}`}
+                  >{link.label}</button>
+                )
               ))}
             </nav>
 
@@ -323,10 +334,22 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                 {[
                   { id: 'news', label: 'News' },
                   { id: 'about', label: 'About' },
+                  { id: 'music', label: 'Music', href: 'https://youtube.com' },
                   { id: 'media', label: 'Media' },
                   { id: 'booking', label: 'Booking' },
                 ].map(link => (
-                  <button key={link.id} onClick={() => { try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {} setMobileOpen(false); }} className="w-full px-3 py-2 rounded-lg bg-neutral-700/30 border border-neutral-600/40 text-white text-left uppercase font-display tracking-wider text-base">{link.label}</button>
+                  link.href ? (
+                    <a
+                      key={link.id}
+                      href={link.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setMobileOpen(false)}
+                      className="w-full px-3 py-2 rounded-lg bg-neutral-700/30 border border-neutral-600/40 text-white text-left uppercase font-display tracking-wider text-base"
+                    >{link.label}</a>
+                  ) : (
+                    <button key={link.id} onClick={() => { try { document.getElementById(link.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {} setMobileOpen(false); }} className="w-full px-3 py-2 rounded-lg bg-neutral-700/30 border border-neutral-600/40 text-white text-left uppercase font-display tracking-wider text-base">{link.label}</button>
+                  )
                 ))}
               </div>
               <div className="rounded-lg bg-neutral-800/60 border border-neutral-700 p-2">
