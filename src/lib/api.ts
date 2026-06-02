@@ -386,6 +386,14 @@ export type SiteContent = {
     hoverBrightness?: number; // hover brightness % 50-150 (default 100)
     hoverOpacity?: number;  // hover opacity 0.5-1.0 (default 1.0)
   };
+  landingPage?: {
+    enabled?: boolean;
+    heroUrl?: string;
+    welcomeText?: { de?: string; en?: string };
+    youtubeUrl?: string;
+    aboutTitle?: { de?: string; en?: string };
+    aboutText?: { de?: string; en?: string };
+  };
   updated_at?: string;
 };
 
@@ -454,6 +462,15 @@ export async function writeMetadata(
   const payload: any = { year, gallery, items };
   if (status) payload.status = status;
   return apiPost<{ ok: boolean; written: number }>(`/write_metadata.php`, payload);
+}
+
+// --- Delete gallery or files ---
+export async function deleteGallery(year: number, gallery: string) {
+  return apiPost<{ ok: boolean; deleted?: boolean; files_deleted?: string[] }>(`/delete_gallery.php`, { year, gallery });
+}
+
+export async function deleteUploads(year: number, gallery: string, files: string[]) {
+  return apiPost<{ ok: boolean; deleted: string[]; errors: Array<{file: string; error: string}> }>(`/delete_uploads.php`, { year, gallery, files });
 }
 
 // --- Two-Factor (TOTP) ---

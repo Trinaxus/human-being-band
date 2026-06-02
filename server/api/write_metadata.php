@@ -40,24 +40,47 @@ foreach ($items as $it) {
   $normItems[] = $row;
 }
 
-// Read existing meta to preserve fields we don't overwrite
+// Read existing meta to preserve fields we don't overwrite (with locking)
 $existing = [];
-if (is_file($metaPath)) {
-  $raw = @file_get_contents($metaPath);
-  if ($raw !== false) {
-    $json = json_decode($raw, true);
-    if (is_array($json)) $existing = $json;
+$fh = @fopen($metaPath, 'c+');
+if ($fh) {
+  if (flock($fh, LOCK_EX)) {
+    $raw = @stream_get_contents($fh);
+    if ($raw !== false) {
+      $json = json_decode($raw, true);
+      if (is_array($json)) $existing = $json;
+    }
+    $meta = $existing;
+    $meta['items'] = $normItems;
+    if ($status !== null && in_array($status, ['public','internal','locked'], true)) {
+      $meta['status'] = $status;
+    }
+    $meta['updated_at'] = date('c');
+    ftruncate($fh, 0);
+    rewind($fh);
+    fwrite($fh, json_encode($meta, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
+    fflush($fh);
+    flock($fh, LOCK_UN);
   }
-}
-
-$meta = $existing;
-$meta['items'] = $normItems;
-if ($status !== null && in_array($status, ['public','internal','locked'], true)) {
-  $meta['status'] = $status;
-}
-$meta['updated_at'] = date('c');
-if (@file_put_contents($metaPath, json_encode($meta, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)) === false) {
-  json_error('Failed to write metadata', 500);
+  fclose($fh);
+} else {
+  // Fallback
+  if (is_file($metaPath)) {
+    $raw = @file_get_contents($metaPath);
+    if ($raw !== false) {
+      $json = json_decode($raw, true);
+      if (is_array($json)) $existing = $json;
+    }
+  }
+  $meta = $existing;
+  $meta['items'] = $normItems;
+  if ($status !== null && in_array($status, ['public','internal','locked'], true)) {
+    $meta['status'] = $status;
+  }
+  $meta['updated_at'] = date('c');
+  if (@file_put_contents($metaPath, json_encode($meta, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES)) === false) {
+    json_error('Failed to write metadata', 500);
+  }
 }
 
 json_ok([ 'ok' => true, 'written' => count($normItems) ]);

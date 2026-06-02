@@ -8,6 +8,7 @@ type HeaderProps = {
   onLogoutClick?: () => void;
   onAdminClick?: () => void;
   onOverviewClick?: () => void;
+  landingMode?: boolean; // true = centered logo, no nav links
 };
 
 const navLinks = [
@@ -18,12 +19,17 @@ const navLinks = [
   { id: 'booking', label: 'Booking' },
 ];
 
-const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeClick, onLoginClick, onLogoutClick, onAdminClick }) => {
+const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeClick, onLoginClick, onLogoutClick, onAdminClick, landingMode }) => {
   const [mobileOpen, setMobileOpen] = React.useState(false);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
-  const [lang, setLang] = React.useState<'de'|'en'>(() => {
+  const [lang, setLangState] = React.useState<'de'|'en'>(() => {
     try { const v = window.localStorage.getItem('lang'); return (v === 'en' ? 'en' : 'de'); } catch { return 'de'; }
   });
+  const setLang = (code: 'de'|'en') => {
+    setLangState(code);
+    try { window.localStorage.setItem('lang', code); } catch {}
+    try { window.dispatchEvent(new Event('langchange')); } catch {}
+  };
   const [theme, setTheme] = React.useState<'dark' | 'light'>(() => {
     try {
       const t = window.localStorage.getItem('theme');
@@ -33,9 +39,10 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
   const [fontSize, setFontSize] = React.useState<'normal' | 'lg' | 'xl' | 'xxl'>(() => {
     try {
       const f = window.localStorage.getItem('fontSize');
-      return (f === 'lg' || f === 'xl' || f === 'xxl') ? f : 'normal';
+      // Default to 'lg' (Large) if no preference saved
+      return (f === 'lg' || f === 'xl' || f === 'xxl') ? f : (f === 'normal' ? 'normal' : 'lg');
     } catch {
-      return 'normal';
+      return 'lg';
     }
   });
   const [headerLogo, setHeaderLogo] = React.useState<{
@@ -150,7 +157,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
       <header className="hb-no-scale fixed inset-x-0 top-0 z-40 bg-neutral-900/85 border-b-[0.5px] border-neutral-800 backdrop-blur-sm shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)]">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
           {/* Mobile top bar */}
-          <div className="flex items-center justify-between sm:hidden" style={{ paddingTop: `${headerLogo.headerMobilePadding ?? 6}px`, paddingBottom: `${headerLogo.headerMobilePadding ?? 6}px` }}>
+          <div className={`flex items-center sm:hidden ${landingMode ? 'justify-center' : 'justify-between'}`} style={{ paddingTop: `${headerLogo.headerMobilePadding ?? 6}px`, paddingBottom: `${headerLogo.headerMobilePadding ?? 6}px` }}>
             <span className="w-9 h-9" />
             <button onClick={handleHome} className="inline-flex items-center" title="Home" onMouseEnter={() => setLogoHover(true)} onMouseLeave={() => setLogoHover(false)}>
               <img
@@ -176,24 +183,49 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
           </div>
 
           {/* Desktop header */}
-          <div className="hidden sm:flex items-center justify-between" style={{ paddingTop: `${headerLogo.headerDesktopPadding ?? 10}px`, paddingBottom: `${headerLogo.headerDesktopPadding ?? 10}px` }}>
-            <button onClick={handleHome} className="inline-flex items-center" title="Home" onMouseEnter={() => setLogoHover(true)} onMouseLeave={() => setLogoHover(false)}>
-              <img
-                src={logoSrc}
-                alt="Human Being Band"
-                className="w-auto block transition-all duration-300"
-                style={{
-                  height: headerLogo.height ?? 48,
-                  transform: logoHover ? `scale(${headerLogo.hoverScale ?? 1})` : 'scale(1)',
-                  filter: logoHover ? `brightness(${headerLogo.hoverBrightness ?? 100}%)` : 'brightness(100%)',
-                  opacity: logoHover ? (headerLogo.hoverOpacity ?? 1) : 1,
-                }}
-              />
-              <span className="sr-only">HUMAN BEING BAND</span>
-            </button>
+          <div className={`hidden sm:flex items-center justify-between relative`} style={{ paddingTop: `${headerLogo.headerDesktopPadding ?? 10}px`, paddingBottom: `${headerLogo.headerDesktopPadding ?? 10}px` }}>
+            {!landingMode ? (
+              <button onClick={handleHome} className="inline-flex items-center" title="Home" onMouseEnter={() => setLogoHover(true)} onMouseLeave={() => setLogoHover(false)}>
+                <img
+                  src={logoSrc}
+                  alt="Human Being Band"
+                  className="w-auto block transition-all duration-300"
+                  style={{
+                    height: headerLogo.height ?? 48,
+                    transform: logoHover ? `scale(${headerLogo.hoverScale ?? 1})` : 'scale(1)',
+                    filter: logoHover ? `brightness(${headerLogo.hoverBrightness ?? 100}%)` : 'brightness(100%)',
+                    opacity: logoHover ? (headerLogo.hoverOpacity ?? 1) : 1,
+                  }}
+                />
+                <span className="sr-only">HUMAN BEING BAND</span>
+              </button>
+            ) : (
+              <div className="w-9" />
+            )}
+
+            {/* Centered logo in landingMode */}
+            {landingMode && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <button onClick={handleHome} className="inline-flex items-center pointer-events-auto" title="Home" onMouseEnter={() => setLogoHover(true)} onMouseLeave={() => setLogoHover(false)}>
+                  <img
+                    src={logoSrc}
+                    alt="Human Being Band"
+                    className="w-auto block transition-all duration-300"
+                    style={{
+                      height: headerLogo.height ?? 48,
+                      transform: logoHover ? `scale(${headerLogo.hoverScale ?? 1})` : 'scale(1)',
+                      filter: logoHover ? `brightness(${headerLogo.hoverBrightness ?? 100}%)` : 'brightness(100%)',
+                      opacity: logoHover ? (headerLogo.hoverOpacity ?? 1) : 1,
+                    }}
+                  />
+                  <span className="sr-only">HUMAN BEING BAND</span>
+                </button>
+              </div>
+            )}
 
             <div className="flex items-center gap-3">
-              <nav className="flex items-center gap-1">
+              {!landingMode && (
+                <nav className="flex items-center gap-1">
                 {navLinks.map(link =>
                   link.href ? (
                     <a key={link.id} href={link.href} target="_blank" rel="noreferrer" className={linkClass()}>
@@ -206,6 +238,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                   )
                 )}
               </nav>
+              )}
 
               {/* Settings dropdown */}
               <div id="header-settings" className="relative ml-2">
@@ -244,6 +277,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       </button>
                     </div>
 
+                    {!landingMode && (
+                    <>
                     <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
                     {/* Font size section */}
@@ -268,6 +303,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                         ))}
                       </div>
                     </div>
+                    </>
+                    )}
 
                     <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
@@ -291,6 +328,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       </div>
                     </div>
 
+                    {!landingMode && (
+                    <>
                     <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
                     {/* Auth */}
@@ -318,12 +357,14 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                         </button>
                       )}
                     </div>
+                    </>
+                    )}
                   </div>
                 )}
               </div>
             </div>
-          </div>
         </div>
+      </div>
 
       {/* Mobile overlay menu */}
       {mobileOpen && (
@@ -336,7 +377,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
           >
             {/* Header row */}
             <div className="flex items-center justify-between mb-5">
-              <h2 className={`text-sm font-semibold uppercase tracking-widest ${isLight ? 'text-neutral-500' : 'text-neutral-500'}`}>{lang==='de'?'Menü':'Menu'}</h2>
+              <h2 className={`text-sm font-semibold uppercase tracking-widest ${isLight ? 'text-neutral-500' : 'text-neutral-500'}`}>{landingMode ? (lang==='de'?'Einstellungen':'Settings') : (lang==='de'?'Menü':'Menu')}</h2>
               <button
                 onClick={() => setMobileOpen(false)}
                 aria-label={lang==='de'?'Schließen':'Close'}
@@ -349,6 +390,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
             </div>
 
             {/* Nav links */}
+            {!landingMode && (
             <div className="grid grid-cols-2 gap-2 mb-5">
               {navLinks.map(link =>
                 link.href ? (
@@ -377,6 +419,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                 )
               )}
             </div>
+            )}
 
             {/* Settings sections */}
             <div className={`rounded-2xl border p-3 space-y-4 ${isLight ? 'bg-neutral-50 border-neutral-200' : 'bg-neutral-800/40 border-neutral-700/50'}`}>

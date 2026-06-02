@@ -65,6 +65,7 @@ $meta = json_read_file($metaPath) ?: [];
 $metaItems = [];
 $metaFileCount = 0; // image/video only
 $metaLinkCount = 0; // youtube/instagram
+$metaStatus = isset($meta['status']) && in_array((string)$meta['status'], ['public','internal','locked'], true) ? (string)$meta['status'] : null;
 if (isset($meta['items']) && is_array($meta['items'])) {
   foreach ($meta['items'] as $mi) {
     $t = strtolower((string)($mi['type'] ?? ''));
@@ -119,6 +120,7 @@ echo json_encode([
   'metaFileCount' => $metaFileCount,
   'metaLinkCount' => $metaLinkCount,
   'metaUrlsOnly' => ($metaFileCount === 0 && $metaLinkCount > 0),
+  'metaStatus' => $metaStatus,
   'serverCount' => count($serverFiles),
   'diff' => count($serverFiles) - count($metaItems),
   'diffFiles' => count($serverFiles) - $metaFileCount,

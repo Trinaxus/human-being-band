@@ -9,9 +9,10 @@ import ResetPasswordPage from './components/ResetPasswordPage';
 import { me, logout, contentGet } from './lib/api';
 import LegalImpressum from './components/LegalImpressum';
 import LegalPrivacy from './components/LegalPrivacy';
+import LandingPage from './components/LandingPage';
 
 function App() {
-  const [view, setView] = useState<'home' | 'login' | 'overview' | 'admin' | 'reset' | 'impressum' | 'datenschutz'>('home');
+  const [view, setView] = useState<'home' | 'login' | 'overview' | 'admin' | 'reset' | 'impressum' | 'datenschutz' | 'landing'>('home');
   const [authRole, setAuthRole] = useState<'unauthenticated' | 'user' | 'admin'>('unauthenticated');
 
   useEffect(() => {
@@ -209,6 +210,11 @@ function App() {
           try { window.history.replaceState({}, '', '/'); } catch {}
           return;
         }
+        if (v === 'landing') {
+          setView('landing');
+          try { window.history.replaceState({}, '', '/'); } catch {}
+          return;
+        }
         // hash-based routing: #reset?email=...&token=...
         const h = window.location.hash || '';
         if (h.startsWith('#reset')) setView('reset');
@@ -230,6 +236,7 @@ function App() {
     <div className="min-h-screen flex flex-col">
       <Header
         authRole={authRole}
+        landingMode={view === 'landing'}
         onHomeClick={() => setView('home')}
         onLoginClick={() => setView('login')}
         onLogoutClick={async () => {
@@ -256,8 +263,9 @@ function App() {
         {view === 'impressum' && <LegalImpressum />}
         {view === 'datenschutz' && <LegalPrivacy />}
         {view === 'admin' && <AdminPage />}
+        {view === 'landing' && <LandingPage />}
       </main>
-      <Footer />
+      {view !== 'landing' && <Footer />}
     </div>
   );
 }

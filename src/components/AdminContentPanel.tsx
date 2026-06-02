@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { API_BASE, contentGet, contentSave, uploadFile, scanUploads, writeMetadata, bookingRequestsList, type SiteContent } from '../lib/api';
+import { API_BASE, contentGet, contentSave, uploadFile, scanUploads, writeMetadata, deleteGallery, deleteUploads, bookingRequestsList, type SiteContent } from '../lib/api';
 import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle, Check, AlertTriangle, X } from 'lucide-react';
 import { RichTextEditor } from './RichTextEditor';
+import LandingPage from './LandingPage';
 
 const SectionTitle: React.FC<{ title: string; subtitle?: string }> = ({ title, subtitle }) => (
   <div className="mb-3">
@@ -21,6 +22,23 @@ const Textarea: React.FC<React.TextareaHTMLAttributes<HTMLTextAreaElement>> = (p
 const Badge: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span className="px-2 py-1 rounded-lg text-xs font-medium bg-neutral-700 text-neutral-100 border border-neutral-600">{children}</span>
 );
+
+const CopyLandingLink: React.FC = () => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      const url = `${window.location.origin}${window.location.pathname}?view=landing`;
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+  return (
+    <button onClick={handleCopy} className="text-xs px-2 py-1 rounded border border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 transition-colors">
+      {copied ? 'Kopiert!' : 'Link kopieren'}
+    </button>
+  );
+};
 
 const ToggleButton: React.FC<{ label: string; open: boolean; onClick: () => void }> = ({ label, open, onClick }) => (
   <button
@@ -272,14 +290,21 @@ const AdminContentPanel: React.FC = () => {
   const norm = (s: string) => s.trim().replace(/\s+/g, ' ');
   const galleryExists = (year: number, name: string) => (galleries||[]).some(g => g.year === year && g.name.toLowerCase() === name.toLowerCase());
   const validYear = (y: number) => Number.isFinite(y) && y >= 1900 && y <= 2999;
-  const addGallery = (year: number, name: string) => {
+  const addGallery = async (year: number, name: string) => {
     const y = Number(year);
     const n = norm(name || '');
     if (!validYear(y)) { setError('Bitte gültiges Jahr (1900–2999) angeben.'); return; }
     if (!n) { setError('Galeriename darf nicht leer sein.'); return; }
     if (galleryExists(y, n)) { setError('Diese Galerie existiert bereits.'); return; }
     setError(null);
-    setGalleries([...(galleries||[]), { year: y, name: n, items: [] }]);
+    // Create folder on server first
+    try {
+      await writeMetadata(y, n, [], 'public');
+    } catch (e) {
+      setError('Ordner konnte nicht erstellt werden: ' + (e instanceof Error ? e.message : String(e)));
+      return;
+    }
+    setGalleries([...(galleries||[]), { year: y, name: n, items: [], status: 'public' }]);
     removeIgnore(y, n);
   };
 
@@ -318,12 +343,18 @@ const AdminContentPanel: React.FC = () => {
     return () => window.removeEventListener('click', onClick);
   }, [statusOpen]);
 
+  // Info toggle per item (year:name:idx)
+  const [infoOpen, setInfoOpen] = useState<Record<string, boolean>>({});
+  const toggleInfo = (key: string) => setInfoOpen(prev => ({ ...prev, [key]: !prev[key] }));
   // Admin: gallery expand/collapse state (default collapsed)
   const [adminOpen, setAdminOpen] = useState<Record<string, boolean>>({});
   const toggleAdminOpen = (y: number, name: string) => setAdminOpen(prev => ({ ...prev, [`${y}:${name}`]: !prev[`${y}:${name}`] }));
+  // Year expand/collapse state (default collapsed = false)
+  const [yearOpen, setYearOpen] = useState<Record<number, boolean>>({});
+  const toggleYearOpen = (y: number) => setYearOpen(prev => ({ ...prev, [y]: !prev[y] }));
   // Selection per gallery removed; Scan-Report works auf alle Galerien
   // Scan report state
-  type ScanEntry = { year: number; name: string; metaCount: number; serverCount: number; diff: number; extraFiles: Array<{ filename: string; url: string; type: 'image'|'video'; selected?: boolean }>; missingInServer: Array<{ type: string; url: string }>; error?: string };
+  type ScanEntry = { year: number; name: string; metaCount: number; serverCount: number; diff: number; extraFiles: Array<{ filename: string; url: string; type: 'image'|'video'; selected?: boolean }>; missingInServer: Array<{ type: string; url: string }>; error?: string; metaStatus?: 'public'|'internal'|'locked' };
   const [scanLoading, setScanLoading] = useState(false);
   const [scanReport, setScanReport] = useState<ScanEntry[] | null>(null);
   const clearScanReport = () => setScanReport(null);
@@ -347,7 +378,9 @@ const AdminContentPanel: React.FC = () => {
           }
           if (!resp.ok || !data?.ok) throw new Error(data?.error||`HTTP ${resp.status} ${resp.statusText}`);
           const extras = Array.isArray(data.extraFiles) ? data.extraFiles.map((e: any)=>({ filename: String(e.filename||''), url: String(e.url||''), type: (e.type==='video'?'video':'image') as 'image'|'video', selected: true })) : [];
-          out.push({ year: Number(data.year), name: String(data.gallery), metaCount: Number(data.metaCount||0), serverCount: Number(data.serverCount||0), diff: Number(data.diff||0), extraFiles: extras, missingInServer: Array.isArray(data.missingInServer)? data.missingInServer as any : [] });
+          const st = data.metaStatus;
+          const metaStatus = (st==='public'||st==='internal'||st==='locked') ? st : undefined;
+          out.push({ year: Number(data.year), name: String(data.gallery), metaCount: Number(data.metaCount||0), serverCount: Number(data.serverCount||0), diff: Number(data.diff||0), extraFiles: extras, missingInServer: Array.isArray(data.missingInServer)? data.missingInServer as any : [], metaStatus });
         } catch (e: any) {
           out.push({ year: Number(g.year), name: g.name, metaCount: 0, serverCount: 0, diff: 0, extraFiles: [], missingInServer: [], error: e?.message||'Fehler' });
         }
@@ -536,7 +569,10 @@ const AdminContentPanel: React.FC = () => {
     setError(null);
     setGalleries((galleries||[]).map(g => (g.year===y && g.name===oldName) ? { ...g, name: n } : g));
   };
-  const removeGallery = (year: number, name: string) => {
+  const removeGallery = async (year: number, name: string) => {
+    // Delete from server first
+    try { await deleteGallery(year, name); } catch {}
+    // Then remove from state
     setGalleries((galleries||[]).filter(g => !(g.year===year && g.name===name)));
     addIgnore(year, name);
   };
@@ -556,18 +592,29 @@ const AdminContentPanel: React.FC = () => {
     });
   };
   const addItemUrl = (year: number, name: string, type: 'image'|'video'|'youtube'|'instagram', url: string) => setGalleries((galleries||[]).map(g => (g.year===year && g.name===name) ? { ...g, items: [ ...(g.items||[]), { type, url } ] } : g));
-  const removeItem = (year: number, name: string, idx: number) => setGalleries((galleries||[]).map(g => (g.year===year && g.name===name) ? { ...g, items: (g.items||[]).filter((_,i)=>i!==idx) } : g));
+  const removeItem = async (year: number, name: string, idx: number) => {
+    const gal = (galleries||[]).find(g => g.year===year && g.name===name);
+    const item = gal?.items?.[idx];
+    // Delete file from server if it's an image/video (not external links)
+    if (item && (item.type==='image' || item.type==='video') && item.url) {
+      try {
+        await deleteUploads(year, name, [item.url]);
+      } catch {}
+    }
+    // Remove from state
+    setGalleries((galleries||[]).map(g => (g.year===year && g.name===name) ? { ...g, items: (g.items||[]).filter((_,i)=>i!==idx) } : g));
+  };
   const moveItem = (year: number, name: string, idx: number, dir: -1|1) => setGalleries((galleries||[]).map(g => {
     if (!(g.year===year && g.name===name)) return g;
     const it = (g.items||[]).slice();
     const j = idx+dir; if (j<0||j>=it.length) return g;
     const tmp = it[idx]; it[idx] = it[j]; it[j] = tmp; return { ...g, items: it };
   }));
-  const uploadItem = async (year: number, name: string, file: File) => {
+  const uploadItem = async (year: number, name: string, file: File): Promise<{type: 'image'|'video', url: string} | null> => {
     const res = await uploadFile(file, { year, gallery: name });
     const url = res?.url || '';
     const t: 'image'|'video' = (file.type||'').startsWith('video') ? 'video' : 'image';
-    if (url) addItemUrl(year, name, t, url);
+    return url ? { type: t, url } : null;
   };
 
   const load = async () => {
@@ -575,7 +622,47 @@ const AdminContentPanel: React.FC = () => {
     setError(null);
     try {
       const res = await contentGet();
-      setContent(res.content || {});
+      const baseContent = res.content || {};
+      // Sync galleries from server upload folders to ensure content.json reflects actual files
+      try {
+        const scan = await scanUploads();
+        if (scan.ok && Array.isArray(scan.galleries) && scan.galleries.length > 0) {
+          const scannedMap = new Map<string, typeof scan.galleries[0]>();
+          for (const g of scan.galleries) {
+            scannedMap.set(`${g.year}::${g.name}`, g);
+          }
+          const mergedGalleries = (baseContent.galleries || []).map((g: any) => {
+            const key = `${g.year}::${g.name}`;
+            if (scannedMap.has(key)) {
+              const scanned = scannedMap.get(key)!;
+              scannedMap.delete(key);
+              return { ...g, items: scanned.items };
+            }
+            // Gallery not found on server - keep only if it has external links (youtube/instagram)
+            const items = g.items || [];
+            const hasExternalLinks = items.some((it: any) => it.type === 'youtube' || it.type === 'instagram');
+            return hasExternalLinks ? g : null;
+          }).filter(Boolean) as any[];
+          // Add any galleries found on server but not in content.json (except ignored ones)
+          const ignoredSet = new Set<string>((baseContent.galleriesIgnore || []).map((ig: any) => `${ig.year}::${ig.name}`.toLowerCase()));
+          for (const [, g] of scannedMap) {
+            const key = `${g.year}::${g.name}`.toLowerCase();
+            if (!ignoredSet.has(key)) {
+              mergedGalleries.push(g);
+            }
+          }
+          // Sort by year desc, name asc
+          mergedGalleries.sort((a: any, b: any) => {
+            if (a.year === b.year) return (a.name || '').localeCompare(b.name || '');
+            return (b.year || 0) - (a.year || 0);
+          });
+          setContent({ ...baseContent, galleries: mergedGalleries });
+        } else {
+          setContent(baseContent);
+        }
+      } catch {
+        setContent(baseContent);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Fehler beim Laden des Inhalts');
     } finally {
@@ -637,12 +724,13 @@ const AdminContentPanel: React.FC = () => {
     mediaEmbeds: false,
     legal: false,
     cards: false,
+    landingPage: false,
   });
 
   
 
   // Admin cards order (server-side via content.adminOrder)
-  const defaultAdminOrder = ['sections','hero','header','bg','cards','about','news','socials','contact','mediaEmbeds','gallery','booking','legal'] as const;
+  const defaultAdminOrder = ['sections','hero','header','bg','cards','about','news','socials','contact','mediaEmbeds','gallery','booking','legal','landingPage'] as const;
   type AdminKey = typeof defaultAdminOrder[number];
   const [adminEdit, setAdminEdit] = useState(false);
   const getAdminOrder = (): AdminKey[] => {
@@ -1723,13 +1811,14 @@ const AdminContentPanel: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  const yStr = prompt('Jahr für neue Galerie (z. B. 2025)');
+                onClick={async () => {
+                  const currentYear = new Date().getFullYear();
+                  const yStr = prompt('Jahr für neue Galerie', String(currentYear));
                   const y = Number(yStr);
                   if (!validYear(y)) { setError('Bitte gültiges Jahr (1900–2999) angeben.'); return; }
                   const name = prompt('Galeriename');
                   if (!name) { setError('Galeriename darf nicht leer sein.'); return; }
-                  addGallery(y, name);
+                  await addGallery(y, name);
                 }}
                 className={`px-3 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'}`}
               >Galerie hinzufügen</button>
@@ -1761,6 +1850,7 @@ const AdminContentPanel: React.FC = () => {
                         <th className="text-left px-2 py-1">Soll (metadata)</th>
                         <th className="text-left px-2 py-1">Ist (Ordner)</th>
                         <th className="text-left px-2 py-1">Status</th>
+                        <th className="text-left px-2 py-1">Diff</th>
                         <th className="text-left px-2 py-1">Aktionen</th>
                       </tr>
                     </thead>
@@ -1774,6 +1864,8 @@ const AdminContentPanel: React.FC = () => {
                         const clsSoll = urlsOnly ? 'text-sky-300' : (okMatch ? 'text-green-400' : tooMany ? 'text-rose-400' : 'text-amber-400');
                         const clsIst = urlsOnly ? 'text-sky-300' : (okMatch ? 'text-green-400' : tooMany ? 'text-rose-400' : 'text-amber-400');
                         const clsDiff = urlsOnly ? 'text-sky-300' : (diffFiles===0 ? 'text-green-400' : diffFiles>0 ? 'text-rose-400' : 'text-amber-400');
+                        const statusLabel = (s?: string) => s==='internal' ? 'Intern' : s==='locked' ? 'Gesperrt' : s==='public' ? 'Öffentlich' : '—';
+                        const statusClass = (s?: string) => s==='internal' ? 'text-blue-300' : s==='locked' ? 'text-red-300' : s==='public' ? 'text-green-300' : 'text-neutral-400';
                         return (
                           <tr key={`${en.year}:${en.name}:${idx}`} className="border-t border-neutral-700/40">
                             <td className="px-2 py-1">{en.year} / {en.name} {en.error && <span className="text-rose-400">({en.error})</span>}</td>
@@ -1782,6 +1874,9 @@ const AdminContentPanel: React.FC = () => {
                             </td>
                             <td className={`px-2 py-1 ${clsIst}`}>
                               {urlsOnly ? (<span>URLs</span>) : en.serverCount}
+                            </td>
+                            <td className={`px-2 py-1 ${statusClass(en.metaStatus)}`}>
+                              {statusLabel(en.metaStatus)}
                             </td>
                             <td className={`px-2 py-1 ${clsDiff}`}>
                               {urlsOnly ? (
@@ -1831,21 +1926,30 @@ const AdminContentPanel: React.FC = () => {
             )}
 
             <div className="space-y-4">
-              {years.map((y) => (
+              {years.map((y) => {
+                const isYearOpen = !!yearOpen[y];
+                return (
                 <div key={y} className={`rounded-xl border ${theme==='light' ? 'bg-white/85 border-neutral-200' : 'bg-neutral-800/60 border-neutral-700/30'}`}>
-                  <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-700/30">
-                    <div className="text-neutral-100 font-semibold">{y}</div>
-                    <div className="flex items-center gap-2">
+                  <div
+                    className="flex items-center justify-between px-3 py-2 border-b border-neutral-700/30 cursor-pointer select-none"
+                    onClick={() => toggleYearOpen(y)}
+                    role="button"
+                    aria-expanded={isYearOpen}
+                  >
+                    <span className="text-neutral-100 font-semibold">{y}</span>
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       <button
-                        onClick={() => {
+                        onClick={async () => {
                           const name = prompt('Galeriename');
                           if (!name) { setError('Galeriename darf nicht leer sein.'); return; }
-                          addGallery(y, name);
+                          await addGallery(y, name);
                         }}
                         className={`px-2 py-1 rounded border text-xs ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'}`}
                       >Galerie hinzufügen</button>
+                      <span className="w-7 h-7 inline-flex items-center justify-center rounded-md border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-sm">{isYearOpen ? '−' : '+'}</span>
                     </div>
                   </div>
+                  {isYearOpen && (
                   <div className="p-3 space-y-2">
                     {(galleriesByYear.get(y) || []).map((g, gi, arrByYear) => {
                       const rowKey = `${y}:${gi}`;
@@ -1904,7 +2008,7 @@ const AdminContentPanel: React.FC = () => {
                             </div>
                             {/* Delete first, then plus/minus at far right of this control group */}
                             <button
-                              onClick={(e) => { e.stopPropagation(); if (window.confirm(`Galerie "${g.name}" (${y}) wirklich löschen?`)) removeGallery(y, g.name); }}
+                              onClick={async (e) => { e.stopPropagation(); if (window.confirm(`Galerie "${g.name}" (${y}) wirklich löschen?`)) await removeGallery(y, g.name); }}
                               className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 text-xs"
                             >Galerie löschen</button>
                             <button
@@ -1961,13 +2065,17 @@ const AdminContentPanel: React.FC = () => {
                               )}
                               <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-[1fr_auto_auto_auto] items-center gap-2">
                                 <div className="min-w-0">
-                                  <div className="text-neutral-200 text-sm truncate">{it.title || it.url}</div>
+                                  <div className="text-neutral-200 text-sm">{it.title || `${it.type==='image'?'Bild':it.type==='video'?'Video':it.type==='youtube'?'YouTube':'Instagram'} #${idx+1}`}</div>
+                                  {infoOpen[`${y}:${g.name}:${idx}`] && (
+                                    <div className="text-neutral-400 text-xs break-all mt-1">{it.url}</div>
+                                  )}
                                 </div>
                                 <div className="ml-auto flex items-center gap-2">
                                   <button onClick={() => moveItem(y, g.name, idx, -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">↑</button>
                                   <button onClick={() => moveItem(y, g.name, idx, 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">↓</button>
+                                  <button onClick={() => toggleInfo(`${y}:${g.name}:${idx}`)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Info</button>
                                   <a href={it.url} target="_blank" rel="noreferrer" className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700">Öffnen</a>
-                                  <button onClick={() => removeItem(y, g.name, idx)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Entfernen</button>
+                                  <button onClick={async () => await removeItem(y, g.name, idx)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800">Entfernen</button>
                                 </div>
                               </div>
                             </div>
@@ -2009,8 +2117,25 @@ const AdminContentPanel: React.FC = () => {
                                   const input = e.currentTarget;
                                   const files = input.files ? Array.from(input.files) : [];
                                   input.value = '';
+                                  const errors: string[] = [];
+                                  const newItems: Array<{type: 'image'|'video', url: string}> = [];
                                   for (const f of files) {
-                                    await uploadItem(y, g.name, f);
+                                    try {
+                                      const item = await uploadItem(y, g.name, f);
+                                      if (item) newItems.push(item);
+                                    } catch (err: any) {
+                                      errors.push(`${f.name}: ${err?.message || 'Fehler'}`);
+                                    }
+                                  }
+                                  // Batch add all items at once to prevent race conditions
+                                  if (newItems.length > 0) {
+                                    setGalleries((galleries||[]).map(ga => {
+                                      if (!(ga.year===y && ga.name===g.name)) return ga;
+                                      return { ...ga, items: [ ...(ga.items||[]), ...newItems ] };
+                                    }));
+                                  }
+                                  if (errors.length > 0) {
+                                    setError(`${errors.length} von ${files.length} Dateien konnten nicht hochgeladen:\n${errors.join('\n')}`);
                                   }
                                 }}
                               />
@@ -2025,8 +2150,10 @@ const AdminContentPanel: React.FC = () => {
                       );
                     })}
                   </div>
+                  )}
                 </div>
-              ))}
+              );
+              })}
             </div>
             
           </div>
@@ -2105,6 +2232,111 @@ const AdminContentPanel: React.FC = () => {
 
             <div className="flex justify-end">
               <button disabled={saving} onClick={save} className={`px-4 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'} disabled:opacity-60`}>{saving ? 'Speichert…' : 'Speichern'}</button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Landing Page */}
+      <section
+        style={sectionStyle('landingPage', 'content')}
+      >
+        <ToggleButton label="Landing Page" open={(open as any).landingPage === true} onClick={() => setOpen(prev => ({ ...prev, landingPage: !(prev as any).landingPage }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('landingPage', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('landingPage', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
+        {(open as any).landingPage && (
+          <div className="mt-3 space-y-4">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="lp-enabled"
+                  checked={!!(content as any).landingPage?.enabled}
+                  onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), enabled: e.target.checked } }))}
+                />
+                <label htmlFor="lp-enabled" className="text-neutral-200 text-sm">Aktiviert</label>
+              </div>
+              <CopyLandingLink />
+            </div>
+
+            <SectionTitle title="Hero Bild" />
+            <Input
+              placeholder="Bild-URL"
+              value={((content as any).landingPage?.heroUrl || '')}
+              onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), heroUrl: e.target.value } }))}
+            />
+
+            <SectionTitle title="Willkommen Text" />
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+              <h4 className="text-neutral-200 text-sm font-semibold mb-2">Deutsch</h4>
+              <Textarea
+                rows={4}
+                placeholder="Willkommen Text (DE)"
+                value={((content as any).landingPage?.welcomeText?.de || '')}
+                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), welcomeText: { ...((prev as any).landingPage?.welcomeText || {}), de: e.target.value } } }))}
+              />
+            </div>
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+              <h4 className="text-neutral-200 text-sm font-semibold mb-2">English</h4>
+              <Textarea
+                rows={4}
+                placeholder="Welcome text (EN)"
+                value={((content as any).landingPage?.welcomeText?.en || '')}
+                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), welcomeText: { ...((prev as any).landingPage?.welcomeText || {}), en: e.target.value } } }))}
+              />
+            </div>
+
+            <SectionTitle title="YouTube Video" />
+            <Input
+              placeholder="YouTube URL (https://youtu.be/... oder https://www.youtube.com/watch?v=...)"
+              value={((content as any).landingPage?.youtubeUrl || '')}
+              onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), youtubeUrl: e.target.value } }))}
+            />
+
+            <SectionTitle title="About Us" />
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+              <h4 className="text-neutral-200 text-sm font-semibold mb-2">Überschrift Deutsch</h4>
+              <Input
+                placeholder="Überschrift (DE)"
+                value={((content as any).landingPage?.aboutTitle?.de || '')}
+                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutTitle: { ...((prev as any).landingPage?.aboutTitle || {}), de: e.target.value } } }))}
+              />
+              <h4 className="text-neutral-200 text-sm font-semibold mb-2 mt-3">Überschrift English</h4>
+              <Input
+                placeholder="Heading (EN)"
+                value={((content as any).landingPage?.aboutTitle?.en || '')}
+                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutTitle: { ...((prev as any).landingPage?.aboutTitle || {}), en: e.target.value } } }))}
+              />
+              <h4 className="text-neutral-200 text-sm font-semibold mb-2 mt-3">Text Deutsch</h4>
+              <Textarea
+                rows={4}
+                placeholder="Text (DE)"
+                value={((content as any).landingPage?.aboutText?.de || '')}
+                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutText: { ...((prev as any).landingPage?.aboutText || {}), de: e.target.value } } }))}
+              />
+              <h4 className="text-neutral-200 text-sm font-semibold mb-2 mt-3">Text English</h4>
+              <Textarea
+                rows={4}
+                placeholder="Text (EN)"
+                value={((content as any).landingPage?.aboutText?.en || '')}
+                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutText: { ...((prev as any).landingPage?.aboutText || {}), en: e.target.value } } }))}
+              />
+            </div>
+
+            <div className="flex justify-end">
+              <button disabled={saving} onClick={save} className={`px-4 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'} disabled:opacity-60`}>{saving ? 'Speichert…' : 'Speichern'}</button>
+            </div>
+
+            {/* Live Preview */}
+            <div className="mt-4">
+              <SectionTitle title="Vorschau" subtitle="So sieht die Landing Page aus (Live-Update)" />
+              <div className="rounded-xl border border-neutral-700/40 overflow-hidden">
+                <LandingPage previewContent={content} />
+              </div>
             </div>
           </div>
         )}

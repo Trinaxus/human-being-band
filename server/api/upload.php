@@ -37,10 +37,10 @@ $slug = trim($slug, '-');
 $unique = $slug . '-' . bin2hex(random_bytes(4));
 $filename = $unique . ($ext ? ('.' . $ext) : '');
 
-// Subfolders: year and gallery (with sensible defaults)
+// Subfolders: year and gallery (year is required)
 $year = isset($_POST['year']) ? intval($_POST['year']) : 0;
 $gallery = isset($_POST['gallery']) ? trim((string)$_POST['gallery']) : '';
-if ($year <= 0) { $year = intval(date('Y')); }
+if ($year <= 0) { json_error('Year is required. Got: ' . ($_POST['year'] ?? 'not set'), 400); }
 if ($gallery === '') { $gallery = 'misc'; }
 // Keep original gallery name; disallow directory separators and traversal
 $galleryName = $gallery;
@@ -75,25 +75,51 @@ $url = $urlBase . '/' . rawurlencode((string)$year) . '/' . rawurlencode($galler
 $type = mime_content_type($target) ?: ($f['type'] ?? 'application/octet-stream');
 $size = filesize($target) ?: 0;
 
-// Update gallery metadata.json in the same folder
+// Update gallery metadata.json in the same folder (with locking to prevent race conditions)
 $metaPath = $targetDir . '/metadata.json';
 $meta = [];
-if (is_file($metaPath)) {
-  $raw = @file_get_contents($metaPath);
-  if ($raw !== false) {
-    $json = json_decode($raw, true);
-    if (is_array($json)) { $meta = $json; }
+$fh = @fopen($metaPath, 'c+');
+if ($fh) {
+  if (flock($fh, LOCK_EX)) {
+    $raw = @stream_get_contents($fh);
+    if ($raw !== false) {
+      $json = json_decode($raw, true);
+      if (is_array($json)) { $meta = $json; }
+    }
+    if (!isset($meta['items']) || !is_array($meta['items'])) { $meta['items'] = []; }
+    $meta['items'][] = [
+      'filename' => $filename,
+      'url' => $url,
+      'type' => (strpos($type, 'video') === 0 ? 'video' : 'image'),
+      'size' => $size,
+      'uploaded_at' => date('c')
+    ];
+    ftruncate($fh, 0);
+    rewind($fh);
+    fwrite($fh, json_encode($meta, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
+    fflush($fh);
+    flock($fh, LOCK_UN);
   }
+  fclose($fh);
+} else {
+  // Fallback if fopen fails
+  if (is_file($metaPath)) {
+    $raw = @file_get_contents($metaPath);
+    if ($raw !== false) {
+      $json = json_decode($raw, true);
+      if (is_array($json)) { $meta = $json; }
+    }
+  }
+  if (!isset($meta['items']) || !is_array($meta['items'])) { $meta['items'] = []; }
+  $meta['items'][] = [
+    'filename' => $filename,
+    'url' => $url,
+    'type' => (strpos($type, 'video') === 0 ? 'video' : 'image'),
+    'size' => $size,
+    'uploaded_at' => date('c')
+  ];
+  @file_put_contents($metaPath, json_encode($meta, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
 }
-if (!isset($meta['items']) || !is_array($meta['items'])) { $meta['items'] = []; }
-$meta['items'][] = [
-  'filename' => $filename,
-  'url' => $url,
-  'type' => (strpos($type, 'video') === 0 ? 'video' : 'image'),
-  'size' => $size,
-  'uploaded_at' => date('c')
-];
-@file_put_contents($metaPath, json_encode($meta, JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES));
 
 json_ok([
   'ok' => true,

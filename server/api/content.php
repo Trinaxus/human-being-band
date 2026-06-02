@@ -61,7 +61,8 @@ $allowed = [
   // Legal pages (values may be string or { de?: string, en?: string })
   'impressum',     // imprint HTML/text
   'privacy',       // privacy policy (Datenschutz) HTML/text
-  'events'         // scheduler events [{ id, date, time?, title, location?, link?, description?, published? }]
+  'events',        // scheduler events [{ id, date, time?, title, location?, link?, description?, published? }]
+  'landingPage'    // landing page config { enabled?, heroUrl?, welcomeText?, youtubeUrl?, aboutTitle?, aboutText? }
 ];
 // Start from existing content and overlay only provided keys
 $existing = json_read_file($contentFile);
