@@ -157,7 +157,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
       <header className="hb-no-scale fixed inset-x-0 top-0 z-40 bg-neutral-900/85 border-b-[0.5px] border-neutral-800 backdrop-blur-sm shadow-[inset_0_-1px_0_rgba(255,255,255,0.02)]">
         <div className="max-w-[1200px] mx-auto px-4 sm:px-6">
           {/* Mobile top bar */}
-          <div className={`flex items-center sm:hidden ${landingMode ? 'justify-center' : 'justify-between'}`} style={{ paddingTop: `${headerLogo.headerMobilePadding ?? 6}px`, paddingBottom: `${headerLogo.headerMobilePadding ?? 6}px` }}>
+          <div className="flex items-center justify-between sm:hidden" style={{ paddingTop: `${headerLogo.headerMobilePadding ?? 6}px`, paddingBottom: `${headerLogo.headerMobilePadding ?? 6}px` }}>
             <span className="w-9 h-9" />
             <button onClick={handleHome} className="inline-flex items-center" title="Home" onMouseEnter={() => setLogoHover(true)} onMouseLeave={() => setLogoHover(false)}>
               <img
@@ -277,8 +277,6 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       </button>
                     </div>
 
-                    {!landingMode && (
-                    <>
                     <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
                     {/* Font size section */}
@@ -303,8 +301,6 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                         ))}
                       </div>
                     </div>
-                    </>
-                    )}
 
                     <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
@@ -328,8 +324,6 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       </div>
                     </div>
 
-                    {!landingMode && (
-                    <>
                     <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
                     {/* Auth */}
@@ -357,8 +351,6 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                         </button>
                       )}
                     </div>
-                    </>
-                    )}
                   </div>
                 )}
               </div>
