@@ -1517,12 +1517,26 @@ const AdminContentPanel: React.FC = () => {
                   </div>
                 </div>
                 {aboutTextMode[aboutLang] === 'editor' && (
-                  <Textarea
-                    rows={4}
-                    placeholder={aboutLang==='en' ? 'About text (EN)' : 'Über uns Text (DE)'}
-                    value={readI18n(content.about?.text as any, aboutLang)}
-                    onChange={e => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, aboutLang, e.target.value) } }))}
-                  />
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge>Editor</Badge>
+                    </div>
+                    {aboutLang==='de' ? (
+                      <RichTextEditor
+                        value={readI18n(content.about?.text as any, 'de')}
+                        onChange={(html) => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, 'de', html) } }))}
+                        onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
+                        galleryImages={allGalleryImages}
+                      />
+                    ) : (
+                      <RichTextEditor
+                        value={readI18n(content.about?.text as any, 'en')}
+                        onChange={(html) => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, 'en', html) } }))}
+                        onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
+                        galleryImages={allGalleryImages}
+                      />
+                    )}
+                  </div>
                 )}
                 {aboutTextMode[aboutLang] === 'html' && (
                   <textarea
