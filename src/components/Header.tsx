@@ -277,6 +277,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       </button>
                     </div>
 
+                    {!landingMode && (
+                    <>
                     <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
                     {/* Font size section */}
@@ -301,6 +303,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                         ))}
                       </div>
                     </div>
+                    </>
+                    )}
 
                     <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
@@ -324,6 +328,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       </div>
                     </div>
 
+                    {!landingMode && (
+                    <>
                     <div className={`mx-2 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
                     {/* Auth */}
@@ -351,6 +357,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                         </button>
                       )}
                     </div>
+                    </>
+                    )}
                   </div>
                 )}
               </div>
@@ -428,6 +436,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                 <span className="flex-1 text-left">{isLight ? (lang==='de'?'Dunkelmodus':'Dark mode') : (lang==='de'?'Hellmodus':'Light mode')}</span>
               </button>
 
+              {!landingMode && (
+              <>
               <div className={`mx-3 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
               {/* Font size */}
@@ -451,6 +461,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                   ))}
                 </div>
               </div>
+              </>
+              )}
 
               <div className={`mx-3 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
@@ -474,6 +486,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                 </div>
               </div>
 
+              {!landingMode && (
+              <>
               <div className={`mx-3 h-px ${isLight ? 'bg-neutral-200' : 'bg-neutral-700/60'}`} />
 
               {/* Auth */}
@@ -501,6 +515,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                   </button>
                 )}
               </div>
+              </>
+              )}
             </div>
           </div>
         </div>
