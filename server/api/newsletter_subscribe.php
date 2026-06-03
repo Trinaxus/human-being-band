@@ -4,7 +4,24 @@ require __DIR__ . '/bootstrap.php';
 
 $body = json_decode(file_get_contents('php://input'), true) ?: [];
 $email = filter_var(trim($body['email'] ?? ''), FILTER_VALIDATE_EMAIL);
-$baseUrl = rtrim($_ENV['BASE_URL'] ?? '', '/');
+
+// Determine frontend URL: prefer FRONTEND_URL, then BASE_URL, then Referer
+$baseUrl = rtrim($_ENV['FRONTEND_URL'] ?? '', '/');
+if (!$baseUrl) {
+  $baseUrl = rtrim($_ENV['BASE_URL'] ?? '', '/');
+}
+// If BASE_URL points to an api subdomain, try to derive main domain
+if ($baseUrl && str_contains($baseUrl, '://api.')) {
+  $baseUrl = preg_replace('#^(https?://)api\.#', '$1', $baseUrl);
+}
+// Last resort: use Referer header and strip path
+if (!$baseUrl) {
+  $ref = $_SERVER['HTTP_REFERER'] ?? '';
+  if ($ref) {
+    $parts = parse_url($ref);
+    $baseUrl = ($parts['scheme'] ?? 'https') . '://' . ($parts['host'] ?? '');
+  }
+}
 $fromEmail = $_ENV['NEWSLETTER_FROM'] ?? '';
 
 if (!$email) {

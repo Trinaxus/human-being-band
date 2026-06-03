@@ -42,7 +42,21 @@ if (!$found) {
   json_error('Kampagne nicht gefunden.', 404);
 }
 
-$baseUrl = rtrim($_ENV['BASE_URL'] ?? '', '/');
+// Determine frontend URL: prefer FRONTEND_URL, then BASE_URL, then Referer
+$baseUrl = rtrim($_ENV['FRONTEND_URL'] ?? '', '/');
+if (!$baseUrl) {
+  $baseUrl = rtrim($_ENV['BASE_URL'] ?? '', '/');
+}
+if ($baseUrl && str_contains($baseUrl, '://api.')) {
+  $baseUrl = preg_replace('#^(https?://)api\.#', '$1', $baseUrl);
+}
+if (!$baseUrl) {
+  $ref = $_SERVER['HTTP_REFERER'] ?? '';
+  if ($ref) {
+    $parts = parse_url($ref);
+    $baseUrl = ($parts['scheme'] ?? 'https') . '://' . ($parts['host'] ?? '');
+  }
+}
 $fromEmail = $_ENV['NEWSLETTER_FROM'] ?? '';
 $subject = $found['subject_' . $lang] ?? '';
 $htmlContent = $found['html_' . $lang] ?? '';

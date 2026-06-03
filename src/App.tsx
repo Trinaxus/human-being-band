@@ -6,7 +6,7 @@ import HomePage from './components/HomePage';
 import AdminPage from './components/AdminPage';
 import OverviewPage from './components/OverviewPage';
 import ResetPasswordPage from './components/ResetPasswordPage';
-import { me, logout, contentGet } from './lib/api';
+import { me, logout, contentGet, newsletterVerify, newsletterUnsubscribe } from './lib/api';
 import LegalImpressum from './components/LegalImpressum';
 import LegalPrivacy from './components/LegalPrivacy';
 import LandingPage from './components/LandingPage';
@@ -14,6 +14,7 @@ import LandingPage from './components/LandingPage';
 function App() {
   const [view, setView] = useState<'home' | 'login' | 'overview' | 'admin' | 'reset' | 'impressum' | 'datenschutz' | 'landing'>('home');
   const [authRole, setAuthRole] = useState<'unauthenticated' | 'user' | 'admin'>('unauthenticated');
+  const [toast, setToast] = useState<{ msg: string; type: 'ok' | 'error' } | null>(null);
 
   useEffect(() => {
     let currentContent: any = null;
@@ -195,9 +196,31 @@ function App() {
     const onVisible = () => { if (!document.hidden) check(); };
     document.addEventListener('visibilitychange', onVisible);
     // route by query param ?view=reset
-    const applyViewFromUrl = () => {
+    const applyViewFromUrl = async () => {
       try {
         const params = new URLSearchParams(window.location.search);
+        const verifyToken = params.get('newsletter_verify');
+        const unsubToken = params.get('newsletter_unsubscribe');
+        if (verifyToken) {
+          try {
+            const res = await newsletterVerify(verifyToken);
+            setToast({ msg: res.message || 'Bestätigt!', type: 'ok' });
+          } catch (e: any) {
+            setToast({ msg: e?.message || 'Link ungültig.', type: 'error' });
+          }
+          try { window.history.replaceState({}, '', '/'); } catch {}
+          return;
+        }
+        if (unsubToken) {
+          try {
+            const res = await newsletterUnsubscribe(unsubToken);
+            setToast({ msg: res.message || 'Abgemeldet.', type: 'ok' });
+          } catch (e: any) {
+            setToast({ msg: e?.message || 'Link ungültig.', type: 'error' });
+          }
+          try { window.history.replaceState({}, '', '/'); } catch {}
+          return;
+        }
         const v = params.get('view');
         if (v === 'reset') { setView('reset'); return; }
         if (v === 'impressum') {
@@ -234,6 +257,12 @@ function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
+      {toast && (
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[100] px-4 py-2 rounded-lg shadow-lg text-sm font-medium transition-opacity ${toast.type==='ok' ? 'bg-emerald-600 text-white' : 'bg-rose-600 text-white'}`}>
+          {toast.msg}
+          <button onClick={() => setToast(null)} className="ml-3 text-white/70 hover:text-white">×</button>
+        </div>
+      )}
       <Header
         authRole={authRole}
         landingMode={view === 'landing'}
