@@ -55,11 +55,11 @@ const LandingPage: React.FC<{ previewContent?: SiteContent }> = ({ previewConten
     <div className="w-full max-w-[1200px] mx-auto">
       {/* Hero */}
       {heroUrl && (
-        <div className="relative overflow-hidden w-full" style={{ height: `${heroHeight}px` }}>
+        <div className="relative overflow-hidden w-full bg-neutral-900" style={{ height: `${heroHeight}px` }}>
           <img
             src={heroUrl}
             alt="Hero"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain sm:object-cover"
             style={{
               objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
               transform: `scale(${(content.heroZoom ?? 100) / 100})`,
