@@ -229,6 +229,28 @@ const AdminContentPanel: React.FC = () => {
     }
     return { ...(v||{}), [l]: next } as any;
   };
+  const stripInlineColors = (html: string): string => {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      doc.querySelectorAll('[style]').forEach(el => {
+        const style = (el.getAttribute('style') || '');
+        const cleaned = style.replace(/color:\s*[^;]+;?/gi, '').trim();
+        if (cleaned) el.setAttribute('style', cleaned);
+        else el.removeAttribute('style');
+      });
+      doc.querySelectorAll('span:not([style]):not([class])').forEach(el => {
+        const span = el as HTMLSpanElement;
+        while (span.firstChild) {
+          span.parentNode!.insertBefore(span.firstChild, span);
+        }
+        if (span.parentNode) span.parentNode.removeChild(span);
+      });
+      return doc.body.innerHTML;
+    } catch {
+      return html;
+    }
+  };
   const [bookingReqs, setBookingReqs] = useState<Array<{ id: string; name: string; email: string; date?: string; event?: string; location?: string; budget?: string; message?: string; created_at?: string }>>([]);
   const [bookingReqsLoading, setBookingReqsLoading] = useState(false);
   const [bookingReqsError, setBookingReqsError] = useState<string | null>(null);
@@ -1383,6 +1405,16 @@ const AdminContentPanel: React.FC = () => {
                         className={`px-2 py-1 rounded border-[0.5px] text-xs ${newsMode[p.id]==='preview' && mode==='preview'?'bg-green-900/40 border-green-700/40 text-green-200':newsMode[p.id]===mode?'bg-blue-900/40 border-blue-700/40 text-blue-200':'border-neutral-700/40 text-neutral-300 hover:bg-neutral-800'}`}
                       >{mode==='editor'?'Editor':mode==='html'?'HTML':'Vorschau'}</button>
                     ))}
+                    <button
+                      type="button"
+                      className="text-[10px] text-neutral-400 hover:text-neutral-200 underline"
+                      title="Entfernt alle inline Textfarben → Theme passt sich an"
+                      onClick={() => {
+                        const current = readI18n(p.html as any, newsLang);
+                        const cleaned = stripInlineColors(current);
+                        setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i) => i===idx ? { ...x, html: writeI18n(x.html as any, newsLang, cleaned) } : x) }));
+                      }}
+                    >🎨 Inline-Farben entfernen</button>
                   </div>
                   {newsMode[p.id] === 'html' ? (
                     <div className="grid grid-cols-1 gap-3">
@@ -1505,15 +1537,27 @@ const AdminContentPanel: React.FC = () => {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs text-neutral-400">{aboutLang==='en' ? 'About text (EN)' : 'Über uns Text (DE)'}</label>
-                  <div className="inline-flex items-center rounded-md border border-neutral-700/40 overflow-hidden">
-                    {(['editor','html','preview'] as const).map(m => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setAboutTextMode(prev => ({ ...prev, [aboutLang]: m }))}
-                        className={`px-2 py-1 text-xs ${aboutTextMode[aboutLang]===m ? 'bg-neutral-700/40 text-neutral-100' : 'text-neutral-300 hover:bg-neutral-800'}`}
-                      >{m==='editor' ? 'Editor' : m==='html' ? 'HTML' : 'Vorschau'}</button>
-                    ))}
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="text-[10px] text-neutral-400 hover:text-neutral-200 underline"
+                      title="Entfernt alle inline Textfarben → Theme passt sich an"
+                      onClick={() => {
+                        const current = readI18n(content.about?.text as any, aboutLang);
+                        const cleaned = stripInlineColors(current);
+                        setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, aboutLang, cleaned) } }));
+                      }}
+                    >🎨 Inline-Farben entfernen</button>
+                    <div className="inline-flex items-center rounded-md border border-neutral-700/40 overflow-hidden">
+                      {(['editor','html','preview'] as const).map(m => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setAboutTextMode(prev => ({ ...prev, [aboutLang]: m }))}
+                          className={`px-2 py-1 text-xs ${aboutTextMode[aboutLang]===m ? 'bg-neutral-700/40 text-neutral-100' : 'text-neutral-300 hover:bg-neutral-800'}`}
+                        >{m==='editor' ? 'Editor' : m==='html' ? 'HTML' : 'Vorschau'}</button>
+                      ))}
+                    </div>
                   </div>
                 </div>
                 {aboutTextMode[aboutLang] === 'editor' && (
@@ -2338,6 +2382,34 @@ const AdminContentPanel: React.FC = () => {
                 placeholder="Text (EN)"
                 value={((content as any).landingPage?.aboutText?.en || '')}
                 onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutText: { ...((prev as any).landingPage?.aboutText || {}), en: e.target.value } } }))}
+              />
+            </div>
+
+            <SectionTitle title="Call-to-Action Button" />
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 space-y-3">
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="lp-cta-visible"
+                  checked={!!(content as any).landingPage?.ctaButton?.visible}
+                  onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), ctaButton: { ...((prev as any).landingPage?.ctaButton || {}), visible: e.target.checked } } }))}
+                />
+                <label htmlFor="lp-cta-visible" className="text-neutral-200 text-sm">Sichtbar</label>
+              </div>
+              <Input
+                placeholder="URL (z. B. https://artist-website.de)"
+                value={((content as any).landingPage?.ctaButton?.url || '')}
+                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), ctaButton: { ...((prev as any).landingPage?.ctaButton || {}), url: e.target.value } } }))}
+              />
+              <Input
+                placeholder="Button-Text Deutsch"
+                value={((content as any).landingPage?.ctaButton?.label?.de || '')}
+                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), ctaButton: { ...((prev as any).landingPage?.ctaButton || {}), label: { ...((prev as any).landingPage?.ctaButton?.label || {}), de: e.target.value } } } }))}
+              />
+              <Input
+                placeholder="Button-Text English"
+                value={((content as any).landingPage?.ctaButton?.label?.en || '')}
+                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), ctaButton: { ...((prev as any).landingPage?.ctaButton || {}), label: { ...((prev as any).landingPage?.ctaButton?.label || {}), en: e.target.value } } } }))}
               />
             </div>
 

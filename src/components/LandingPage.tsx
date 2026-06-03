@@ -78,6 +78,18 @@ const LandingPage: React.FC<{ previewContent?: SiteContent }> = ({ previewConten
           <p className="text-neutral-300 text-sm sm:text-base max-w-2xl mx-auto whitespace-pre-line">
             {t(lp.welcomeText)}
           </p>
+          {lp.ctaButton?.visible && lp.ctaButton?.url && (
+            <div className="mt-6">
+              <a
+                href={lp.ctaButton.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-6 py-3 rounded-lg bg-[#8C1423] text-white font-display uppercase tracking-wider text-sm hover:bg-[#a0182a] transition-colors"
+              >
+                {t(lp.ctaButton.label) || (lang === 'de' ? 'Mehr erfahren' : 'Learn more')}
+              </a>
+            </div>
+          )}
         </section>
       )}
 

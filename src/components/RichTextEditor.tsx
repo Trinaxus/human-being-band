@@ -477,7 +477,7 @@ export const RichTextEditor: React.FC<{
         </div>
         <div className="flex items-center gap-1">
           <input type="color" value={typeof currentColor==='string' && currentColor ? currentColor : '#000000'} onChange={(e) => { (editor.chain().focus() as any).setColor(e.target.value).run(); }} className="h-6 w-8 rounded border border-neutral-700/40 bg-neutral-900 cursor-pointer" title="Text Color" />
-          <TbButton icon={<span className="text-xs">Reset</span>} title="Reset Color" onClick={() => (editor.chain().focus() as any).unsetColor().run()} />
+          <TbButton icon={<span className="text-xs">↺ Reset</span>} title="Alle Textfarben zurücksetzen (theme-abhängig)" onClick={() => (editor.chain().focus() as any).selectAll().unsetColor().run()} />
         </div>
         <div className="w-px h-5 bg-neutral-700/40 mx-0.5" />
         {/* Link dropdown */}

@@ -393,6 +393,11 @@ export type SiteContent = {
     youtubeUrl?: string;
     aboutTitle?: { de?: string; en?: string };
     aboutText?: { de?: string; en?: string };
+    ctaButton?: {
+      label?: { de?: string; en?: string };
+      url?: string;
+      visible?: boolean;
+    };
   };
   updated_at?: string;
 };

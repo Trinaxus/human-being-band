@@ -237,7 +237,7 @@ function App() {
       <Header
         authRole={authRole}
         landingMode={view === 'landing'}
-        onHomeClick={() => setView('home')}
+        onHomeClick={() => { if (view !== 'landing') setView('home'); }}
         onLoginClick={() => setView('login')}
         onLogoutClick={async () => {
           try { await logout(); } catch {}
