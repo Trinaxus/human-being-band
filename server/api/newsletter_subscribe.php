@@ -4,6 +4,7 @@ require __DIR__ . '/bootstrap.php';
 
 $body = json_decode(file_get_contents('php://input'), true) ?: [];
 $email = filter_var(trim($body['email'] ?? ''), FILTER_VALIDATE_EMAIL);
+$lang = ($body['lang'] ?? 'de') === 'en' ? 'en' : 'de';
 
 // Determine frontend URL: prefer FRONTEND_URL, then BASE_URL, then Referer
 $baseUrl = rtrim($_ENV['FRONTEND_URL'] ?? '', '/');
@@ -50,6 +51,7 @@ $newSub = [
   'email' => $email,
   'status' => 'pending',
   'token' => $token,
+  'lang' => $lang,
   'subscribed_at' => date('c'),
   'verified_at' => null,
 ];

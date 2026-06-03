@@ -149,8 +149,8 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
     }`;
 
   const logoSrc = isLight
-    ? (headerLogo.light || headerLogo.dark || '/human-being-logo-weiß.png')
-    : (headerLogo.dark || headerLogo.light || '/human-being-logo-weiß.png');
+    ? (headerLogo.light || headerLogo.dark || '')
+    : (headerLogo.dark || headerLogo.light || '');
 
   return (
     <>
@@ -160,7 +160,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
           <div className="flex items-center justify-between sm:hidden" style={{ paddingTop: `${headerLogo.headerMobilePadding ?? 6}px`, paddingBottom: `${headerLogo.headerMobilePadding ?? 6}px` }}>
             <span className="w-9 h-9" />
             <button onClick={handleHome} className="inline-flex items-center" title="Home" onMouseEnter={() => setLogoHover(true)} onMouseLeave={() => setLogoHover(false)}>
-              <img
+              {logoSrc && <img
                 src={logoSrc}
                 alt="Human Being Band"
                 className="w-auto block transition-all duration-300"
@@ -170,7 +170,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                   filter: logoHover ? `brightness(${headerLogo.hoverBrightness ?? 100}%)` : 'brightness(100%)',
                   opacity: logoHover ? (headerLogo.hoverOpacity ?? 1) : 1,
                 }}
-              />
+              />}
               <span className="sr-only">HUMAN BEING BAND</span>
             </button>
             <button
@@ -186,7 +186,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
           <div className={`hidden sm:flex items-center justify-between relative`} style={{ paddingTop: `${headerLogo.headerDesktopPadding ?? 10}px`, paddingBottom: `${headerLogo.headerDesktopPadding ?? 10}px` }}>
             {!landingMode ? (
               <button onClick={handleHome} className="inline-flex items-center" title="Home" onMouseEnter={() => setLogoHover(true)} onMouseLeave={() => setLogoHover(false)}>
-                <img
+                {logoSrc && <img
                   src={logoSrc}
                   alt="Human Being Band"
                   className="w-auto block transition-all duration-300"
@@ -196,7 +196,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                     filter: logoHover ? `brightness(${headerLogo.hoverBrightness ?? 100}%)` : 'brightness(100%)',
                     opacity: logoHover ? (headerLogo.hoverOpacity ?? 1) : 1,
                   }}
-                />
+                />}
                 <span className="sr-only">HUMAN BEING BAND</span>
               </button>
             ) : (
@@ -207,7 +207,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
             {landingMode && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <button onClick={handleHome} className="inline-flex items-center pointer-events-auto" title="Home" onMouseEnter={() => setLogoHover(true)} onMouseLeave={() => setLogoHover(false)}>
-                  <img
+                  {logoSrc && <img
                     src={logoSrc}
                     alt="Human Being Band"
                     className="w-auto block transition-all duration-300"
@@ -217,7 +217,7 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                       filter: logoHover ? `brightness(${headerLogo.hoverBrightness ?? 100}%)` : 'brightness(100%)',
                       opacity: logoHover ? (headerLogo.hoverOpacity ?? 1) : 1,
                     }}
-                  />
+                  />}
                   <span className="sr-only">HUMAN BEING BAND</span>
                 </button>
               </div>

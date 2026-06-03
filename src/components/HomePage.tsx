@@ -13,16 +13,16 @@ const HomePage: React.FC = () => {
   const [lastOrder, setLastOrder] = useState<OrderItem | null>(null);
   // Global confirmation after ticket booking
   const [orderOk, setOrderOk] = useState<string | null>(null);
-  // Newsletter subscribe
-  const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [newsletterBusy, setNewsletterBusy] = useState(false);
-  const [newsletterMsg, setNewsletterMsg] = useState<string | null>(null);
-
   // Tickets modal state
   const [ticketOpen, setTicketOpen] = useState(false);
   const [lang, setLang] = useState<'de'|'en'>(() => {
     try { const v = window.localStorage.getItem('lang'); return v === 'en' ? 'en' : 'de'; } catch { return 'de'; }
   });
+  // Newsletter subscribe
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterLang, setNewsletterLang] = useState<'de'|'en'>(lang);
+  const [newsletterBusy, setNewsletterBusy] = useState(false);
+  const [newsletterMsg, setNewsletterMsg] = useState<string | null>(null);
   useEffect(() => {
     const onLang = (e: Event) => {
       try {
@@ -899,7 +899,7 @@ const HomePage: React.FC = () => {
 
       {/* Newsletter Subscribe */}
       <section className="px-4 sm:px-6 py-8">
-        <div className={`max-w-xl mx-auto ${theme==='light' ? 'bg-white/50' : 'bg-neutral-900/40'} rounded-xl border-[0.5px] ${theme==='light' ? 'border-neutral-300/50' : 'border-neutral-700/30'} p-4 sm:p-6 text-center`}>
+        <div className={`max-w-3xl mx-auto ${theme==='light' ? 'bg-white/50' : 'bg-neutral-900/40'} rounded-xl border-[0.5px] ${theme==='light' ? 'border-neutral-300/50' : 'border-neutral-700/30'} p-4 sm:p-6 text-center`}>
           <h3 className={`font-display ${textHeading} text-xl sm:text-2xl font-extrabold uppercase tracking-wider mb-2`}>{lang==='de' ? 'Newsletter' : 'Newsletter'}</h3>
           <p className={`${textMuted} text-sm mb-4`}>{lang==='de' ? 'Bleib auf dem Laufenden – abonniere unseren Newsletter.' : 'Stay up to date – subscribe to our newsletter.'}</p>
           {newsletterMsg && (
@@ -912,7 +912,7 @@ const HomePage: React.FC = () => {
               setNewsletterBusy(true);
               setNewsletterMsg(null);
               try {
-                const res = await newsletterSubscribe(newsletterEmail.trim());
+                const res = await newsletterSubscribe(newsletterEmail.trim(), newsletterLang);
                 setNewsletterMsg(res.message || '');
                 if (!res.already) setNewsletterEmail('');
               } catch (err) {
@@ -930,13 +930,24 @@ const HomePage: React.FC = () => {
               onChange={e => setNewsletterEmail(e.target.value)}
               className={`flex-1 px-4 py-2.5 rounded-lg ${theme==='light' ? 'bg-white border-neutral-300 text-neutral-900 placeholder-neutral-500' : 'bg-neutral-800/60 border-neutral-700/40 text-neutral-100 placeholder-neutral-500'} border focus:outline-none focus:ring-0`}
             />
-            <button
-              type="submit"
-              disabled={newsletterBusy}
-              className="px-6 py-2.5 rounded-lg bg-[#8C1423] text-white font-display uppercase tracking-wider text-sm hover:bg-[#a0182a] transition-colors disabled:opacity-60"
-            >
-              {newsletterBusy ? (lang==='de' ? 'Wird gesendet…' : 'Sending…') : (lang==='de' ? 'Abonnieren' : 'Subscribe')}
-            </button>
+            <div className="flex gap-2">
+              <select
+                value={newsletterLang}
+                onChange={e => setNewsletterLang(e.target.value as 'de'|'en')}
+                className={`px-3 py-2.5 rounded-lg text-sm ${theme==='light' ? 'bg-white border-neutral-300 text-neutral-900' : 'bg-neutral-800/60 border-neutral-700/40 text-neutral-100'} border focus:outline-none focus:ring-0 cursor-pointer`}
+                aria-label="Sprache"
+              >
+                <option value="de">Deutsch</option>
+                <option value="en">English</option>
+              </select>
+              <button
+                type="submit"
+                disabled={newsletterBusy}
+                className="px-6 py-2.5 rounded-lg bg-[#8C1423] text-white font-display uppercase tracking-wider text-sm hover:bg-[#a0182a] transition-colors disabled:opacity-60"
+              >
+                {newsletterBusy ? (lang==='de' ? 'Wird gesendet…' : 'Sending…') : (lang==='de' ? 'Abonnieren' : 'Subscribe')}
+              </button>
+            </div>
           </form>
           <p className={`mt-2 text-xs ${textMuted}`}>{lang==='de' ? 'Kein Spam. Jederzeit abbestellbar.' : 'No spam. Unsubscribe anytime.'}</p>
         </div>

@@ -47,6 +47,16 @@ export async function apiPost<T>(path: string, body: any, headers: Record<string
   return parseResponse<T>(res, 'POST', path);
 }
 
+export async function apiDelete<T>(path: string, body: any): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'DELETE',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return parseResponse<T>(res, 'DELETE', path);
+}
+
 export async function login(username: string, password: string) {
   return apiPost<{ ok?: boolean; require_totp?: boolean; role?: string }>(`/login.php`, { username, password });
 }
@@ -555,6 +565,7 @@ export type NewsletterSubscriber = {
   email: string;
   status: 'pending' | 'verified';
   token: string;
+  lang: 'de' | 'en';
   subscribed_at: string;
   verified_at?: string | null;
 };
@@ -570,8 +581,8 @@ export type NewsletterCampaign = {
   recipients_count?: number;
 };
 
-export async function newsletterSubscribe(email: string) {
-  return apiPost<{ message: string; sent?: boolean; already?: boolean }>(`/newsletter_subscribe.php`, { email });
+export async function newsletterSubscribe(email: string, lang: 'de' | 'en' = 'de') {
+  return apiPost<{ message: string; sent?: boolean; already?: boolean }>(`/newsletter_subscribe.php`, { email, lang });
 }
 
 export async function newsletterVerify(token: string) {
@@ -595,9 +606,9 @@ export async function newsletterCampaignSave(campaign: NewsletterCampaign) {
 }
 
 export async function newsletterCampaignDelete(id: string) {
-  return apiPost<{ deleted: boolean }>(`/newsletter_campaigns.php`, { id });
+  return apiDelete<{ deleted: boolean }>(`/newsletter_campaigns.php`, { id });
 }
 
-export async function newsletterSend(campaignId: string, lang: 'de' | 'en') {
+export async function newsletterSend(campaignId: string, lang: 'de' | 'en' | 'auto') {
   return apiPost<{ sent?: boolean; recipients?: number }>(`/newsletter_send.php`, { campaignId, lang });
 }
