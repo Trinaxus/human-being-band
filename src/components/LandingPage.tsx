@@ -55,18 +55,34 @@ const LandingPage: React.FC<{ previewContent?: SiteContent }> = ({ previewConten
     <div className="w-full max-w-[1200px] mx-auto">
       {/* Hero */}
       {heroUrl && (
-        <div className="relative overflow-hidden w-full bg-neutral-900" style={{ height: `${heroHeight}px` }}>
-          <img
-            src={heroUrl}
-            alt="Hero"
-            className="w-full h-full object-contain sm:object-cover"
-            style={{
-              objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
-              transform: `scale(${(content.heroZoom ?? 100) / 100})`,
-              transformOrigin: 'center',
-            }}
-          />
-        </div>
+        <>
+          {/* Mobile: natürliche Größe, keine fixe Höhe → kein leerer Bereich hinter transparentem PNG */}
+          <div className="relative overflow-hidden w-full sm:hidden">
+            <img
+              src={heroUrl}
+              alt="Hero"
+              className="w-full h-auto"
+              style={{
+                objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
+                transform: `scale(${(content.heroZoom ?? 100) / 100})`,
+                transformOrigin: 'center',
+              }}
+            />
+          </div>
+          {/* Desktop: fixe Höhe mit object-cover wie gehabt */}
+          <div className="relative overflow-hidden w-full hidden sm:block" style={{ height: `${heroHeight}px` }}>
+            <img
+              src={heroUrl}
+              alt="Hero"
+              className="w-full h-full object-cover"
+              style={{
+                objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
+                transform: `scale(${(content.heroZoom ?? 100) / 100})`,
+                transformOrigin: 'center',
+              }}
+            />
+          </div>
+        </>
       )}
 
       {/* Welcome */}
