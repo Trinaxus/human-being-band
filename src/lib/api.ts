@@ -549,3 +549,55 @@ export async function requestPasswordReset(email: string) {
 export async function confirmPasswordReset(email: string, token: string, new_password: string) {
   return apiPost<{ ok: boolean }>(`/users.php?action=confirm_reset`, { email, token, new_password });
 }
+
+// --- Newsletter ---
+export type NewsletterSubscriber = {
+  email: string;
+  status: 'pending' | 'verified';
+  token: string;
+  subscribed_at: string;
+  verified_at?: string | null;
+};
+
+export type NewsletterCampaign = {
+  id: string;
+  subject_de?: string;
+  subject_en?: string;
+  html_de?: string;
+  html_en?: string;
+  created_at?: string;
+  sent_at?: string | null;
+  recipients_count?: number;
+};
+
+export async function newsletterSubscribe(email: string) {
+  return apiPost<{ message: string; sent?: boolean; already?: boolean }>(`/newsletter_subscribe.php`, { email });
+}
+
+export async function newsletterVerify(token: string) {
+  return apiGet<{ message: string; verified?: boolean }>(`/newsletter_verify.php?token=${encodeURIComponent(token)}`);
+}
+
+export async function newsletterUnsubscribe(token: string) {
+  return apiGet<{ message: string; unsubscribed?: boolean }>(`/newsletter_unsubscribe.php?token=${encodeURIComponent(token)}`);
+}
+
+export async function newsletterSubscribersList() {
+  return apiGet<{ subscribers: NewsletterSubscriber[] }>(`/newsletter_subscribers.php`);
+}
+
+export async function newsletterCampaignsList() {
+  return apiGet<{ campaigns: NewsletterCampaign[] }>(`/newsletter_campaigns.php`);
+}
+
+export async function newsletterCampaignSave(campaign: NewsletterCampaign) {
+  return apiPost<{ campaign: NewsletterCampaign }>(`/newsletter_campaigns.php`, campaign);
+}
+
+export async function newsletterCampaignDelete(id: string) {
+  return apiPost<{ deleted: boolean }>(`/newsletter_campaigns.php`, { id });
+}
+
+export async function newsletterSend(campaignId: string, lang: 'de' | 'en') {
+  return apiPost<{ sent?: boolean; recipients?: number }>(`/newsletter_send.php`, { campaignId, lang });
+}

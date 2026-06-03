@@ -158,9 +158,9 @@ export const RichTextEditor: React.FC<{
   const [cardEdit, setCardEdit] = useState(false);
   const [cardUseBg, setCardUseBg] = useState(true);
   const [cardBg, setCardBg] = useState('#1f2937');
-  const [cardBgOpacity, setCardBgOpacity] = useState('20');
+  const [cardBgOpacity, setCardBgOpacity] = useState('15');
   const [cardBg2, setCardBg2] = useState('#000000');
-  const [cardBg2Opacity, setCardBg2Opacity] = useState('0');
+  const [cardBg2Opacity, setCardBg2Opacity] = useState('15');
   const [cardGradientType, setCardGradientType] = useState<'solid' | 'linear' | 'radial'>('solid');
   const [cardGradientDir, setCardGradientDir] = useState('180');
   const [cardBorderColor, setCardBorderColor] = useState('#374151');
@@ -168,7 +168,7 @@ export const RichTextEditor: React.FC<{
   const [cardBorderWidth, setCardBorderWidth] = useState('1');
   const [cardBorderRadius, setCardBorderRadius] = useState('8');
   const [cardPadding, setCardPadding] = useState('16');
-  const [cardWidth, setCardWidth] = useState('95');
+  const [cardWidth, setCardWidth] = useState('90');
   const [cardHasBorder, setCardHasBorder] = useState(true);
 
   if (!editor) return <div className="text-neutral-400 text-sm">Editor lädt…</div>;
@@ -411,13 +411,13 @@ export const RichTextEditor: React.FC<{
     } else {
       setCardUseBg(true);
       setCardBg('#76101b');
-      setCardBgOpacity('30');
+      setCardBgOpacity('15');
       setCardBg2('#400a10');
-      setCardBg2Opacity('30');
+      setCardBg2Opacity('15');
       setCardGradientType('radial');
       setCardGradientDir('180');
       setCardPadding('16');
-      setCardWidth('95');
+      setCardWidth('90');
       setCardBorderWidth('2');
       setCardBorderColor('#8C1423');
       setCardBorderOpacity('15');

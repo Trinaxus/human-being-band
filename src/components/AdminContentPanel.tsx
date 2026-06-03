@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { API_BASE, contentGet, contentSave, uploadFile, scanUploads, writeMetadata, deleteGallery, deleteUploads, bookingRequestsList, type SiteContent } from '../lib/api';
+import { API_BASE, contentGet, contentSave, uploadFile, scanUploads, writeMetadata, deleteGallery, deleteUploads, bookingRequestsList, type SiteContent, newsletterSubscribersList, newsletterCampaignsList, newsletterCampaignSave, newsletterCampaignDelete, newsletterSend, type NewsletterSubscriber, type NewsletterCampaign } from '../lib/api';
 import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle, Check, AlertTriangle, X } from 'lucide-react';
 import { RichTextEditor } from './RichTextEditor';
 import LandingPage from './LandingPage';
@@ -254,6 +254,16 @@ const AdminContentPanel: React.FC = () => {
   const [bookingReqs, setBookingReqs] = useState<Array<{ id: string; name: string; email: string; date?: string; event?: string; location?: string; budget?: string; message?: string; created_at?: string }>>([]);
   const [bookingReqsLoading, setBookingReqsLoading] = useState(false);
   const [bookingReqsError, setBookingReqsError] = useState<string | null>(null);
+  // Newsletter
+  const [newsletterTab, setNewsletterTab] = useState<'subscribers' | 'campaigns' | 'editor'>('subscribers');
+  const [newsletterSubscribers, setNewsletterSubscribers] = useState<NewsletterSubscriber[]>([]);
+  const [newsletterCampaigns, setNewsletterCampaigns] = useState<NewsletterCampaign[]>([]);
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const [newsletterError, setNewsletterError] = useState<string | null>(null);
+  const [newsletterEditorLang, setNewsletterEditorLang] = useState<'de'|'en'>('de');
+  const [activeCampaign, setActiveCampaign] = useState<NewsletterCampaign | null>(null);
+  const [newsletterSending, setNewsletterSending] = useState(false);
+  const [newsletterSendMsg, setNewsletterSendMsg] = useState<string | null>(null);
   // About main text: mode per language ('editor' | 'html' | 'preview')
   const [aboutTextMode, setAboutTextMode] = useState<Record<'de'|'en', 'editor'|'html'|'preview'>>({ de: 'editor', en: 'editor' });
   // Background filter theme being edited/previewed
@@ -747,12 +757,13 @@ const AdminContentPanel: React.FC = () => {
     legal: false,
     cards: false,
     landingPage: false,
+    newsletter: false,
   });
 
   
 
   // Admin cards order (server-side via content.adminOrder)
-  const defaultAdminOrder = ['sections','hero','header','bg','cards','about','news','socials','contact','mediaEmbeds','gallery','booking','legal','landingPage'] as const;
+  const defaultAdminOrder = ['sections','hero','header','bg','cards','about','news','socials','contact','mediaEmbeds','gallery','booking','legal','landingPage','newsletter'] as const;
   type AdminKey = typeof defaultAdminOrder[number];
   const [adminEdit, setAdminEdit] = useState(false);
   const getAdminOrder = (): AdminKey[] => {
@@ -2424,6 +2435,110 @@ const AdminContentPanel: React.FC = () => {
                 <LandingPage previewContent={content} />
               </div>
             </div>
+          </div>
+        )}
+      </section>
+
+      {/* Newsletter */}
+      <section style={sectionStyle('newsletter', 'content')}>
+        <ToggleButton label="Newsletter" open={(open as any).newsletter === true} onClick={() => setOpen(prev => ({ ...prev, newsletter: !(prev as any).newsletter }))} />
+        {adminEdit && (
+          <div className="flex justify-end gap-2 mt-2">
+            <button onClick={()=>moveAdmin('newsletter', -1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↑ Karte</button>
+            <button onClick={()=>moveAdmin('newsletter', 1)} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">↓ Karte</button>
+          </div>
+        )}
+        {(open as any).newsletter && (
+          <div className="mt-3 space-y-4">
+            {/* Tabs */}
+            <div className="flex items-center gap-2">
+              {(['subscribers','campaigns','editor'] as const).map(t => (
+                <button key={t} onClick={() => setNewsletterTab(t)} className={`px-3 py-1.5 rounded border-[0.5px] text-xs ${newsletterTab===t ? 'bg-blue-900/40 border-blue-700/40 text-blue-200' : 'border-neutral-700/40 text-neutral-300 hover:bg-neutral-800'}`}>
+                  {t==='subscribers' ? 'Abonnenten' : t==='campaigns' ? 'Kampagnen' : 'Editor'}
+                </button>
+              ))}
+            </div>
+
+            {newsletterTab === 'subscribers' && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-neutral-300 text-sm font-semibold">Abonnenten</div>
+                  <button onClick={async () => { setNewsletterLoading(true); setNewsletterError(null); try { const res = await newsletterSubscribersList(); setNewsletterSubscribers(res.subscribers || []); } catch(e) { setNewsletterError(e instanceof Error ? e.message : 'Fehler'); } setNewsletterLoading(false); }} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 text-xs">Aktualisieren</button>
+                </div>
+                {newsletterLoading && <div className="text-neutral-400 text-sm">Laden…</div>}
+                {newsletterError && <div className="text-rose-400 text-sm">{newsletterError}</div>}
+                {newsletterSubscribers.length === 0 && !newsletterLoading && <div className="text-[#909296] text-sm">Noch keine Abonnenten.</div>}
+                {newsletterSubscribers.length > 0 && (
+                  <div className="space-y-1 max-h-[300px] overflow-y-auto">
+                    {newsletterSubscribers.map((s, i) => (
+                      <div key={i} className="flex items-center justify-between p-2 rounded bg-neutral-900/60 border border-neutral-700/40 text-sm">
+                        <span className="text-neutral-200">{s.email}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded ${s.status==='verified' ? 'bg-emerald-900/30 text-emerald-300' : 'bg-yellow-900/30 text-yellow-300'}`}>{s.status==='verified' ? 'Bestätigt' : 'Ausstehend'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="text-neutral-400 text-xs mt-2">Verifiziert: {newsletterSubscribers.filter(s=>s.status==='verified').length} / Gesamt: {newsletterSubscribers.length}</div>
+              </div>
+            )}
+
+            {newsletterTab === 'campaigns' && (
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-neutral-300 text-sm font-semibold">Kampagnen</div>
+                  <button onClick={async () => { setNewsletterLoading(true); setNewsletterError(null); try { const res = await newsletterCampaignsList(); setNewsletterCampaigns(res.campaigns || []); } catch(e) { setNewsletterError(e instanceof Error ? e.message : 'Fehler'); } setNewsletterLoading(false); }} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 text-xs">Aktualisieren</button>
+                </div>
+                {newsletterLoading && <div className="text-neutral-400 text-sm">Laden…</div>}
+                {newsletterError && <div className="text-rose-400 text-sm">{newsletterError}</div>}
+                <button onClick={() => { setActiveCampaign({ id: crypto.randomUUID(), subject_de: '', subject_en: '', html_de: '', html_en: '', created_at: new Date().toISOString(), sent_at: null, recipients_count: 0 }); setNewsletterTab('editor'); }} className="mb-2 px-3 py-1.5 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-xs">+ Neue Kampagne</button>
+                {newsletterCampaigns.length === 0 && !newsletterLoading && <div className="text-[#909296] text-sm">Noch keine Kampagnen.</div>}
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  {newsletterCampaigns.map(c => (
+                    <div key={c.id} className="flex items-center justify-between p-2 rounded bg-neutral-900/60 border border-neutral-700/40">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-neutral-200 text-sm truncate">{c.subject_de || c.subject_en || '(kein Betreff)'}</div>
+                        <div className="text-neutral-500 text-xs">{c.sent_at ? `Versendet: ${new Date(c.sent_at).toLocaleDateString('de-DE')} (${c.recipients_count || 0})` : 'Entwurf'}</div>
+                      </div>
+                      <div className="flex items-center gap-1 ml-2 shrink-0">
+                        <button onClick={() => { setActiveCampaign(c); setNewsletterTab('editor'); }} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 text-xs">Bearbeiten</button>
+                        {!c.sent_at && (
+                          <button onClick={async () => { if (!window.confirm('Wirklich an alle verifizierten Abonnenten senden?')) return; setNewsletterSending(true); setNewsletterSendMsg(null); try { const res = await newsletterSend(c.id, 'de'); setNewsletterSendMsg(`${res.recipients || 0} Empfänger (DE)`); const list = await newsletterCampaignsList(); setNewsletterCampaigns(list.campaigns || []); } catch(e) { setNewsletterSendMsg('Fehler beim Versand'); } setNewsletterSending(false); }} disabled={newsletterSending} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 text-xs">Senden (DE)</button>
+                        )}
+                        <button onClick={async () => { if (!window.confirm('Kampagne wirklich löschen?')) return; try { await newsletterCampaignDelete(c.id); const list = await newsletterCampaignsList(); setNewsletterCampaigns(list.campaigns || []); } catch(e) {} }} className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-300 hover:bg-neutral-800 text-xs">Löschen</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {newsletterSendMsg && <div className="mt-2 text-emerald-400 text-sm">{newsletterSendMsg}</div>}
+              </div>
+            )}
+
+            {newsletterTab === 'editor' && activeCampaign && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setNewsletterTab('campaigns')} className="text-xs text-neutral-400 hover:text-neutral-200 underline">← Zurück zu Kampagnen</button>
+                  <div className="inline-flex rounded-md overflow-hidden border border-neutral-700/40">
+                    {(['de','en'] as const).map(l => (
+                      <button key={l} onClick={() => setNewsletterEditorLang(l)} className={`px-2 py-1 text-xs ${newsletterEditorLang===l ? 'bg-neutral-700 text-neutral-100' : 'bg-neutral-900 text-neutral-400'}`}>{l.toUpperCase()}</button>
+                    ))}
+                  </div>
+                </div>
+                <Input placeholder={`Betreffzeile (${newsletterEditorLang.toUpperCase()})`} value={newsletterEditorLang==='de' ? (activeCampaign.subject_de||'') : (activeCampaign.subject_en||'')} onChange={e => setActiveCampaign(prev => prev ? { ...prev, [newsletterEditorLang==='de' ? 'subject_de' : 'subject_en']: e.target.value } : prev)} />
+                <RichTextEditor
+                  value={newsletterEditorLang==='de' ? (activeCampaign.html_de||'') : (activeCampaign.html_en||'')}
+                  onChange={(html) => setActiveCampaign(prev => prev ? { ...prev, [newsletterEditorLang==='de' ? 'html_de' : 'html_en']: html } : prev)}
+                  onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
+                  galleryImages={allGalleryImages}
+                />
+                <div className="flex justify-end gap-2">
+                  <button onClick={async () => { try { await newsletterCampaignSave(activeCampaign); setNewsletterSendMsg('Gespeichert.'); const list = await newsletterCampaignsList(); setNewsletterCampaigns(list.campaigns || []); } catch(e) { setNewsletterSendMsg('Fehler beim Speichern.'); } }} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700">Speichern</button>
+                  {!activeCampaign.sent_at && (
+                    <button onClick={async () => { if (!window.confirm('Wirklich an alle verifizierten Abonnenten senden?')) return; setNewsletterSending(true); setNewsletterSendMsg(null); try { const res = await newsletterSend(activeCampaign.id, newsletterEditorLang); setNewsletterSendMsg(`${res.recipients || 0} Empfänger (${newsletterEditorLang.toUpperCase()})`); const list = await newsletterCampaignsList(); setNewsletterCampaigns(list.campaigns || []); } catch(e) { setNewsletterSendMsg('Fehler beim Versand'); } setNewsletterSending(false); }} disabled={newsletterSending} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 disabled:opacity-60">{newsletterSending ? 'Sendet…' : `Senden (${newsletterEditorLang.toUpperCase()})`}</button>
+                  )}
+                </div>
+                {newsletterSendMsg && <div className="text-emerald-400 text-sm">{newsletterSendMsg}</div>}
+              </div>
+            )}
           </div>
         )}
       </section>

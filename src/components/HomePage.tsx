@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { API_BASE } from '../lib/api';
 import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle, X as IconX } from 'lucide-react';
-import { contentGet, ordersCreate, bookingRequest, type SiteContent, type OrderItem } from '../lib/api';
+import { contentGet, ordersCreate, bookingRequest, newsletterSubscribe, type SiteContent, type OrderItem } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 
 const HomePage: React.FC = () => {
@@ -13,6 +13,10 @@ const HomePage: React.FC = () => {
   const [lastOrder, setLastOrder] = useState<OrderItem | null>(null);
   // Global confirmation after ticket booking
   const [orderOk, setOrderOk] = useState<string | null>(null);
+  // Newsletter subscribe
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterBusy, setNewsletterBusy] = useState(false);
+  const [newsletterMsg, setNewsletterMsg] = useState<string | null>(null);
 
   // Tickets modal state
   const [ticketOpen, setTicketOpen] = useState(false);
@@ -891,6 +895,51 @@ const HomePage: React.FC = () => {
             {sectionsOrder.map(renderSection)}
           </>
         )}
+      </section>
+
+      {/* Newsletter Subscribe */}
+      <section className="px-4 sm:px-6 py-8">
+        <div className={`max-w-xl mx-auto ${theme==='light' ? 'bg-white/50' : 'bg-neutral-900/40'} rounded-xl border-[0.5px] ${theme==='light' ? 'border-neutral-300/50' : 'border-neutral-700/30'} p-4 sm:p-6 text-center`}>
+          <h3 className={`font-display ${textHeading} text-xl sm:text-2xl font-extrabold uppercase tracking-wider mb-2`}>{lang==='de' ? 'Newsletter' : 'Newsletter'}</h3>
+          <p className={`${textMuted} text-sm mb-4`}>{lang==='de' ? 'Bleib auf dem Laufenden – abonniere unseren Newsletter.' : 'Stay up to date – subscribe to our newsletter.'}</p>
+          {newsletterMsg && (
+            <div className={`mb-3 p-2 rounded text-sm ${newsletterMsg.includes('Fehler') ? 'bg-rose-600/15 text-rose-200 border border-rose-500/30' : 'bg-emerald-600/15 text-emerald-200 border border-emerald-500/30'}`}>{newsletterMsg}</div>
+          )}
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!newsletterEmail.trim()) return;
+              setNewsletterBusy(true);
+              setNewsletterMsg(null);
+              try {
+                const res = await newsletterSubscribe(newsletterEmail.trim());
+                setNewsletterMsg(res.message || '');
+                if (!res.already) setNewsletterEmail('');
+              } catch (err) {
+                setNewsletterMsg('Fehler beim Anmelden. Bitte versuche es später erneut.');
+              }
+              setNewsletterBusy(false);
+            }}
+            className="flex flex-col sm:flex-row items-stretch gap-2"
+          >
+            <input
+              type="email"
+              required
+              placeholder={lang==='de' ? 'Deine E-Mail-Adresse' : 'Your email address'}
+              value={newsletterEmail}
+              onChange={e => setNewsletterEmail(e.target.value)}
+              className={`flex-1 px-4 py-2.5 rounded-lg ${theme==='light' ? 'bg-white border-neutral-300 text-neutral-900 placeholder-neutral-500' : 'bg-neutral-800/60 border-neutral-700/40 text-neutral-100 placeholder-neutral-500'} border focus:outline-none focus:ring-0`}
+            />
+            <button
+              type="submit"
+              disabled={newsletterBusy}
+              className="px-6 py-2.5 rounded-lg bg-[#8C1423] text-white font-display uppercase tracking-wider text-sm hover:bg-[#a0182a] transition-colors disabled:opacity-60"
+            >
+              {newsletterBusy ? (lang==='de' ? 'Wird gesendet…' : 'Sending…') : (lang==='de' ? 'Abonnieren' : 'Subscribe')}
+            </button>
+          </form>
+          <p className={`mt-2 text-xs ${textMuted}`}>{lang==='de' ? 'Kein Spam. Jederzeit abbestellbar.' : 'No spam. Unsubscribe anytime.'}</p>
+        </div>
       </section>
 
       {/* Footer links are provided by global Footer component */}
