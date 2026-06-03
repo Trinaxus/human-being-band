@@ -265,29 +265,6 @@ const AdminContentPanel: React.FC = () => {
   const [newsletterSending, setNewsletterSending] = useState(false);
   const [newsletterSendMsg, setNewsletterSendMsg] = useState<string | null>(null);
 
-  // Auto-load newsletter data when section opens
-  useEffect(() => {
-    if ((open as any).newsletter) {
-      (async () => {
-        setNewsletterLoading(true);
-        setNewsletterError(null);
-        try {
-          const [subRes, campRes] = await Promise.all([
-            newsletterSubscribersList(),
-            newsletterCampaignsList(),
-          ]);
-          setNewsletterSubscribers(subRes.subscribers || []);
-          setNewsletterCampaigns(campRes.campaigns || []);
-        } catch (e: any) {
-          setNewsletterError(e instanceof Error ? e.message : 'Fehler beim Laden');
-        } finally {
-          setNewsletterLoading(false);
-        }
-      })();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [(open as any).newsletter]);
-
   // About main text: mode per language ('editor' | 'html' | 'preview')
   const [aboutTextMode, setAboutTextMode] = useState<Record<'de'|'en', 'editor'|'html'|'preview'>>({ de: 'editor', en: 'editor' });
   // Background filter theme being edited/previewed
@@ -783,6 +760,29 @@ const AdminContentPanel: React.FC = () => {
     landingPage: false,
     newsletter: false,
   });
+
+  // Auto-load newsletter data when section opens (must be after 'open' declaration to avoid TDZ in minified build)
+  useEffect(() => {
+    if ((open as any).newsletter) {
+      (async () => {
+        setNewsletterLoading(true);
+        setNewsletterError(null);
+        try {
+          const [subRes, campRes] = await Promise.all([
+            newsletterSubscribersList(),
+            newsletterCampaignsList(),
+          ]);
+          setNewsletterSubscribers(subRes.subscribers || []);
+          setNewsletterCampaigns(campRes.campaigns || []);
+        } catch (e: any) {
+          setNewsletterError(e instanceof Error ? e.message : 'Fehler beim Laden');
+        } finally {
+          setNewsletterLoading(false);
+        }
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(open as any).newsletter]);
 
   
 
