@@ -2387,6 +2387,15 @@ const AdminContentPanel: React.FC = () => {
                 />
                 <label htmlFor="lp-enabled" className="text-neutral-200 text-sm">Aktiviert</label>
               </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="lp-fullscreen"
+                  checked={!!content.fullscreenEnabled}
+                  onChange={e => setContent(prev => ({ ...prev, fullscreenEnabled: e.target.checked }))}
+                />
+                <label htmlFor="lp-fullscreen" className="text-neutral-200 text-sm">Fullscreen-Modus erlauben</label>
+              </div>
               <CopyLandingLink />
             </div>
 

@@ -61,6 +61,7 @@ $allowed = [
   'cardRadius',    // card border radius in px (0-24)
   'cardBorderColor', // card border color (hex or rgba)
   'cardBorderOpacity', // card border opacity 0-100
+  'fullscreenEnabled', // enable fullscreen mode toggle
   'headerLogo',    // { dark?: string, light?: string }
   // Legal pages (values may be string or { de?: string, en?: string })
   'impressum',     // imprint HTML/text

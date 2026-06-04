@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Maximize, Minimize } from 'lucide-react';
 import { contentGet, newsletterSubscribe, type SiteContent } from '../lib/api';
 
 const LandingPage: React.FC<{ previewContent?: SiteContent }> = ({ previewContent }) => {
@@ -10,6 +11,13 @@ const LandingPage: React.FC<{ previewContent?: SiteContent }> = ({ previewConten
   const [newsletterLang, setNewsletterLang] = useState<'de'|'en'>(lang);
   const [newsletterBusy, setNewsletterBusy] = useState(false);
   const [newsletterMsg, setNewsletterMsg] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  React.useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
 
   React.useEffect(() => {
     if (previewContent) {
@@ -75,6 +83,21 @@ const LandingPage: React.FC<{ previewContent?: SiteContent }> = ({ previewConten
           </div>
           {/* Desktop: fixe Höhe mit object-cover wie gehabt */}
           <div className="relative overflow-hidden w-full hidden sm:block" style={{ height: `${heroHeight}px` }}>
+            {content.fullscreenEnabled && (
+              <button
+                onClick={() => {
+                  if (isFullscreen) {
+                    document.exitFullscreen?.().catch(() => {});
+                  } else {
+                    document.documentElement.requestFullscreen?.().catch(() => {});
+                  }
+                }}
+                className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/40 text-white flex items-center justify-center hover:bg-black/60 transition-colors"
+                title={isFullscreen ? 'Vollbild beenden' : 'Vollbild'}
+              >
+                {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+              </button>
+            )}
             <img
               src={heroUrl}
               alt="Hero"

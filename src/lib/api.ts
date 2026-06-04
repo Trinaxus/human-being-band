@@ -414,6 +414,7 @@ export type SiteContent = {
     };
     newsletterVisible?: boolean;
   };
+  fullscreenEnabled?: boolean; // allow fullscreen mode toggle
   updated_at?: string;
 };
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, X, LogIn, LogOut, Settings, Sun, Moon, Shield } from 'lucide-react';
+import { Menu, X, LogIn, LogOut, Settings, Sun, Moon, Shield, Maximize, Minimize } from 'lucide-react';
 
 type HeaderProps = {
   authRole?: 'unauthenticated' | 'user' | 'admin';
@@ -51,8 +51,10 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
     hoverScale?: number; hoverBrightness?: number; hoverOpacity?: number;
   }>({});
   const [logoHover, setLogoHover] = React.useState(false);
+  const [fullscreenEnabled, setFullscreenEnabled] = React.useState(false);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
 
-  // Load custom header logo from server content
+  // Load custom header logo and fullscreen setting from server content
   React.useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -60,12 +62,20 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
         const base = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
         const res = await fetch(`${base}/content.php`, { credentials: 'include' });
         const data = await res.json();
-        if (!cancelled && data?.ok && data.content?.headerLogo) {
-          setHeaderLogo(data.content.headerLogo);
+        if (!cancelled && data?.ok) {
+          if (data.content?.headerLogo) setHeaderLogo(data.content.headerLogo);
+          if (data.content?.fullscreenEnabled) setFullscreenEnabled(true);
         }
       } catch {}
     })();
     return () => { cancelled = true; };
+  }, []);
+
+  // Track fullscreen changes
+  React.useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
   }, []);
 
   // Persist language
@@ -274,6 +284,25 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
                         </span>
                         <span className="flex-1 text-left">{isLight ? (lang==='de'?'Dunkelmodus':'Dark mode') : (lang==='de'?'Hellmodus':'Light mode')}</span>
                       </button>
+                      {fullscreenEnabled && (
+                        <button
+                          onClick={() => {
+                            if (isFullscreen) {
+                              document.exitFullscreen?.().catch(() => {});
+                            } else {
+                              document.documentElement.requestFullscreen?.().catch(() => {});
+                            }
+                          }}
+                          className={`hidden sm:flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                            isLight ? 'text-neutral-800 hover:bg-neutral-100' : 'text-neutral-200 hover:bg-neutral-700/40'
+                          }`}
+                        >
+                          <span className={`inline-flex h-9 w-9 items-center justify-center rounded-full ${isLight ? 'bg-neutral-100 text-neutral-800' : 'bg-neutral-700/50 text-neutral-300'}`}>
+                            {isFullscreen ? <Minimize className="w-[18px] h-[18px]"/> : <Maximize className="w-[18px] h-[18px]"/>}
+                          </span>
+                          <span className="flex-1 text-left">{isFullscreen ? (lang==='de'?'Vollbild beenden':'Exit fullscreen') : (lang==='de'?'Vollbild':'Fullscreen')}</span>
+                        </button>
+                      )}
                     </div>
 
                     {!landingMode && (
