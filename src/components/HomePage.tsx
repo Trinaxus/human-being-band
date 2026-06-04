@@ -410,11 +410,10 @@ const HomePage: React.FC = () => {
                       <div className="max-w-xs mx-auto" style={{ textAlign: content.heroTitleAlign || 'center' }}>
                         {hasHeroVal(content.heroTitle) && (
                           <h2
-                            className="uppercase drop-shadow tracking-wider leading-tight"
+                            className="uppercase drop-shadow tracking-wider leading-tight text-white"
                             style={{
                               fontFamily: content.heroTitleFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTitleFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
                               fontSize: `clamp(11px, 3.5vw, 16px)`,
-                              color: content.heroTitleColor || '#FFFFFF',
                               opacity: (content.heroTitleOpacity ?? 100) / 100,
                               fontWeight: content.heroTitleWeight ?? 800,
                             }}
@@ -424,11 +423,10 @@ const HomePage: React.FC = () => {
                         )}
                         {hasHeroVal(content.heroText) && (
                           <p
-                            className="mt-1 uppercase drop-shadow tracking-wider whitespace-pre-line leading-snug"
+                            className="mt-1 uppercase drop-shadow tracking-wider whitespace-pre-line leading-snug text-white"
                             style={{
                               fontFamily: content.heroTextFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTextFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
                               fontSize: `clamp(8px, 2.2vw, 10px)`,
-                              color: content.heroTextColor || '#E5E5E5',
                               opacity: (content.heroTextOpacity ?? 100) / 100,
                               fontWeight: content.heroTextWeight ?? 200,
                             }}
@@ -466,11 +464,10 @@ const HomePage: React.FC = () => {
                       <div className="max-w-3xl mx-auto" style={{ textAlign: content.heroTitleAlign || 'center' }}>
                         {hasHeroVal(content.heroTitle) && (
                           <h2
-                            className="uppercase drop-shadow tracking-wider"
+                            className="uppercase drop-shadow tracking-wider text-white"
                             style={{
                               fontFamily: content.heroTitleFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTitleFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
                               fontSize: `clamp(22px, 4vw, ${content.heroTitleSize ?? 36}px)`,
-                              color: content.heroTitleColor || '#FFFFFF',
                               opacity: (content.heroTitleOpacity ?? 100) / 100,
                               fontWeight: content.heroTitleWeight ?? 800,
                             }}
@@ -480,11 +477,10 @@ const HomePage: React.FC = () => {
                         )}
                         {hasHeroVal(content.heroText) && (
                           <p
-                            className="mt-2 uppercase drop-shadow tracking-wider whitespace-pre-line"
+                            className="mt-2 uppercase drop-shadow tracking-wider whitespace-pre-line text-white"
                             style={{
                               fontFamily: content.heroTextFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTextFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
                               fontSize: `clamp(12px, 2vw, ${content.heroTextSize ?? 16}px)`,
-                              color: content.heroTextColor || '#E5E5E5',
                               opacity: (content.heroTextOpacity ?? 100) / 100,
                               fontWeight: content.heroTextWeight ?? 200,
                             }}

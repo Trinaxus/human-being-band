@@ -27,9 +27,11 @@ const LandingPage: React.FC<{ previewContent?: SiteContent }> = ({ previewConten
       try { const v = window.localStorage.getItem('lang'); setLang(v === 'en' ? 'en' : 'de'); } catch {}
     };
     window.addEventListener('langchange', onLang);
+    window.addEventListener('lang:changed', onLang as any);
     window.addEventListener('storage', onLang);
     return () => {
       window.removeEventListener('langchange', onLang);
+      window.removeEventListener('lang:changed', onLang as any);
       window.removeEventListener('storage', onLang);
     };
   }, [previewContent]);
@@ -43,6 +45,10 @@ const LandingPage: React.FC<{ previewContent?: SiteContent }> = ({ previewConten
     if (typeof val === 'string') return val;
     return lang === 'en' ? (val.en || val.de || '') : (val.de || val.en || '');
   };
+  const hasHeroTitle = !!t(content.heroTitle);
+  const hasHeroText = !!t(content.heroText);
+  const heroTitleVertical = typeof content.heroTitleVertical === 'number' ? content.heroTitleVertical : 50;
+  const heroTitleAlign = content.heroTitleAlign || 'center';
 
   const ytId = (() => {
     const url = lp.youtubeUrl || '';
@@ -58,33 +64,115 @@ const LandingPage: React.FC<{ previewContent?: SiteContent }> = ({ previewConten
   return (
     <div className="w-full max-w-[1200px] mx-auto">
       {/* Hero */}
-      {heroUrl && (
+      {(heroUrl || hasHeroTitle || hasHeroText) && (
         <>
-          {/* Mobile: natürliche Größe, keine fixe Höhe → kein leerer Bereich hinter transparentem PNG */}
-          <div className="relative overflow-hidden w-full sm:hidden">
-            <img
-              src={heroUrl}
-              alt="Hero"
-              className="w-full h-auto"
-              style={{
-                objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
-                transform: `scale(${(content.heroZoom ?? 100) / 100})`,
-                transformOrigin: 'center',
-              }}
-            />
+          {/* Mobile: natürliche Größe, Text als Overlay */}
+          <div className="sm:hidden relative overflow-hidden">
+            {heroUrl ? (
+              <img
+                src={heroUrl}
+                alt="Hero"
+                className="w-full h-auto"
+                style={{
+                  objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
+                  transform: `scale(${(content.heroZoom ?? 100) / 100})`,
+                  transformOrigin: 'center',
+                }}
+              />
+            ) : (
+              <div className="w-full h-48 bg-neutral-800/60 flex items-center justify-center" />
+            )}
+            {(hasHeroTitle || hasHeroText) && (
+              <div
+                className={`absolute inset-0 p-3 flex flex-col hero-overlay ${content.heroOverlayEnabled !== false ? 'bg-gradient-to-t from-black/60 via-black/30 to-transparent' : ''}`}
+                style={{ alignItems: heroTitleAlign === 'left' ? 'flex-start' : heroTitleAlign === 'right' ? 'flex-end' : 'center' }}
+              >
+                <div style={{ flexGrow: heroTitleVertical }} />
+                <div className="max-w-xs mx-auto" style={{ textAlign: heroTitleAlign }}>
+                  {hasHeroTitle && (
+                    <h2
+                      className="uppercase drop-shadow tracking-wider leading-tight text-white"
+                      style={{
+                        fontFamily: content.heroTitleFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTitleFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
+                        fontSize: `clamp(11px, 3.5vw, 16px)`,
+                        opacity: (content.heroTitleOpacity ?? 100) / 100,
+                        fontWeight: content.heroTitleWeight ?? 800,
+                      }}
+                    >
+                      {t(content.heroTitle)}
+                    </h2>
+                  )}
+                  {hasHeroText && (
+                    <p
+                      className="mt-1 uppercase drop-shadow tracking-wider whitespace-pre-line leading-snug text-white"
+                      style={{
+                        fontFamily: content.heroTextFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTextFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
+                        fontSize: `clamp(8px, 2.2vw, 10px)`,
+                        opacity: (content.heroTextOpacity ?? 100) / 100,
+                        fontWeight: content.heroTextWeight ?? 200,
+                      }}
+                    >
+                      {t(content.heroText)}
+                    </p>
+                  )}
+                </div>
+                <div style={{ flexGrow: 100 - heroTitleVertical }} />
+              </div>
+            )}
           </div>
-          {/* Desktop: fixe Höhe mit object-cover wie gehabt */}
-          <div className="relative overflow-hidden w-full hidden sm:block" style={{ height: `${heroHeight}px` }}>
-            <img
-              src={heroUrl}
-              alt="Hero"
-              className="w-full h-full object-cover"
-              style={{
-                objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
-                transform: `scale(${(content.heroZoom ?? 100) / 100})`,
-                transformOrigin: 'center',
-              }}
-            />
+          {/* Desktop: fixe Höhe mit object-cover und Text-Overlay */}
+          <div className="relative overflow-hidden w-full hidden sm:block" style={{ height: `${heroHeight}px`, maxHeight: '70vh' }}>
+            {heroUrl ? (
+              <img
+                src={heroUrl}
+                alt="Hero"
+                className="w-full h-full object-cover"
+                style={{
+                  objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
+                  transform: `scale(${(content.heroZoom ?? 100) / 100})`,
+                  transformOrigin: 'center',
+                }}
+              />
+            ) : (
+              <div className="w-full h-full bg-neutral-800/60" />
+            )}
+            {(hasHeroTitle || hasHeroText) && (
+              <div
+                className={`absolute inset-0 p-4 sm:p-6 flex flex-col hero-overlay ${content.heroOverlayEnabled !== false ? 'bg-gradient-to-t from-black/60 via-black/30 to-transparent' : ''}`}
+                style={{ alignItems: heroTitleAlign === 'left' ? 'flex-start' : heroTitleAlign === 'right' ? 'flex-end' : 'center' }}
+              >
+                <div style={{ flexGrow: heroTitleVertical }} />
+                <div className="max-w-3xl mx-auto" style={{ textAlign: heroTitleAlign }}>
+                  {hasHeroTitle && (
+                    <h2
+                      className="uppercase drop-shadow tracking-wider text-white"
+                      style={{
+                        fontFamily: content.heroTitleFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTitleFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
+                        fontSize: `clamp(22px, 4vw, ${content.heroTitleSize ?? 36}px)`,
+                        opacity: (content.heroTitleOpacity ?? 100) / 100,
+                        fontWeight: content.heroTitleWeight ?? 800,
+                      }}
+                    >
+                      {t(content.heroTitle)}
+                    </h2>
+                  )}
+                  {hasHeroText && (
+                    <p
+                      className="mt-2 uppercase drop-shadow tracking-wider whitespace-pre-line text-white"
+                      style={{
+                        fontFamily: content.heroTextFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTextFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
+                        fontSize: `clamp(12px, 2vw, ${content.heroTextSize ?? 16}px)`,
+                        opacity: (content.heroTextOpacity ?? 100) / 100,
+                        fontWeight: content.heroTextWeight ?? 200,
+                      }}
+                    >
+                      {t(content.heroText)}
+                    </p>
+                  )}
+                </div>
+                <div style={{ flexGrow: 100 - heroTitleVertical }} />
+              </div>
+            )}
           </div>
         </>
       )}
