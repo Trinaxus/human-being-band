@@ -57,18 +57,21 @@ const Header: React.FC<HeaderProps> = ({ authRole = 'unauthenticated', onHomeCli
   // Load custom header logo and fullscreen setting from server content
   React.useEffect(() => {
     let cancelled = false;
-    (async () => {
+    const fetchContent = async () => {
       try {
         const base = (import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
         const res = await fetch(`${base}/content.php`, { credentials: 'include' });
         const data = await res.json();
         if (!cancelled && data?.ok) {
           if (data.content?.headerLogo) setHeaderLogo(data.content.headerLogo);
-          if (data.content?.fullscreenEnabled) setFullscreenEnabled(true);
+          setFullscreenEnabled(!!data.content?.fullscreenEnabled);
         }
       } catch {}
-    })();
-    return () => { cancelled = true; };
+    };
+    fetchContent();
+    const onUpdate = () => { cancelled = false; fetchContent(); };
+    window.addEventListener('content:updated', onUpdate);
+    return () => { cancelled = true; window.removeEventListener('content:updated', onUpdate); };
   }, []);
 
   // Track fullscreen changes
