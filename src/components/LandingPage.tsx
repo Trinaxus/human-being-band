@@ -1,11 +1,15 @@
-import React from 'react';
-import { contentGet, type SiteContent } from '../lib/api';
+import React, { useState } from 'react';
+import { contentGet, newsletterSubscribe, type SiteContent } from '../lib/api';
 
 const LandingPage: React.FC<{ previewContent?: SiteContent }> = ({ previewContent }) => {
   const [content, setContent] = React.useState<SiteContent>(previewContent || {});
   const [lang, setLang] = React.useState<'de' | 'en'>(() => {
     try { const v = window.localStorage.getItem('lang'); return (v === 'en' ? 'en' : 'de'); } catch { return 'de'; }
   });
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterLang, setNewsletterLang] = useState<'de'|'en'>(lang);
+  const [newsletterBusy, setNewsletterBusy] = useState(false);
+  const [newsletterMsg, setNewsletterMsg] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (previewContent) {
@@ -141,6 +145,69 @@ const LandingPage: React.FC<{ previewContent?: SiteContent }> = ({ previewConten
           >
             {t(lp.ctaButton.label) || (lang === 'de' ? 'Mehr erfahren' : 'Learn more')}
           </a>
+        </section>
+      )}
+
+      {/* Newsletter */}
+      {lp.newsletterVisible && (
+        <section className="px-4 sm:px-6 py-12">
+          <div className="max-w-xl mx-auto">
+            <h2 className="font-display uppercase text-neutral-100 text-2xl sm:text-3xl font-extrabold tracking-wider text-center mb-2">
+              {lang === 'de' ? 'Newsletter' : 'Newsletter'}
+            </h2>
+            <p className="text-neutral-300 text-sm text-center mb-6">
+              {lang === 'de' ? 'Bleib auf dem Laufenden – abonniere unseren Newsletter.' : 'Stay up to date – subscribe to our newsletter.'}
+            </p>
+            {newsletterMsg && (
+              <div className={`mb-4 p-3 rounded-lg text-sm text-center ${newsletterMsg.includes('fehl') || newsletterMsg.includes('error') ? 'bg-rose-500/10 border border-rose-500/30 text-rose-400' : 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400'}`}>
+                {newsletterMsg}
+              </div>
+            )}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!newsletterEmail.trim()) return;
+                setNewsletterBusy(true);
+                setNewsletterMsg(null);
+                try {
+                  const res = await newsletterSubscribe(newsletterEmail.trim(), newsletterLang);
+                  setNewsletterMsg(res?.message || (lang === 'de' ? 'Vielen Dank fürs Abonnieren!' : 'Thank you for subscribing!'));
+                  setNewsletterEmail('');
+                } catch (e) {
+                  setNewsletterMsg(e instanceof Error ? e.message : (lang === 'de' ? 'Fehler beim Abonnieren.' : 'Subscription failed.'));
+                } finally {
+                  setNewsletterBusy(false);
+                }
+              }}
+              className="flex flex-col sm:flex-row gap-3"
+            >
+              <input
+                type="email"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                placeholder={lang === 'de' ? 'Deine E-Mail-Adresse' : 'Your email address'}
+                required
+                disabled={newsletterBusy}
+                className="flex-1 px-4 py-2.5 bg-neutral-800/60 border border-neutral-700/40 rounded-lg text-neutral-100 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-[#8C1423]/40 focus:border-[#8C1423]/60 transition-colors"
+              />
+              <select
+                value={newsletterLang}
+                onChange={(e) => setNewsletterLang(e.target.value as 'de' | 'en')}
+                disabled={newsletterBusy}
+                className="px-3 py-2.5 bg-neutral-800/60 border border-neutral-700/40 rounded-lg text-neutral-100 text-sm focus:outline-none focus:ring-2 focus:ring-[#8C1423]/40"
+              >
+                <option value="de">Deutsch</option>
+                <option value="en">English</option>
+              </select>
+              <button
+                type="submit"
+                disabled={newsletterBusy}
+                className="px-6 py-2.5 rounded-lg text-sm font-medium text-white bg-[#8C1423] hover:bg-[#a0182a] transition-colors disabled:opacity-50"
+              >
+                {newsletterBusy ? '…' : (lang === 'de' ? 'Abonnieren' : 'Subscribe')}
+              </button>
+            </form>
+          </div>
         </section>
       )}
     </div>

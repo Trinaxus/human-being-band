@@ -2482,6 +2482,17 @@ const AdminContentPanel: React.FC = () => {
               />
             </div>
 
+            <SectionTitle title="Newsletter" />
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="lp-newsletter"
+                checked={!!(content as any).landingPage?.newsletterVisible}
+                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), newsletterVisible: e.target.checked } }))}
+              />
+              <label htmlFor="lp-newsletter" className="text-neutral-200 text-sm">Newsletter anzeigen</label>
+            </div>
+
             <div className="flex justify-end">
               <button disabled={saving} onClick={save} className={`px-4 py-2 rounded-lg border ${theme==='light' ? 'bg-white text-neutral-900 border-neutral-300 hover:bg-neutral-100' : 'border-neutral-700/40 text-neutral-200 hover:bg-neutral-700'} disabled:opacity-60`}>{saving ? 'Speichert…' : 'Speichern'}</button>
             </div>

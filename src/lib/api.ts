@@ -412,6 +412,7 @@ export type SiteContent = {
       url?: string;
       visible?: boolean;
     };
+    newsletterVisible?: boolean;
   };
   updated_at?: string;
 };
