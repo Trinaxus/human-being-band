@@ -1360,6 +1360,40 @@ const AdminContentPanel: React.FC = () => {
                 <label className="block text-xs text-neutral-400 mb-1">Hintergrund-Blur ({content.cardBlur ?? 0}px)</label>
                 <input type="range" min={0} max={20} step={1} value={content.cardBlur ?? 0} onChange={e => setContent(prev => ({ ...prev, cardBlur: Number(e.target.value) }))} className="w-full accent-blue-500" />
               </div>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">Border ({content.cardBorder ?? 1}px)</label>
+                <input type="range" min={0} max={8} step={1} value={content.cardBorder ?? 1} onChange={e => setContent(prev => ({ ...prev, cardBorder: Number(e.target.value) }))} className="w-full accent-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-neutral-400 mb-1">Radius ({content.cardRadius ?? 8}px)</label>
+                <input type="range" min={0} max={24} step={1} value={content.cardRadius ?? 8} onChange={e => setContent(prev => ({ ...prev, cardRadius: Number(e.target.value) }))} className="w-full accent-blue-500" />
+              </div>
+              <div className="sm:col-span-2 flex items-end gap-2">
+                <div className="flex-1">
+                  <label className="block text-xs text-neutral-400 mb-1">Border-Farbe</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={content.cardBorderColor || '#8C1423'}
+                      onChange={e => setContent(prev => ({ ...prev, cardBorderColor: e.target.value }))}
+                      className="w-10 h-8 rounded cursor-pointer border-0 p-0 bg-transparent"
+                    />
+                    <span className="text-xs text-neutral-400">{content.cardBorderColor || 'Auto (Theme)'}</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs text-neutral-400 mb-1">Border-Deckkraft ({content.cardBorderOpacity ?? 100}%)</label>
+                  <input type="range" min={0} max={100} step={5} value={content.cardBorderOpacity ?? 100} onChange={e => setContent(prev => ({ ...prev, cardBorderOpacity: Number(e.target.value) }))} className="w-full accent-blue-500" />
+                </div>
+                {content.cardBorderColor && (
+                  <button
+                    onClick={() => setContent(prev => { const { cardBorderColor, cardBorderOpacity, ...rest } = prev as any; return rest; })}
+                    className="px-2 py-1 rounded border-[0.5px] border-neutral-700/40 text-neutral-400 hover:bg-neutral-800 text-xs"
+                  >
+                    Zurücksetzen
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}

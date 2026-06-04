@@ -14,7 +14,6 @@ type HeaderProps = {
 const navLinks = [
   { id: 'news', label: 'News' },
   { id: 'about', label: 'About' },
-  { id: 'music', label: 'Music', href: 'https://youtube.com' },
   { id: 'media', label: 'Media' },
   { id: 'booking', label: 'Booking' },
 ];

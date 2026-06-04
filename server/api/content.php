@@ -57,6 +57,10 @@ $allowed = [
   'booking',       // booking config { enabled?, headline?, recipientEmail?, phone?, note? }
   'cardOpacity',   // card background opacity (0-100)
   'cardBlur',      // card backdrop blur in px (0-20)
+  'cardBorder',    // card border width in px (0-8)
+  'cardRadius',    // card border radius in px (0-24)
+  'cardBorderColor', // card border color (hex or rgba)
+  'cardBorderOpacity', // card border opacity 0-100
   'headerLogo',    // { dark?: string, light?: string }
   // Legal pages (values may be string or { de?: string, en?: string })
   'impressum',     // imprint HTML/text

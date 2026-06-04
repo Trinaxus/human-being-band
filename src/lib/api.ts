@@ -384,6 +384,10 @@ export type SiteContent = {
   // Card appearance settings (homepage main cards)
   cardOpacity?: number; // 0-100 (default 40)
   cardBlur?: number;    // 0-20 px (default 0)
+  cardBorder?: number;  // 0-8 px (default 1)
+  cardRadius?: number;  // 0-24 px (default 8)
+  cardBorderColor?: string; // hex or rgba (default auto)
+  cardBorderOpacity?: number; // 0-100 (default 100)
   // Header logo (per theme)
   headerLogo?: {
     dark?: string;

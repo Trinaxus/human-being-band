@@ -1,7 +1,7 @@
  
 import React, { useEffect, useState, useMemo } from 'react';
 import { API_BASE } from '../lib/api';
-import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle, X as IconX } from 'lucide-react';
+import { Globe, Instagram, Facebook, Youtube, Twitter, Linkedin, Music2, MessageCircle, X as IconX, ChevronUp } from 'lucide-react';
 import { contentGet, ordersCreate, bookingRequest, newsletterSubscribe, type SiteContent, type OrderItem } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 
@@ -23,6 +23,14 @@ const HomePage: React.FC = () => {
   const [newsletterLang, setNewsletterLang] = useState<'de'|'en'>(lang);
   const [newsletterBusy, setNewsletterBusy] = useState(false);
   const [newsletterMsg, setNewsletterMsg] = useState<string | null>(null);
+  // Scroll-to-top visibility
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowScrollTop(window.scrollY > 400);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   useEffect(() => {
     const onLang = (e: Event) => {
       try {
@@ -53,14 +61,29 @@ const HomePage: React.FC = () => {
     window.addEventListener('storage', onStorage);
     return () => { try { observer.disconnect(); } catch {}; window.removeEventListener('storage', onStorage); };
   }, []);
-  const cardBase = 'border';
+  const hexToRgba = (hex: string, alpha: number): string => {
+    const h = hex.replace('#', '');
+    const bigint = parseInt(h, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r},${g},${b},${alpha})`;
+  };
+  const cardBorderVal = content.cardBorder ?? 1;
+  const cardRadiusVal = content.cardRadius ?? 8;
+  const hasCustomBorderColor = !!content.cardBorderColor;
+  const cardBase = cardBorderVal > 0 ? 'border' : '';
   const cardOpacityVal = (content.cardOpacity ?? 40) / 100;
   const cardBlurVal = content.cardBlur ?? 0;
-  const cardTone = theme === 'light' ? 'border-neutral-200/60' : 'border-neutral-700/20';
-  const cardToneAlt = theme === 'light' ? 'border-neutral-200/60' : 'border-neutral-700/20';
+  const cardTone = cardBorderVal > 0 ? (hasCustomBorderColor ? 'border' : (theme === 'light' ? 'border-neutral-200/60' : 'border-neutral-700/20')) : '';
+  const cardToneAlt = cardBorderVal > 0 ? (hasCustomBorderColor ? 'border' : (theme === 'light' ? 'border-neutral-200/60' : 'border-neutral-700/20')) : '';
+  const cardBorderOpacityVal = (content.cardBorderOpacity ?? 100) / 100;
   const cardStyle: React.CSSProperties = {
     backgroundColor: theme === 'light' ? `rgba(255,255,255,${cardOpacityVal})` : `rgba(23,23,23,${cardOpacityVal})`,
     ...(cardBlurVal > 0 ? { backdropFilter: `blur(${cardBlurVal}px)`, WebkitBackdropFilter: `blur(${cardBlurVal}px)` } : {}),
+    ...(cardBorderVal > 1 ? { borderWidth: `${cardBorderVal}px` } : {}),
+    borderRadius: `${cardRadiusVal}px`,
+    ...(hasCustomBorderColor ? { borderColor: hexToRgba(content.cardBorderColor!, cardBorderOpacityVal) } : {}),
   };
   const textHeading = theme === 'light' ? 'text-neutral-900' : 'text-neutral-100';
   const textMuted = theme === 'light' ? 'text-neutral-700' : 'text-neutral-300';
@@ -343,7 +366,6 @@ const HomePage: React.FC = () => {
       case 'news':
         return (
           <React.Fragment key="news">
-            <div id="news" className="scroll-mt-[68px] sm:scroll-mt-[96px]" />
             {(content.heroTitle || content.heroText || content.heroUrl) && (
               <div className="relative">
                 {/* Mobile: natürliche Größe, volles Bild anzeigen */}
@@ -415,15 +437,15 @@ const HomePage: React.FC = () => {
               </div>
             )}
             {content.newsEnabled && Array.isArray(content.news) && content.news.some(p => p.published !== false && (p.title || p.html)) && (
-              <div className="mt-4">
+              <div id="news" className="scroll-mt-[68px] sm:scroll-mt-[96px] mt-4">
                 <div className="mb-3 flex items-center justify-center">
                   <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{lang==='en' ? 'News' : 'News'}</h3>
                 </div>
                 <div className="space-y-4">
                   {content.news.filter(p => p.published !== false).sort((a,b)=> (b.date||'').localeCompare(a.date||'')).map(p => (
-                    <article key={p.id} className={`p-3 ${cardBase} ${cardTone}`} style={cardStyle}>
+                    <article key={p.id} className={`p-5 ${cardBase} ${cardTone}`} style={cardStyle}>
                       {(p.title) && <h3 className="text-neutral-100 text-lg font-semibold mb-1">{L(p.title as any)}</h3>}
-                      {p.date && <div className="text-neutral-400 text-xs mb-2">{new Date(p.date).toLocaleDateString('de-DE')}</div>}
+                      {p.date && <div className="text-neutral-400 text-xs mb-2">{new Date(p.date).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>}
                       <div className="content-rendered max-w-none text-neutral-200 text-base" dangerouslySetInnerHTML={{ __html: L(p.html as any) }} />
                     </article>
                   ))}
@@ -1151,6 +1173,16 @@ const HomePage: React.FC = () => {
         </div>
       )}
 
+      {/* Scroll-to-top */}
+      {showScrollTop && (
+        <button
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          className="fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-[#8C1423] text-white shadow-lg flex items-center justify-center hover:bg-[#a0182a] transition active:scale-95"
+          aria-label="Nach oben scrollen"
+        >
+          <ChevronUp className="w-6 h-6" />
+        </button>
+      )}
     </div>
     </>
   );
