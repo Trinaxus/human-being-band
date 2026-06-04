@@ -61,8 +61,24 @@ $allowed = [
   'cardRadius',    // card border radius in px (0-24)
   'cardBorderColor', // card border color (hex or rgba)
   'cardBorderOpacity', // card border opacity 0-100
+  'headingFont',   // global heading font family
   'fullscreenEnabled', // enable fullscreen mode toggle
   'headerLogo',    // { dark?: string, light?: string }
+  // Hero title style
+  'heroTitleFont',
+  'heroTitleAlign',
+  'heroTitleVertical',
+  'heroTitleSize',
+  'heroTitleColor',
+  'heroTitleOpacity',
+  'heroTitleWeight',
+  'heroOverlayEnabled',
+  // Hero text style
+  'heroTextFont',
+  'heroTextSize',
+  'heroTextColor',
+  'heroTextOpacity',
+  'heroTextWeight',
   // Legal pages (values may be string or { de?: string, en?: string })
   'impressum',     // imprint HTML/text
   'privacy',       // privacy policy (Datenschutz) HTML/text

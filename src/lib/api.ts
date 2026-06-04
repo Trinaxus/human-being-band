@@ -283,12 +283,27 @@ export async function usersSetRole(id: string, role: 'user' | 'admin') {
 // --- Content management (admin only) ---
 export type SiteContent = {
   heroUrl?: string;
-  heroTitle?: string;
-  heroText?: string;
+  heroTitle?: string | { de?: string; en?: string };
+  heroText?: string | { de?: string; en?: string };
   heroHeight?: number; // in px
   heroFocusX?: number; // 0..100 (%), horizontal focus
   heroFocusY?: number; // 0..100 (%), vertical focus
   heroZoom?: number;   // 100..150 (%)
+  // Hero title style
+  heroTitleFont?: 'display' | 'space-grotesk' | 'sans-serif';
+  heroTitleAlign?: 'left' | 'center' | 'right';
+  heroTitleVertical?: number; // 0-100, vertical position percentage (0=top, 50=center, 100=bottom)
+  heroTitleSize?: number; // px
+  heroTitleColor?: string;
+  heroTitleOpacity?: number; // 0-100
+  heroTitleWeight?: number; // 100-900
+  heroOverlayEnabled?: boolean; // gradient overlay on hero image
+  // Hero text style
+  heroTextFont?: 'display' | 'space-grotesk' | 'sans-serif';
+  heroTextSize?: number; // px
+  heroTextColor?: string;
+  heroTextOpacity?: number; // 0-100
+  heroTextWeight?: number; // 100-900
   // Global background orb image URL
   backgroundUrl?: string;
   // Background image position (percentages)
@@ -414,6 +429,7 @@ export type SiteContent = {
     };
     newsletterVisible?: boolean;
   };
+  headingFont?: 'display' | 'space-grotesk' | 'sans-serif';
   fullscreenEnabled?: boolean; // allow fullscreen mode toggle
   updated_at?: string;
 };

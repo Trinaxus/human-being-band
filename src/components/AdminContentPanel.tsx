@@ -1046,29 +1046,95 @@ const AdminContentPanel: React.FC = () => {
                 <div className="w-full h-full flex items-center justify-center text-[#909296] text-sm">Kein Bild</div>
               )}
             </div>
-            {(content.heroTitle || content.heroText) && (
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent p-4 sm:p-6 flex items-center justify-center text-center">
-                <div className="max-w-3xl mx-auto">
-                  {content.heroTitle && (
-                    <h2 className="uppercase text-white drop-shadow tracking-wide text-2xl sm:text-3xl font-semibold">
-                      {content.heroTitle}
+            {( (typeof content.heroTitle === 'string' ? content.heroTitle : content.heroTitle?.de || content.heroTitle?.en) || (typeof content.heroText === 'string' ? content.heroText : content.heroText?.de || content.heroText?.en) ) && (
+              <div
+                className={`absolute inset-0 p-4 sm:p-6 flex flex-col ${content.heroOverlayEnabled !== false ? 'bg-gradient-to-t from-black/60 via-black/30 to-transparent' : ''}`}
+                style={{ alignItems: content.heroTitleAlign === 'left' ? 'flex-start' : content.heroTitleAlign === 'right' ? 'flex-end' : 'center' }}
+              >
+                <div style={{ flexGrow: typeof content.heroTitleVertical === 'number' ? content.heroTitleVertical : 50 }} />
+                <div className="max-w-3xl mx-auto" style={{ textAlign: content.heroTitleAlign || 'center' }}>
+                  {(typeof content.heroTitle === 'string' ? content.heroTitle : content.heroTitle?.de || content.heroTitle?.en) && (
+                    <h2
+                      className="uppercase drop-shadow tracking-wide"
+                      style={{
+                        fontFamily: content.heroTitleFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTitleFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
+                        fontSize: `${content.heroTitleSize ?? 30}px`,
+                        color: content.heroTitleColor || '#FFFFFF',
+                        opacity: (content.heroTitleOpacity ?? 100) / 100,
+                        fontWeight: content.heroTitleWeight ?? 600,
+                      }}
+                    >
+                      {typeof content.heroTitle === 'string' ? content.heroTitle : (content.heroTitle?.de || content.heroTitle?.en || '')}
                     </h2>
                   )}
-                  {content.heroText && (
-                    <p className="mt-2 uppercase text-neutral-200 drop-shadow tracking-wider whitespace-pre-line text-xs sm:text-sm font-extralight">
-                      {content.heroText}
+                  {(typeof content.heroText === 'string' ? content.heroText : content.heroText?.de || content.heroText?.en) && (
+                    <p
+                      className="mt-2 uppercase drop-shadow tracking-wider whitespace-pre-line"
+                      style={{
+                        fontFamily: content.heroTextFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTextFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
+                        fontSize: `${content.heroTextSize ?? 14}px`,
+                        color: content.heroTextColor || '#E5E5E5',
+                        opacity: (content.heroTextOpacity ?? 100) / 100,
+                        fontWeight: content.heroTextWeight ?? 200,
+                      }}
+                    >
+                      {typeof content.heroText === 'string' ? content.heroText : (content.heroText?.de || content.heroText?.en || '')}
                     </p>
                   )}
                 </div>
+                <div style={{ flexGrow: 100 - (typeof content.heroTitleVertical === 'number' ? content.heroTitleVertical : 50) }} />
               </div>
             )}
           </div>
         </div>
         <div className="grid grid-cols-1 gap-4">
           <div className="space-y-3">
-            <Input placeholder="Hero-Titel (wird über dem Bild angezeigt)" value={content.heroTitle || ''} onChange={e => setContent({ ...content, heroTitle: e.target.value })} />
-            <Textarea rows={4} placeholder="Hero-Beschreibung (wird über dem Bild angezeigt)" value={content.heroText || ''} onChange={e => setContent({ ...content, heroText: e.target.value })} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input placeholder="Hero-Titel Deutsch" value={(typeof content.heroTitle === 'string' ? content.heroTitle : content.heroTitle?.de) || ''} onChange={e => {
+                const current = content.heroTitle;
+                if (typeof current === 'string') {
+                  setContent({ ...content, heroTitle: { de: e.target.value, en: '' } });
+                } else {
+                  setContent({ ...content, heroTitle: { ...current, de: e.target.value } });
+                }
+              }} />
+              <Input placeholder="Hero-Titel English" value={(typeof content.heroTitle === 'object' ? content.heroTitle?.en : '') || ''} onChange={e => {
+                const current = content.heroTitle;
+                if (typeof current === 'string') {
+                  setContent({ ...content, heroTitle: { de: current, en: e.target.value } });
+                } else {
+                  setContent({ ...content, heroTitle: { ...current, en: e.target.value } });
+                }
+              }} />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Textarea rows={4} placeholder="Hero-Beschreibung Deutsch" value={(typeof content.heroText === 'string' ? content.heroText : content.heroText?.de) || ''} onChange={e => {
+                const current = content.heroText;
+                if (typeof current === 'string') {
+                  setContent({ ...content, heroText: { de: e.target.value, en: '' } });
+                } else {
+                  setContent({ ...content, heroText: { ...current, de: e.target.value } });
+                }
+              }} />
+              <Textarea rows={4} placeholder="Hero-Beschreibung English" value={(typeof content.heroText === 'object' ? content.heroText?.en : '') || ''} onChange={e => {
+                const current = content.heroText;
+                if (typeof current === 'string') {
+                  setContent({ ...content, heroText: { de: current, en: e.target.value } });
+                } else {
+                  setContent({ ...content, heroText: { ...current, en: e.target.value } });
+                }
+              }} />
+            </div>
             <Input placeholder="Bild-URL (Hero)" value={content.heroUrl || ''} onChange={e => setContent({ ...content, heroUrl: e.target.value })} />
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="hero-overlay"
+                checked={content.heroOverlayEnabled !== false}
+                onChange={e => setContent({ ...content, heroOverlayEnabled: e.target.checked })}
+              />
+              <label htmlFor="hero-overlay" className="text-neutral-200 text-sm">Schattenverlauf über Bild</label>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
                 <label className="block text-xs text-neutral-400 mb-1">Höhe (px)</label>
@@ -1121,6 +1187,150 @@ const AdminContentPanel: React.FC = () => {
                   className="w-full"
                 />
                 <div className="text-neutral-300 text-sm mt-1">{content.heroFocusY ?? 50}%</div>
+              </div>
+            </div>
+
+            {/* Hero Title Style */}
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 mt-4 mb-2">Titel-Stil</div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Schriftart</label>
+                <select
+                  value={content.heroTitleFont || 'display'}
+                  onChange={e => setContent({ ...content, heroTitleFont: e.target.value as any })}
+                  className="w-full bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-sm text-neutral-200"
+                >
+                  <option value="display">Bebas Neue (Display)</option>
+                  <option value="space-grotesk">Space Grotesk Sans Serif</option>
+                  <option value="sans-serif">Poppins (Sans)</option>
+                </select>
+              </div>
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Ausrichtung</label>
+                <select
+                  value={content.heroTitleAlign || 'center'}
+                  onChange={e => setContent({ ...content, heroTitleAlign: e.target.value as any })}
+                  className="w-full bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-sm text-neutral-200"
+                >
+                  <option value="left">Links</option>
+                  <option value="center">Mitte</option>
+                  <option value="right">Rechts</option>
+                </select>
+              </div>
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Vertikal (%)</label>
+                <input
+                  type="range" min={0} max={100} step={5}
+                  value={typeof content.heroTitleVertical === 'number' ? content.heroTitleVertical : 50}
+                  onChange={e => setContent({ ...content, heroTitleVertical: Number(e.target.value) })}
+                  className="w-full"
+                />
+                <div className="text-neutral-300 text-sm mt-1">{typeof content.heroTitleVertical === 'number' ? content.heroTitleVertical : 50}%</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3">
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Größe (px)</label>
+                <input
+                  type="range" min={12} max={72} step={1}
+                  value={content.heroTitleSize ?? 30}
+                  onChange={e => setContent({ ...content, heroTitleSize: Number(e.target.value) })}
+                  className="w-full"
+                />
+                <div className="text-neutral-300 text-sm mt-1">{content.heroTitleSize ?? 30}px</div>
+              </div>
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Farbe</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={content.heroTitleColor || '#FFFFFF'}
+                    onChange={e => setContent({ ...content, heroTitleColor: e.target.value })}
+                    className="w-8 h-8 rounded border-0 p-0 bg-transparent cursor-pointer"
+                  />
+                  <span className="text-neutral-300 text-xs">{content.heroTitleColor || '#FFFFFF'}</span>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Transparenz (%)</label>
+                <input
+                  type="range" min={0} max={100} step={5}
+                  value={content.heroTitleOpacity ?? 100}
+                  onChange={e => setContent({ ...content, heroTitleOpacity: Number(e.target.value) })}
+                  className="w-full"
+                />
+                <div className="text-neutral-300 text-sm mt-1">{content.heroTitleOpacity ?? 100}%</div>
+              </div>
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Dicke (100-900)</label>
+                <input
+                  type="range" min={100} max={900} step={100}
+                  value={content.heroTitleWeight ?? 600}
+                  onChange={e => setContent({ ...content, heroTitleWeight: Number(e.target.value) })}
+                  className="w-full"
+                />
+                <div className="text-neutral-300 text-sm mt-1">{content.heroTitleWeight ?? 600}</div>
+              </div>
+            </div>
+
+            {/* Hero Text Style */}
+            <div className="text-[10px] font-semibold uppercase tracking-widest text-neutral-500 mt-4 mb-2">Beschreibung-Stil</div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Schriftart</label>
+                <select
+                  value={content.heroTextFont || 'sans-serif'}
+                  onChange={e => setContent({ ...content, heroTextFont: e.target.value as any })}
+                  className="w-full bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-sm text-neutral-200"
+                >
+                  <option value="display">Bebas Neue</option>
+                  <option value="space-grotesk">Space Grotesk Sans Serif</option>
+                  <option value="sans-serif">Poppins (Sans)</option>
+                </select>
+              </div>
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Größe (px)</label>
+                <input
+                  type="range" min={10} max={32} step={1}
+                  value={content.heroTextSize ?? 14}
+                  onChange={e => setContent({ ...content, heroTextSize: Number(e.target.value) })}
+                  className="w-full"
+                />
+                <div className="text-neutral-300 text-sm mt-1">{content.heroTextSize ?? 14}px</div>
+              </div>
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Farbe</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={content.heroTextColor || '#E5E5E5'}
+                    onChange={e => setContent({ ...content, heroTextColor: e.target.value })}
+                    className="w-8 h-8 rounded border-0 p-0 bg-transparent cursor-pointer"
+                  />
+                  <span className="text-neutral-300 text-xs">{content.heroTextColor || '#E5E5E5'}</span>
+                </div>
+              </div>
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Transparenz (%)</label>
+                <input
+                  type="range" min={0} max={100} step={5}
+                  value={content.heroTextOpacity ?? 100}
+                  onChange={e => setContent({ ...content, heroTextOpacity: Number(e.target.value) })}
+                  className="w-full"
+                />
+                <div className="text-neutral-300 text-sm mt-1">{content.heroTextOpacity ?? 100}%</div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+              <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+                <label className="block text-xs text-neutral-400 mb-1">Dicke (100-900)</label>
+                <input
+                  type="range" min={100} max={900} step={100}
+                  value={content.heroTextWeight ?? 200}
+                  onChange={e => setContent({ ...content, heroTextWeight: Number(e.target.value) })}
+                  className="w-full"
+                />
+                <div className="text-neutral-300 text-sm mt-1">{content.heroTextWeight ?? 200}</div>
               </div>
             </div>
           </div>
@@ -1394,6 +1604,18 @@ const AdminContentPanel: React.FC = () => {
                   </button>
                 )}
               </div>
+            </div>
+            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
+              <label className="block text-xs text-neutral-400 mb-1">Überschriften-Schriftart</label>
+              <select
+                value={content.headingFont || 'display'}
+                onChange={e => setContent({ ...content, headingFont: e.target.value as any })}
+                className="w-full bg-neutral-900 border border-neutral-700 rounded px-2 py-1 text-sm text-neutral-200"
+              >
+                <option value="display">Bebas Neue (Display)</option>
+                <option value="space-grotesk">Space Grotesk Sans Serif</option>
+                <option value="sans-serif">Poppins (Sans)</option>
+              </select>
             </div>
           </div>
         )}
