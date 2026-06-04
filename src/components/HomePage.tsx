@@ -346,13 +346,14 @@ const HomePage: React.FC = () => {
             <div id="news" className="scroll-mt-[68px] sm:scroll-mt-[96px]" />
             {(content.heroTitle || content.heroText || content.heroUrl) && (
               <div className="relative">
-                <div className="relative overflow-hidden">
-                  <div className="w-full" style={{ height: `${content.heroHeight ?? 300}px` }}>
+                {/* Mobile: natürliche Größe, volles Bild anzeigen */}
+                <div className="sm:hidden">
+                  <div className="relative overflow-hidden w-full">
                     {content.heroUrl ? (
                       <img
                         src={content.heroUrl}
                         alt="Hero"
-                        className="w-full h-full object-cover"
+                        className="w-full h-auto"
                         style={{
                           objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
                           transform: `scale(${(content.heroZoom ?? 100) / 100})`,
@@ -360,9 +361,40 @@ const HomePage: React.FC = () => {
                         }}
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-[#909296] text-sm">Kein Bild</div>
+                      <div className="w-full h-48 flex items-center justify-center text-[#909296] text-sm">Kein Bild</div>
                     )}
                   </div>
+                  {(content.heroTitle || content.heroText) && (
+                    <div className="text-center py-4 px-4">
+                      {content.heroTitle && (
+                        <h2 className="font-display uppercase text-neutral-100 tracking-wider text-xl font-extrabold">
+                          {content.heroTitle}
+                        </h2>
+                      )}
+                      {content.heroText && (
+                        <p className="font-display mt-1 uppercase text-neutral-300 tracking-wider whitespace-pre-line text-xs">
+                          {content.heroText}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {/* Desktop: fixe Höhe mit object-cover und Overlay */}
+                <div className="relative overflow-hidden w-full hidden sm:block" style={{ height: `${content.heroHeight ?? 300}px` }}>
+                  {content.heroUrl ? (
+                    <img
+                      src={content.heroUrl}
+                      alt="Hero"
+                      className="w-full h-full object-cover"
+                      style={{
+                        objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
+                        transform: `scale(${(content.heroZoom ?? 100) / 100})`,
+                        transformOrigin: 'center',
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-[#909296] text-sm">Kein Bild</div>
+                  )}
                   {(content.heroTitle || content.heroText) && (
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/30 to-transparent p-4 sm:p-6 flex items-center justify-center text-center hero-overlay">
                       <div className="max-w-3xl mx-auto">
