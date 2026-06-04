@@ -384,60 +384,65 @@ const HomePage: React.FC = () => {
         return (
           <React.Fragment key="news">
             {(hasHeroVal(content.heroTitle) || hasHeroVal(content.heroText) || content.heroUrl) && (
-              <div className="relative">
-                {/* Mobile: natürliche Größe, volles Bild anzeigen */}
-                <div className="sm:hidden">
-                  <div className="relative overflow-hidden w-full">
-                    {content.heroUrl ? (
-                      <img
-                        src={content.heroUrl}
-                        alt="Hero"
-                        className="w-full h-auto"
-                        style={{
-                          objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
-                          transform: `scale(${(content.heroZoom ?? 100) / 100})`,
-                          transformOrigin: 'center',
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-48 flex items-center justify-center text-[#909296] text-sm">Kein Bild</div>
-                    )}
-                  </div>
+              <>
+                {/* Mobile: natürliche Bildhöhe, Text als Overlay */}
+                <div className="sm:hidden relative overflow-hidden">
+                  {content.heroUrl ? (
+                    <img
+                      src={content.heroUrl}
+                      alt="Hero"
+                      className="w-full h-auto"
+                      style={{
+                        objectPosition: `${content.heroFocusX ?? 50}% ${content.heroFocusY ?? 50}%`,
+                        transform: `scale(${(content.heroZoom ?? 100) / 100})`,
+                        transformOrigin: 'center',
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-48 flex items-center justify-center text-[#909296] text-sm">Kein Bild</div>
+                  )}
                   {(hasHeroVal(content.heroTitle) || hasHeroVal(content.heroText)) && (
-                    <div className="py-4 px-4" style={{ textAlign: content.heroTitleAlign || 'center' }}>
-                      {hasHeroVal(content.heroTitle) && (
-                        <h2
-                          className="uppercase tracking-wider"
-                          style={{
-                            fontFamily: content.heroTitleFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTitleFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
-                            fontSize: `${content.heroTitleSize ?? 20}px`,
-                            color: content.heroTitleColor || '#F5F5F5',
-                            opacity: (content.heroTitleOpacity ?? 100) / 100,
-                            fontWeight: content.heroTitleWeight ?? 800,
-                          }}
-                        >
-                          {tHero(content.heroTitle)}
-                        </h2>
-                      )}
-                      {hasHeroVal(content.heroText) && (
-                        <p
-                          className="mt-1 uppercase tracking-wider whitespace-pre-line"
-                          style={{
-                            fontFamily: content.heroTextFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTextFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
-                            fontSize: `${content.heroTextSize ?? 12}px`,
-                            color: content.heroTextColor || '#D4D4D4',
-                            opacity: (content.heroTextOpacity ?? 100) / 100,
-                            fontWeight: content.heroTextWeight ?? 400,
-                          }}
-                        >
-                          {tHero(content.heroText)}
-                        </p>
-                      )}
+                    <div
+                      className={`absolute inset-0 p-3 flex flex-col hero-overlay ${content.heroOverlayEnabled !== false ? 'bg-gradient-to-t from-black/60 via-black/30 to-transparent' : ''}`}
+                      style={{ alignItems: content.heroTitleAlign === 'left' ? 'flex-start' : content.heroTitleAlign === 'right' ? 'flex-end' : 'center' }}
+                    >
+                      <div style={{ flexGrow: typeof content.heroTitleVertical === 'number' ? content.heroTitleVertical : 50 }} />
+                      <div className="max-w-xs mx-auto" style={{ textAlign: content.heroTitleAlign || 'center' }}>
+                        {hasHeroVal(content.heroTitle) && (
+                          <h2
+                            className="uppercase drop-shadow tracking-wider leading-tight"
+                            style={{
+                              fontFamily: content.heroTitleFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTitleFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
+                              fontSize: `clamp(11px, 3.5vw, 16px)`,
+                              color: content.heroTitleColor || '#FFFFFF',
+                              opacity: (content.heroTitleOpacity ?? 100) / 100,
+                              fontWeight: content.heroTitleWeight ?? 800,
+                            }}
+                          >
+                            {tHero(content.heroTitle)}
+                          </h2>
+                        )}
+                        {hasHeroVal(content.heroText) && (
+                          <p
+                            className="mt-1 uppercase drop-shadow tracking-wider whitespace-pre-line leading-snug"
+                            style={{
+                              fontFamily: content.heroTextFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTextFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
+                              fontSize: `clamp(8px, 2.2vw, 10px)`,
+                              color: content.heroTextColor || '#E5E5E5',
+                              opacity: (content.heroTextOpacity ?? 100) / 100,
+                              fontWeight: content.heroTextWeight ?? 200,
+                            }}
+                          >
+                            {tHero(content.heroText)}
+                          </p>
+                        )}
+                      </div>
+                      <div style={{ flexGrow: 100 - (typeof content.heroTitleVertical === 'number' ? content.heroTitleVertical : 50) }} />
                     </div>
                   )}
                 </div>
-                {/* Desktop: fixe Höhe mit object-cover und Overlay */}
-                <div className="relative overflow-hidden w-full hidden sm:block" style={{ height: `${content.heroHeight ?? 300}px` }}>
+                {/* Desktop / Tablet: fixe Höhe mit object-cover */}
+                <div className="relative overflow-hidden w-full hidden sm:block" style={{ height: `${content.heroHeight ?? 300}px`, maxHeight: '70vh' }}>
                   {content.heroUrl ? (
                     <img
                       src={content.heroUrl}
@@ -464,7 +469,7 @@ const HomePage: React.FC = () => {
                             className="uppercase drop-shadow tracking-wider"
                             style={{
                               fontFamily: content.heroTitleFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTitleFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
-                              fontSize: `${content.heroTitleSize ?? 30}px`,
+                              fontSize: `clamp(22px, 4vw, ${content.heroTitleSize ?? 36}px)`,
                               color: content.heroTitleColor || '#FFFFFF',
                               opacity: (content.heroTitleOpacity ?? 100) / 100,
                               fontWeight: content.heroTitleWeight ?? 800,
@@ -478,7 +483,7 @@ const HomePage: React.FC = () => {
                             className="mt-2 uppercase drop-shadow tracking-wider whitespace-pre-line"
                             style={{
                               fontFamily: content.heroTextFont === 'space-grotesk' ? "'Space Grotesk', sans-serif" : content.heroTextFont === 'sans-serif' ? "'Poppins', sans-serif" : "'Bebas Neue', 'Poppins', sans-serif",
-                              fontSize: `${content.heroTextSize ?? 14}px`,
+                              fontSize: `clamp(12px, 2vw, ${content.heroTextSize ?? 16}px)`,
                               color: content.heroTextColor || '#E5E5E5',
                               opacity: (content.heroTextOpacity ?? 100) / 100,
                               fontWeight: content.heroTextWeight ?? 200,
@@ -492,7 +497,7 @@ const HomePage: React.FC = () => {
                     </div>
                   )}
                 </div>
-              </div>
+              </>
             )}
             {content.newsEnabled && Array.isArray(content.news) && content.news.some(p => p.published !== false && (p.title || p.html)) && (
               <div id="news" className="scroll-mt-[68px] sm:scroll-mt-[96px] mt-4">
