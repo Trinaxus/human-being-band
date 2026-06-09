@@ -1969,10 +1969,23 @@ const AdminContentPanel: React.FC = () => {
                         case 'twitter': return <Twitter className={cls} />;
                         case 'linkedin': return <Linkedin className={cls} />;
                         case 'whatsapp': return <MessageCircle className={cls} />;
-                        case 'spotify': return <Music2 className={cls} />;
+                        case 'spotify': return (
+                          <svg className={cls} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                          </svg>
+                        );
                         case 'soundcloud': return <Music2 className={cls} />;
                         case 'bandcamp': return <Music2 className={cls} />;
-                        case 'tiktok': return <Music2 className={cls} />;
+                        case 'tiktok': return (
+                          <svg className={cls} viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+                            <path d="M16.656 1.029c1.637-.025 3.262-.012 4.886-.025a7.76 7.76 0 0 0 2.189 5.213l-.002-.002A8.77 8.77 0 0 0 29 8.45l.028.002v5.036a13.3 13.3 0 0 1-5.331-1.247l.082.034a15.4 15.4 0 0 1-2.077-1.196l.052.034c-.012 3.649.012 7.298-.025 10.934a9.5 9.5 0 0 1-1.707 4.954l.02-.031c-1.652 2.366-4.328 3.919-7.371 4.011h-.014a9.071 9.071 0 0 1-5.139-1.31l.04.023C5.05 28.185 3.32 25.603 3 22.6l-.004-.041a23 23 0 0 1-.012-1.862c.49-4.779 4.494-8.476 9.361-8.476q.822.001 1.604.136l-.056-.008c.025 1.849-.05 3.699-.05 5.548a4.29 4.29 0 0 0-5.465 2.619l-.009.03c-.133.427-.21.918-.21 1.426q0 .31.037.61l-.002-.024a4.26 4.26 0 0 0 4.382 3.586h-.009a4.2 4.2 0 0 0 3.451-1.994l.01-.018c.267-.372.45-.822.511-1.311l.001-.014c.125-2.237.075-4.461.087-6.698.012-5.036-.012-10.06.025-15.083z"/>
+                          </svg>
+                        );
+                        case 'patreon': return (
+                          <svg className={cls} viewBox="0 0 1080 1080" fill="currentColor" aria-hidden="true">
+                            <path d="M1033.05 324.45c-.19-137.9-107.59-250.92-233.6-291.7-156.48-50.64-362.86-43.3-512.28 27.2-181.1 85.46-237.99 272.66-240.11 459.36-1.74 153.5 13.58 557.79 241.62 560.67 169.44 2.15 194.67-216.18 273.07-321.33 55.78-74.81 127.6-95.94 216.01-117.82 151.95-37.61 255.51-157.53 255.29-316.38"/>
+                          </svg>
+                        );
                         default: return <Globe className={cls} />;
                       }
                     })()}
@@ -1982,7 +1995,7 @@ const AdminContentPanel: React.FC = () => {
                     onChange={e => setContent(prev => ({ ...prev, socials: (prev.socials||[]).map((x,i) => i===idx ? { ...x, type: e.target.value as any } : x) }))}
                     className="px-2 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 text-sm"
                   >
-                    {['instagram','facebook','youtube','tiktok','twitter','linkedin','spotify','soundcloud','bandcamp','website','whatsapp'].map(k => (
+                    {['instagram','facebook','youtube','tiktok','twitter','linkedin','spotify','soundcloud','bandcamp','patreon','website','whatsapp'].map(k => (
                       <option key={k} value={k}>{k}</option>
                     ))}
                   </select>
