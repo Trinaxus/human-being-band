@@ -1958,6 +1958,28 @@ const AdminContentPanel: React.FC = () => {
             <div className="space-y-2">
               {(content.socials || []).map((s, idx) => (
                 <div key={idx} className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30 flex items-center gap-3">
+                  <div className="flex flex-col gap-0.5">
+                    <button
+                      type="button"
+                      disabled={idx === 0}
+                      onClick={() => setContent(prev => {
+                        const arr = [...(prev.socials||[])];
+                        [arr[idx-1], arr[idx]] = [arr[idx], arr[idx-1]];
+                        return { ...prev, socials: arr };
+                      })}
+                      className="px-1 py-0.5 rounded border-[0.5px] border-neutral-700/40 text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-[10px] leading-none"
+                    >▲</button>
+                    <button
+                      type="button"
+                      disabled={idx === ((content.socials||[]).length - 1)}
+                      onClick={() => setContent(prev => {
+                        const arr = [...(prev.socials||[])];
+                        [arr[idx], arr[idx+1]] = [arr[idx+1], arr[idx]];
+                        return { ...prev, socials: arr };
+                      })}
+                      className="px-1 py-0.5 rounded border-[0.5px] border-neutral-700/40 text-neutral-400 hover:text-neutral-100 hover:bg-neutral-700 disabled:opacity-30 disabled:cursor-not-allowed text-[10px] leading-none"
+                    >▼</button>
+                  </div>
                   <div className="w-6 h-6 flex items-center justify-center rounded bg-neutral-900 border border-neutral-700/50 flex-shrink-0">
                     {(() => {
                       const t = s.type as any;

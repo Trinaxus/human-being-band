@@ -618,7 +618,7 @@ const HomePage: React.FC = () => {
               <div className="mb-3 flex items-center justify-center">
                 <h3 className="font-display text-neutral-100 text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center">{lang==='en' ? 'Social' : 'Social'}</h3>
               </div>
-              <div className="flex flex-wrap items-center justify-center gap-8">
+              <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8">
                 {content.socials.map((s, idx) => (
                   <a
                     key={idx}
@@ -626,10 +626,10 @@ const HomePage: React.FC = () => {
                     target="_blank"
                     rel="noreferrer"
                     aria-label={s.type || 'link'}
-                    className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#77111c] border-[0.5px] border-[#77111c]/60 hover:bg-[#8b1522] transition-all duration-200 shadow-[0_0_0_0_rgba(139,21,34,0)] hover:shadow-[0_0_24px_8px_rgba(139,21,34,0.7)]"
+                    className="inline-flex items-center justify-center w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-[#77111c] border-[0.5px] border-[#77111c]/60 hover:bg-[#8b1522] transition-all duration-200 shadow-[0_0_0_0_rgba(139,21,34,0)] hover:shadow-[0_0_24px_8px_rgba(139,21,34,0.7)]"
                     title={s.type || s.url}
                   >
-                    <SocialIcon type={s.type} />
+                    <SocialIcon type={s.type} className="h-[30px] w-[30px] sm:h-10 sm:w-10 text-white" />
                   </a>
                 ))}
               </div>
