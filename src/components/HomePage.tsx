@@ -1022,13 +1022,12 @@ const HomePage: React.FC = () => {
             {sectionsOrder.map(renderSection)}
           </>
         )}
-      </section>
-
-      {/* Newsletter Subscribe */}
-      <section className="px-4 sm:px-6 py-8">
-        <div className={`max-w-3xl mx-auto ${theme==='light' ? 'bg-white/50' : 'bg-neutral-900/40'} rounded-xl border-[0.5px] ${theme==='light' ? 'border-neutral-300/50' : 'border-neutral-700/30'} p-4 sm:p-6 text-center`}>
-          <h3 className={`font-display ${textHeading} text-xl sm:text-2xl font-extrabold uppercase tracking-wider mb-2`}>{lang==='de' ? 'Newsletter' : 'Newsletter'}</h3>
-          <p className={`${textMuted} text-sm mb-4`}>{lang==='de' ? 'Bleib auf dem Laufenden – abonniere unseren Newsletter.' : 'Stay up to date – subscribe to our newsletter.'}</p>
+        {/* Newsletter Subscribe */}
+        <div className={`${cardBase} ${cardTone} p-4 sm:p-6`} style={cardStyle}>
+          <div className="mb-3 flex items-center justify-center">
+            <h3 className={`font-display ${textHeading} text-2xl md:text-3xl font-extrabold uppercase tracking-wider text-center`}>{lang==='de' ? 'Newsletter' : 'Newsletter'}</h3>
+          </div>
+          <p className={`${textMuted} text-sm mb-4 text-center`}>{lang==='de' ? 'Bleib auf dem Laufenden – abonniere unseren Newsletter.' : 'Stay up to date – subscribe to our newsletter.'}</p>
           {newsletterMsg && (
             <div className={`mb-3 p-2 rounded text-sm ${newsletterMsg.includes('Fehler') ? 'bg-rose-600/15 text-rose-200 border border-rose-500/30' : 'bg-emerald-600/15 text-emerald-200 border border-emerald-500/30'}`}>{newsletterMsg}</div>
           )}
@@ -1047,7 +1046,7 @@ const HomePage: React.FC = () => {
               }
               setNewsletterBusy(false);
             }}
-            className="flex flex-col sm:flex-row items-stretch gap-2"
+            className="flex flex-col sm:flex-row items-stretch gap-3"
           >
             <input
               type="email"
@@ -1055,13 +1054,13 @@ const HomePage: React.FC = () => {
               placeholder={lang==='de' ? 'Deine E-Mail-Adresse' : 'Your email address'}
               value={newsletterEmail}
               onChange={e => setNewsletterEmail(e.target.value)}
-              className={`flex-1 px-4 py-2.5 rounded-lg ${theme==='light' ? 'bg-white border-neutral-300 text-neutral-900 placeholder-neutral-500' : 'bg-neutral-800/60 border-neutral-700/40 text-neutral-100 placeholder-neutral-500'} border focus:outline-none focus:ring-0`}
+              className="flex-1 px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 placeholder-neutral-500 focus:outline-none focus:ring-0"
             />
             <div className="flex gap-2">
               <select
                 value={newsletterLang}
                 onChange={e => setNewsletterLang(e.target.value as 'de'|'en')}
-                className={`px-3 py-2.5 rounded-lg text-sm ${theme==='light' ? 'bg-white border-neutral-300 text-neutral-900' : 'bg-neutral-800/60 border-neutral-700/40 text-neutral-100'} border focus:outline-none focus:ring-0 cursor-pointer`}
+                className="px-3 py-2 rounded-lg text-sm bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 focus:outline-none focus:ring-0 cursor-pointer"
                 aria-label="Sprache"
               >
                 <option value="de">Deutsch</option>
@@ -1070,17 +1069,18 @@ const HomePage: React.FC = () => {
               <button
                 type="submit"
                 disabled={newsletterBusy}
-                className="px-6 py-2.5 rounded-lg bg-[#8C1423] text-white font-display uppercase tracking-wider text-sm hover:bg-[#a0182a] transition-colors disabled:opacity-60"
+                className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700 disabled:opacity-60 font-display uppercase tracking-wider text-sm"
               >
                 {newsletterBusy ? (lang==='de' ? 'Wird gesendet…' : 'Sending…') : (lang==='de' ? 'Abonnieren' : 'Subscribe')}
               </button>
             </div>
           </form>
-          <p className={`mt-2 text-xs ${textMuted}`}>{lang==='de' ? 'Kein Spam. Jederzeit abbestellbar.' : 'No spam. Unsubscribe anytime.'}</p>
+          <p className={`mt-3 text-xs ${textMuted} text-center`}>{lang==='de' ? 'Kein Spam. Jederzeit abbestellbar.' : 'No spam. Unsubscribe anytime.'}</p>
         </div>
       </section>
+    </div>
 
-      {/* Footer links are provided by global Footer component */}
+    {/* Footer links are provided by global Footer component */}
 
       {/* Lightbox overlay */}
       {lbOpen && lbList[lbIndex] && (
@@ -1256,7 +1256,6 @@ const HomePage: React.FC = () => {
           <ChevronUp className="w-6 h-6" />
         </button>
       )}
-    </div>
     </>
   );
 };

@@ -133,6 +133,9 @@ HTML;
 
 $plainText = "Danke für dein Interesse an unserem Newsletter.\n\nBitte bestätige deine Anmeldung:\n{$verifyUrl}\n\nFalls du dich nicht angemeldet hast, ignoriere diese E-Mail einfach.\n\nAbmelden: {$unsubUrl}";
 
+// Encode subject for safe UTF-8 transmission
+$subjectEncoded = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+
 // Build multipart/alternative email for both HTML and plain text
 $boundary = md5(uniqid(time()));
 $multipartHeaders = "MIME-Version: 1.0\r\n";
@@ -144,16 +147,16 @@ if ($fromEmail) {
 
 $multipartBody = "--{$boundary}\r\n";
 $multipartBody .= "Content-Type: text/plain; charset=utf-8\r\n";
-$multipartBody .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
-$multipartBody .= $plainText . "\r\n\r\n";
+$multipartBody .= "Content-Transfer-Encoding: quoted-printable\r\n\r\n";
+$multipartBody .= quoted_printable_encode($plainText) . "\r\n\r\n";
 $multipartBody .= "--{$boundary}\r\n";
 $multipartBody .= "Content-Type: text/html; charset=utf-8\r\n";
-$multipartBody .= "Content-Transfer-Encoding: 7bit\r\n\r\n";
-$multipartBody .= $html . "\r\n\r\n";
+$multipartBody .= "Content-Transfer-Encoding: quoted-printable\r\n\r\n";
+$multipartBody .= quoted_printable_encode($html) . "\r\n\r\n";
 $multipartBody .= "--{$boundary}--\r\n";
 
 if (function_exists('mail')) {
-  mail($email, $subject, $multipartBody, $multipartHeaders);
+  mail($email, $subjectEncoded, $multipartBody, $multipartHeaders);
 }
 
 json_ok(['message' => 'Bitte prüfe dein Postfach und bestätige die Anmeldung.', 'sent' => true]);
