@@ -267,6 +267,10 @@ const AdminContentPanel: React.FC = () => {
 
   // About main text: mode per language ('editor' | 'html' | 'preview')
   const [aboutTextMode, setAboutTextMode] = useState<Record<'de'|'en', 'editor'|'html'|'preview'>>({ de: 'editor', en: 'editor' });
+  // Landing page editor states
+  const [lpLang, setLpLang] = useState<'de'|'en'>('de');
+  const [lpWelcomeMode, setLpWelcomeMode] = useState<Record<'de'|'en', 'editor'|'html'|'preview'>>({ de: 'editor', en: 'editor' });
+  const [lpAboutMode, setLpAboutMode] = useState<Record<'de'|'en', 'editor'|'html'|'preview'>>({ de: 'editor', en: 'editor' });
   // Background filter theme being edited/previewed
   const [bgTheme, setBgTheme] = useState<'light'|'dark'>(() => {
     try { return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark'; } catch { return 'light'; }
@@ -290,17 +294,6 @@ const AdminContentPanel: React.FC = () => {
       map.set(g.year, arr);
     }
     return map;
-  }, [galleries]);
-  const allGalleryImages = useMemo(() => {
-    const urls: string[] = [];
-    for (const g of galleries) {
-      for (const it of (g.items||[])) {
-        if (it?.url && (it.type==='image' || (!it.type && String(it.url).match(/\.(jpg|jpeg|png|gif|webp|svg)/i)))) {
-          urls.push(it.url);
-        }
-      }
-    }
-    return urls;
   }, [galleries]);
 
   const upsertContent = (patch: Partial<SiteContent>) => setContent(prev => ({ ...prev, ...patch }));
@@ -1760,6 +1753,15 @@ const AdminContentPanel: React.FC = () => {
                           .preview-content div[data-youtube-video] { position: relative; }
                           .preview-content iframe { max-width: 100%; border-radius: 6px; }
                           .preview-content div[data-card] { margin: 0.5em 0; }
+                          .preview-content .image-grid { display: grid; gap: 0.5rem; margin: 0.5em 0; }
+                          .preview-content .image-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                          .preview-content .image-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+                          .preview-content .image-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+                          @media (max-width: 640px) {
+                            .preview-content .image-grid-2,
+                            .preview-content .image-grid-3,
+                            .preview-content .image-grid-4 { grid-template-columns: 1fr; }
+                          }
                         `}</style>
                         <div className={`preview-content max-w-none text-sm ${previewTheme==='light'?'text-neutral-800':'text-neutral-200'}`} dangerouslySetInnerHTML={{ __html: readI18n(p.html as any, newsLang) }} />
                       </div>
@@ -1774,14 +1776,14 @@ const AdminContentPanel: React.FC = () => {
                           value={readI18n(p.html as any, 'de')}
                           onChange={(html) => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'de', html) } : x) }))}
                           onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
-                          galleryImages={allGalleryImages}
+                          galleries={galleries}
                         />
                       ) : (
                         <RichTextEditor
                           value={readI18n(p.html as any, 'en')}
                           onChange={(html) => setContent(prev => ({ ...prev, news: (prev.news||[]).map((x,i)=> i===idx ? { ...x, html: writeI18n(x.html as any, 'en', html) } : x) }))}
                           onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
-                          galleryImages={allGalleryImages}
+                          galleries={galleries}
                         />
                       )}
                     </div>
@@ -1861,14 +1863,14 @@ const AdminContentPanel: React.FC = () => {
                         value={readI18n(content.about?.text as any, 'de')}
                         onChange={(html) => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, 'de', html) } }))}
                         onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
-                        galleryImages={allGalleryImages}
+                        galleries={galleries}
                       />
                     ) : (
                       <RichTextEditor
                         value={readI18n(content.about?.text as any, 'en')}
                         onChange={(html) => setContent(prev => ({ ...prev, about: { ...(prev.about||{}), text: writeI18n(prev.about?.text as any, 'en', html) } }))}
                         onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
-                        galleryImages={allGalleryImages}
+                        galleries={galleries}
                       />
                     )}
                   </div>
@@ -2664,23 +2666,73 @@ const AdminContentPanel: React.FC = () => {
             />
 
             <SectionTitle title="Willkommen Text" />
-            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
-              <h4 className="text-neutral-200 text-sm font-semibold mb-2">Deutsch</h4>
-              <Textarea
-                rows={4}
-                placeholder="Willkommen Text (DE)"
-                value={((content as any).landingPage?.welcomeText?.de || '')}
-                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), welcomeText: { ...((prev as any).landingPage?.welcomeText || {}), de: e.target.value } } }))}
-              />
+            <div className="flex items-center gap-2 mb-2">
+              <button type="button" onClick={() => setLpLang('de')} className={`px-3 py-1.5 rounded border text-sm ${lpLang==='de' ? 'border-neutral-300 text-neutral-100 bg-neutral-700/40' : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'}`}>DE</button>
+              <button type="button" onClick={() => setLpLang('en')} className={`px-3 py-1.5 rounded border text-sm ${lpLang==='en' ? 'border-neutral-300 text-neutral-100 bg-neutral-700/40' : 'border-neutral-700 text-neutral-300 hover:bg-neutral-800'}`}>EN</button>
             </div>
-            <div className="p-3 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/30">
-              <h4 className="text-neutral-200 text-sm font-semibold mb-2">English</h4>
-              <Textarea
-                rows={4}
-                placeholder="Welcome text (EN)"
-                value={((content as any).landingPage?.welcomeText?.en || '')}
-                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), welcomeText: { ...((prev as any).landingPage?.welcomeText || {}), en: e.target.value } } }))}
-              />
+            <div className="space-y-3">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs text-neutral-400">{lpLang==='en' ? 'Welcome text (EN)' : 'Willkommen Text (DE)'}</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="text-[10px] text-neutral-400 hover:text-neutral-200 underline"
+                      title="Entfernt alle inline Textfarben → Theme passt sich an"
+                      onClick={() => {
+                        const current = readI18n((content as any).landingPage?.welcomeText, lpLang);
+                        const cleaned = stripInlineColors(current);
+                        setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), welcomeText: writeI18n((prev as any).landingPage?.welcomeText, lpLang, cleaned) } }));
+                      }}
+                    >🎨 Inline-Farben entfernen</button>
+                    <div className="inline-flex items-center rounded-md border border-neutral-700/40 overflow-hidden">
+                      {(['editor','html','preview'] as const).map(m => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setLpWelcomeMode(prev => ({ ...prev, [lpLang]: m }))}
+                          className={`px-2 py-1 text-xs ${lpWelcomeMode[lpLang]===m ? 'bg-neutral-700/40 text-neutral-100' : 'text-neutral-300 hover:bg-neutral-800'}`}
+                        >{m==='editor' ? 'Editor' : m==='html' ? 'HTML' : 'Vorschau'}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {lpWelcomeMode[lpLang] === 'editor' && (
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge>Editor</Badge>
+                    </div>
+                    {lpLang==='de' ? (
+                      <RichTextEditor
+                        value={readI18n((content as any).landingPage?.welcomeText, 'de')}
+                        onChange={(html) => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), welcomeText: writeI18n((prev as any).landingPage?.welcomeText, 'de', html) } }))}
+                        onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
+                        galleries={galleries}
+                      />
+                    ) : (
+                      <RichTextEditor
+                        value={readI18n((content as any).landingPage?.welcomeText, 'en')}
+                        onChange={(html) => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), welcomeText: writeI18n((prev as any).landingPage?.welcomeText, 'en', html) } }))}
+                        onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
+                        galleries={galleries}
+                      />
+                    )}
+                  </div>
+                )}
+                {lpWelcomeMode[lpLang] === 'html' && (
+                  <textarea
+                    className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
+                    value={readI18n((content as any).landingPage?.welcomeText, lpLang)}
+                    onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), welcomeText: writeI18n((prev as any).landingPage?.welcomeText, lpLang, e.target.value) } }))}
+                    placeholder={lpLang==='en' ? '<p>HTML content…</p>' : '<p>HTML‑Inhalt…</p>'}
+                  />
+                )}
+                {lpWelcomeMode[lpLang] === 'preview' && (
+                  <div className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40">
+                    <div className="prose prose-invert max-w-none text-neutral-300 text-sm" dangerouslySetInnerHTML={{ __html: readI18n((content as any).landingPage?.welcomeText, lpLang) }} />
+                  </div>
+                )}
+              </div>
             </div>
 
             <SectionTitle title="YouTube Video" />
@@ -2704,20 +2756,68 @@ const AdminContentPanel: React.FC = () => {
                 value={((content as any).landingPage?.aboutTitle?.en || '')}
                 onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutTitle: { ...((prev as any).landingPage?.aboutTitle || {}), en: e.target.value } } }))}
               />
-              <h4 className="text-neutral-200 text-sm font-semibold mb-2 mt-3">Text Deutsch</h4>
-              <Textarea
-                rows={4}
-                placeholder="Text (DE)"
-                value={((content as any).landingPage?.aboutText?.de || '')}
-                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutText: { ...((prev as any).landingPage?.aboutText || {}), de: e.target.value } } }))}
-              />
-              <h4 className="text-neutral-200 text-sm font-semibold mb-2 mt-3">Text English</h4>
-              <Textarea
-                rows={4}
-                placeholder="Text (EN)"
-                value={((content as any).landingPage?.aboutText?.en || '')}
-                onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutText: { ...((prev as any).landingPage?.aboutText || {}), en: e.target.value } } }))}
-              />
+              <div className="mt-3">
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs text-neutral-400">{lpLang==='en' ? 'About text (EN)' : 'About Text (DE)'}</label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      className="text-[10px] text-neutral-400 hover:text-neutral-200 underline"
+                      title="Entfernt alle inline Textfarben → Theme passt sich an"
+                      onClick={() => {
+                        const current = readI18n((content as any).landingPage?.aboutText, lpLang);
+                        const cleaned = stripInlineColors(current);
+                        setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutText: writeI18n((prev as any).landingPage?.aboutText, lpLang, cleaned) } }));
+                      }}
+                    >🎨 Inline-Farben entfernen</button>
+                    <div className="inline-flex items-center rounded-md border border-neutral-700/40 overflow-hidden">
+                      {(['editor','html','preview'] as const).map(m => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => setLpAboutMode(prev => ({ ...prev, [lpLang]: m }))}
+                          className={`px-2 py-1 text-xs ${lpAboutMode[lpLang]===m ? 'bg-neutral-700/40 text-neutral-100' : 'text-neutral-300 hover:bg-neutral-800'}`}
+                        >{m==='editor' ? 'Editor' : m==='html' ? 'HTML' : 'Vorschau'}</button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                {lpAboutMode[lpLang] === 'editor' && (
+                  <div className="grid grid-cols-1 gap-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge>Editor</Badge>
+                    </div>
+                    {lpLang==='de' ? (
+                      <RichTextEditor
+                        value={readI18n((content as any).landingPage?.aboutText, 'de')}
+                        onChange={(html) => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutText: writeI18n((prev as any).landingPage?.aboutText, 'de', html) } }))}
+                        onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
+                        galleries={galleries}
+                      />
+                    ) : (
+                      <RichTextEditor
+                        value={readI18n((content as any).landingPage?.aboutText, 'en')}
+                        onChange={(html) => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutText: writeI18n((prev as any).landingPage?.aboutText, 'en', html) } }))}
+                        onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
+                        galleries={galleries}
+                      />
+                    )}
+                  </div>
+                )}
+                {lpAboutMode[lpLang] === 'html' && (
+                  <textarea
+                    className="w-full min-h-[160px] p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40 text-neutral-100 font-mono text-sm"
+                    value={readI18n((content as any).landingPage?.aboutText, lpLang)}
+                    onChange={e => setContent(prev => ({ ...prev, landingPage: { ...((prev as any).landingPage || {}), aboutText: writeI18n((prev as any).landingPage?.aboutText, lpLang, e.target.value) } }))}
+                    placeholder={lpLang==='en' ? '<p>HTML content…</p>' : '<p>HTML‑Inhalt…</p>'}
+                  />
+                )}
+                {lpAboutMode[lpLang] === 'preview' && (
+                  <div className="p-3 rounded-lg bg-neutral-900/60 border border-neutral-700/40">
+                    <div className="prose prose-invert max-w-none text-neutral-300 text-sm" dangerouslySetInnerHTML={{ __html: readI18n((content as any).landingPage?.aboutText, lpLang) }} />
+                  </div>
+                )}
+              </div>
             </div>
 
             <SectionTitle title="Call-to-Action Button" />
@@ -2863,7 +2963,7 @@ const AdminContentPanel: React.FC = () => {
                   value={newsletterEditorLang==='de' ? (activeCampaign.html_de||'') : (activeCampaign.html_en||'')}
                   onChange={(html) => setActiveCampaign(prev => prev ? { ...prev, [newsletterEditorLang==='de' ? 'html_de' : 'html_en']: html } : prev)}
                   onPickImage={(insert) => { const url = window.prompt('Bild-URL'); if (url) insert(url); }}
-                  galleryImages={allGalleryImages}
+                  galleries={galleries}
                 />
                 <div className="flex justify-end gap-2">
                   <button onClick={async () => { try { await newsletterCampaignSave(activeCampaign); setNewsletterSendMsg('Gespeichert.'); const list = await newsletterCampaignsList(); setNewsletterCampaigns(list.campaigns || []); } catch(e) { setNewsletterSendMsg('Fehler beim Speichern.'); } }} className="px-4 py-2 rounded-lg border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-700">Speichern</button>

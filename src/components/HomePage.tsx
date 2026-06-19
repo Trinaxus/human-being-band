@@ -1005,6 +1005,15 @@ const HomePage: React.FC = () => {
         .content-rendered div[data-youtube-video] { position: relative; }
         .content-rendered iframe { max-width: 100%; border-radius: 6px; }
         .content-rendered div[data-card] { margin: 0.5em 0; }
+        .content-rendered .image-grid { display: grid; gap: 0.5rem; margin: 0.5em 0; }
+        .content-rendered .image-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .content-rendered .image-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        .content-rendered .image-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        @media (max-width: 640px) {
+          .content-rendered .image-grid-2,
+          .content-rendered .image-grid-3,
+          .content-rendered .image-grid-4 { grid-template-columns: 1fr; }
+        }
       `}</style>
     <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 self-start mt-2 md:mt-3">
       <section className="relative p-3 sm:p-5 space-y-8">

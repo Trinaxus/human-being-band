@@ -201,3 +201,30 @@ body {
 .glow-pulse-blue {
   animation: glowPulseBlue 1.4s ease-in-out infinite;
 }
+
+/* Image grid layouts */
+.image-grid {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.5em 0;
+}
+
+.image-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.image-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.image-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 640px) {
+  .image-grid-2,
+  .image-grid-3,
+  .image-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}

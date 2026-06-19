@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Paragraph from '@tiptap/extension-paragraph';
@@ -96,6 +96,27 @@ const Card = Node.create({
   },
 });
 
+const ImageGrid = Node.create({
+  name: 'imageGrid',
+  group: 'block',
+  atom: true,
+  addAttributes() {
+    return {
+      columns: { default: 2, parseHTML: (el: HTMLElement) => Number(el.getAttribute('data-columns') || 2) },
+      urls: { default: [], parseHTML: (el: HTMLElement) => Array.from(el.querySelectorAll('img')).map(img => img.getAttribute('src') || '') },
+    };
+  },
+  parseHTML() {
+    return [{ tag: 'div[data-image-grid]' }];
+  },
+  renderHTML({ HTMLAttributes }) {
+    const cols = (HTMLAttributes.columns as number) || 2;
+    const urls = ((HTMLAttributes.urls as string[]) || []);
+    const children = urls.map((url: string) => ['img', { src: url, style: 'display:block;width:100%;height:auto;border-radius:4px;' }]);
+    return ['div', { 'data-image-grid': '', 'data-columns': String(cols), class: `image-grid image-grid-${cols}` }, ...children];
+  },
+});
+
 const Input: React.FC<React.InputHTMLAttributes<HTMLInputElement>> = (props) => (
   <input {...props} className={"w-full px-3 py-2 rounded-lg bg-neutral-800/60 border-[0.5px] border-neutral-700/40 text-neutral-100 placeholder-[#909296] focus:outline-none focus:ring-0 focus:border-neutral-600 "+(props.className||"")} />
 );
@@ -105,8 +126,8 @@ export const RichTextEditor: React.FC<{
   value: string;
   onChange: (html: string) => void;
   onPickImage?: (insert: (url: string, alt?: string) => void) => void;
-  galleryImages?: string[];
-}> = ({ value, onChange, onPickImage, galleryImages }) => {
+  galleries?: Array<{ year: number; name: string; items?: Array<{ type: string; url: string; title?: string }> }>;
+}> = ({ value, onChange, onPickImage, galleries }) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ paragraph: false, heading: false }),
@@ -120,6 +141,7 @@ export const RichTextEditor: React.FC<{
       CustomYoutube.configure({ width: 640, height: 360 }),
       UppercaseMark,
       Card,
+      ImageGrid,
     ],
     content: value || '<p></p>',
     onUpdate: ({ editor }) => {
@@ -146,6 +168,10 @@ export const RichTextEditor: React.FC<{
   const [linkIsButton, setLinkIsButton] = useState(false);
   const [linkButtonColor, setLinkButtonColor] = useState('#000000');
   const [galleryOpen, setGalleryOpen] = useState(false);
+  const [galleryYear, setGalleryYear] = useState<number | ''>('');
+  const [galleryName, setGalleryName] = useState<string>('');
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [imageRatios, setImageRatios] = useState<Record<string, 'portrait' | 'landscape' | 'square'>>({});
   const [linkMenuOpen, setLinkMenuOpen] = useState(false);
   const [imgSizeOpen, setImgSizeOpen] = useState(false);
   const [imgPercent, setImgPercent] = useState<string>('100');
@@ -170,6 +196,11 @@ export const RichTextEditor: React.FC<{
   const [cardPadding, setCardPadding] = useState('16');
   const [cardWidth, setCardWidth] = useState('90');
   const [cardHasBorder, setCardHasBorder] = useState(true);
+
+  const galleryYears = useMemo(() => {
+    if (!galleries) return [] as number[];
+    return [...new Set(galleries.map(g => g.year))].sort((a, b) => b - a);
+  }, [galleries]);
 
   if (!editor) return <div className="text-neutral-400 text-sm">Editor lädt…</div>;
 
@@ -494,8 +525,8 @@ export const RichTextEditor: React.FC<{
         {onPickImage && (
           <TbButton icon={<ImageIcon size={16} />} title="Bild per URL" onClick={() => onPickImage((url, alt) => editor.chain().focus().setImage({ src: url, alt: alt || '' }).run())} />
         )}
-        {galleryImages && galleryImages.length > 0 && (
-          <TbButton icon={<span className="text-xs">Galerie</span>} title="Bild aus Galerie" onClick={() => setGalleryOpen(true)} />
+        {galleries && galleries.length > 0 && (
+          <TbButton icon={<span className="text-xs">Galerie</span>} title="Bild aus Galerie" onClick={() => { setGalleryOpen(true); setGalleryYear(''); setGalleryName(''); setSelectedImages([]); setImageRatios({}); }} />
         )}
         {editor.isActive('image') && (
           <>
@@ -558,20 +589,162 @@ export const RichTextEditor: React.FC<{
         </div>
       )}
       {/* Gallery Picker */}
-      {galleryOpen && galleryImages && (
+      {galleryOpen && galleries && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={(e) => { if (e.target === e.currentTarget) setGalleryOpen(false); }}>
           <div className="w-full max-w-2xl mx-4 p-4 rounded-xl bg-neutral-900 border border-neutral-700/40 shadow-xl space-y-3 max-h-[80vh] overflow-auto">
             <div className="flex items-center justify-between">
-              <h3 className="text-neutral-100 font-medium">Bild aus Galerie wählen</h3>
+              <h3 className="text-neutral-100 font-medium">Bilder aus Galerie wählen</h3>
               <button type="button" onClick={() => setGalleryOpen(false)} className="text-neutral-400 hover:text-neutral-200">✕</button>
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-              {galleryImages.map((url, i) => (
-                <button key={i} type="button" onClick={() => { editor.chain().focus().setImage({ src: url, alt: '' }).run(); setGalleryOpen(false); }} className="relative aspect-square rounded-lg overflow-hidden border border-neutral-700/40 hover:border-blue-500 focus:border-blue-500">
-                  <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
-                </button>
-              ))}
+            {/* Year / Gallery filters */}
+            <div className="flex gap-2">
+              <select
+                className="flex-1 px-2 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-300 text-sm"
+                value={galleryYear === '' ? '' : String(galleryYear)}
+                onChange={e => {
+                  const y = e.target.value ? Number(e.target.value) : '';
+                  setGalleryYear(y);
+                  setGalleryName('');
+                  setSelectedImages([]);
+                }}
+              >
+                <option value="">Alle Jahre</option>
+                {galleryYears.map((y: number) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <select
+                className="flex-1 px-2 py-2 rounded-lg bg-neutral-800 border border-neutral-700 text-neutral-300 text-sm"
+                value={galleryName ? `${galleryYear}::${galleryName}` : ''}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (!val) { setGalleryName(''); setSelectedImages([]); return; }
+                  const [y, name] = val.split('::');
+                  setGalleryYear(Number(y));
+                  setGalleryName(name);
+                  setSelectedImages([]);
+                }}
+              >
+                <option value="">Galerie wählen…</option>
+                {galleries
+                  .filter(g => galleryYear === '' || g.year === galleryYear)
+                  .map(g => (
+                    <option key={`${g.year}::${g.name}`} value={`${g.year}::${g.name}`}>{g.year} — {g.name}</option>
+                  ))}
+              </select>
             </div>
+            {/* Images grid with multi-select */}
+            {(() => {
+              const g = galleries.find(g => g.year === Number(galleryYear) && g.name === galleryName);
+              const images = (g?.items || []).filter(it => it.type === 'image');
+              if (galleryName && images.length === 0) return <div className="text-xs text-neutral-500">Keine Bilder in dieser Galerie.</div>;
+              if (!galleryName) return <div className="text-xs text-neutral-500">Bitte eine Galerie auswählen.</div>;
+              return (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {images.map((it, i) => {
+                    const orderNum = selectedImages.indexOf(it.url) + 1;
+                    const ratio = imageRatios[it.url];
+                    return (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => {
+                          const url = it.url;
+                          setSelectedImages(prev => prev.includes(url) ? prev.filter(u => u !== url) : [...prev, url]);
+                        }}
+                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
+                          selectedImages.includes(it.url) ? 'border-[#4ECBD9] ring-2 ring-[#4ECBD9]/30' : 'border-neutral-700 hover:border-neutral-500'
+                        }`}
+                      >
+                        <img
+                          src={it.url}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                          onLoad={(e) => {
+                            const img = e.currentTarget;
+                            const w = img.naturalWidth;
+                            const h = img.naturalHeight;
+                            if (w && h) {
+                              const r = h / w;
+                              const orientation = r > 1.15 ? 'portrait' : r < 0.87 ? 'landscape' : 'square';
+                              setImageRatios(prev => ({ ...prev, [it.url]: orientation }));
+                            }
+                          }}
+                        />
+                        {/* Orientation badge */}
+                        {ratio && (
+                          <div className={`absolute top-1 left-1 px-1 py-0.5 rounded text-[10px] font-bold leading-none shadow ${
+                            ratio === 'portrait' ? 'bg-blue-600 text-white' :
+                            ratio === 'landscape' ? 'bg-green-600 text-white' :
+                            'bg-yellow-600 text-white'
+                          }`}>
+                            {ratio === 'portrait' ? 'H' : ratio === 'landscape' ? 'Q' : '□'}
+                          </div>
+                        )}
+                        {/* Selection order number */}
+                        {selectedImages.includes(it.url) && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                            <span className="text-white text-lg font-bold">{orderNum}</span>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+            {/* Actions */}
+            {selectedImages.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-neutral-300 text-sm">{selectedImages.length} ausgewählt</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nodes = selectedImages.map(url => ({ type: 'image', attrs: { src: url, alt: '' } }));
+                    editor.chain().focus().insertContent(nodes).run();
+                    setSelectedImages([]);
+                    setGalleryOpen(false);
+                  }}
+                  className="px-3 py-1.5 rounded border-[0.5px] border-neutral-700/40 text-neutral-200 hover:bg-neutral-800 text-sm"
+                >
+                  Als Einzelbilder einfügen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    editor.chain().focus().insertContent({ type: 'imageGrid', attrs: { columns: 2, urls: selectedImages } }).run();
+                    setSelectedImages([]);
+                    setGalleryOpen(false);
+                  }}
+                  className="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-500 text-sm"
+                >
+                  2er-Grid einfügen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    editor.chain().focus().insertContent({ type: 'imageGrid', attrs: { columns: 3, urls: selectedImages } }).run();
+                    setSelectedImages([]);
+                    setGalleryOpen(false);
+                  }}
+                  className="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-500 text-sm"
+                >
+                  3er-Grid einfügen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    editor.chain().focus().insertContent({ type: 'imageGrid', attrs: { columns: 4, urls: selectedImages } }).run();
+                    setSelectedImages([]);
+                    setGalleryOpen(false);
+                  }}
+                  className="px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-500 text-sm"
+                >
+                  4er-Grid einfügen
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -753,6 +926,16 @@ export const RichTextEditor: React.FC<{
           .ProseMirror div[data-youtube-video] { position: relative; }
           .ProseMirror iframe { max-width: 100%; border-radius: 6px; }
           .ProseMirror .ProseMirror-selectednode div[data-youtube-video] { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 4px; }
+          .ProseMirror .image-grid { display: grid; gap: 0.5rem; margin: 0.5em 0; }
+          .ProseMirror .image-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+          .ProseMirror .image-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+          .ProseMirror .image-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+          @media (max-width: 640px) {
+            .ProseMirror .image-grid-2,
+            .ProseMirror .image-grid-3,
+            .ProseMirror .image-grid-4 { grid-template-columns: 1fr; }
+          }
+          .ProseMirror .ProseMirror-selectednode div[data-image-grid] { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 4px; }
         `}</style>
         <EditorContent editor={editor} />
       </div>
